@@ -1,0 +1,87 @@
+
+	;Town under attack rules for Jester.per
+
+(defrule
+      (true)
+=>
+      (set-goal is-town-under-attack no)
+      (set-goal need-assistance-chat no)
+      (disable-self)
+)
+
+(defrule
+      (goal is-town-under-attack no)
+      (players-military-population any-enemy > 1) ; testing, but 1 scout could still attack.
+      (town-under-attack)
+=>
+      (chat-local-to-self "Village might be... under pillage?")
+      (set-goal is-town-under-attack maybe)
+      (enable-timer tua-timer tua-check-interval)
+)
+
+(defrule
+      (timer-triggered tua-timer)
+      (town-under-attack)
+=>
+      (chat-local-to-self "Village IS under pillage!")
+      (disable-timer tua-timer)
+      (enable-timer tua-timer tua-check-interval)
+      (set-goal is-town-under-attack yes)
+)
+
+(defrule
+      (timer-triggered tua-timer)
+      (not (town-under-attack))
+=>
+      (chat-local-to-self "Village NOT under pillage anymore.")
+      (chat-to-allies "I'm no longer under attack.")
+      (disable-timer tua-timer)
+      (set-goal is-town-under-attack no)
+)
+
+(defrule
+      (goal is-town-under-attack yes)
+      (building-type-count town-center > 0)
+      (building-type-count-total barracks < 1)
+      (can-build barracks)
+=>
+      (chat-local-to-self "Village under pillage! Building a barracks.")
+      (up-assign-builders c: barracks c: 4) ;3
+      (build barracks)
+)
+
+;reset barracks builders
+(defrule
+	(building-type-count barracks > 0)
+=>
+	(up-assign-builders c: barracks c: 2)
+	(disable-self)
+)
+
+;Special rule so ai doesn't spam allies that he is under attack every 20 seconds
+;Trigger need-assistance-chat rule
+(defrule
+	(goal need-assistance-chat yes)
+	(goal is-town-under-attack yes)
+=>
+	(set-strategic-number sn-percent-attack-soldiers 0)
+	(set-strategic-number sn-percent-attack-boats 0)
+	(chat-to-allies "My village is under pillage!")
+	(set-goal need-assistance-chat wait)
+)
+;Reset rule so it only triggers once while we are under attack
+(defrule
+	(goal is-town-under-attack no); attack seems to be over
+	(goal need-assistance-chat wait)
+=>
+	(set-goal need-assistance-chat no)
+)
+;Enable it again
+(defrule
+	(goal is-town-under-attack yes)
+	(goal need-assistance-chat no)
+=>
+	(set-goal need-assistance-chat yes)
+)
+
+

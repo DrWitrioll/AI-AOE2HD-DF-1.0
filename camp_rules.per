@@ -1,0 +1,2543 @@
+
+	;Camp rules (like economy buildings and sn's) for Jester.per
+
+;AOE2HD REQUIRES SN-CAMP-DISTANCE RULE.  (HAS BEEN REMOVED).
+;AOE2DE REQUIRES SN-MINING-CAMP-DISTANCE, AND SN-LUMBER-CAMP-DISTANCE. (CURRENTLY SET TO THIS).
+
+	;custom goals (default starting numbers)
+(defrule
+	(true)
+=>
+	(set-goal gold-mine-distance 0)
+	(set-goal stone-mine-distance 0)
+	(set-goal deer-luring no);default
+	(set-goal town-size-ready no) ; yes or no, no = default to start
+	(disable-self)
+)
+
+	;camp-timer
+(defrule
+	(goal town-size-ready yes) ;default start
+(or	(building-type-count lumber-camp > 0)
+(or	(building-type-count mining-camp > 0)
+		(building-type-count-total mule-cart > 0))) ;Armenian & Georgian camp
+=>
+	(enable-timer camp-size-timer 120) ;quicker than normal for safety only for start
+	(disable-self))
+
+	;town-size rules
+
+	;default
+(defrule
+	(true)
+=>
+	(set-strategic-number sn-maximum-town-size 8)
+	(set-strategic-number sn-safe-town-size 8)
+	(disable-self))
+
+	;these next two rules define when town-size rules can activate or disable, yes = enable, no = wait (or disable)
+	;town-size ready yes
+(defrule
+	(goal town-size-ready no)
+	(game-time > 30) ;buffer ;current-age-time
+	(building-type-count town-center > 0)
+	(goal is-town-under-attack no)
+(not	(town-under-attack))
+=>
+	(set-goal town-size-ready yes))
+
+	;town-size ready no
+(defrule
+	(goal town-size-ready yes)
+(or	(game-time <= 30) ;buffer ;current-age-time
+(or	(building-type-count town-center <= 0)
+(or	(goal is-town-under-attack yes)
+	(town-under-attack))))
+=>
+	(set-goal town-size-ready no))
+
+
+;enable town-size-timer
+;(defrule
+;(or	(and	(goal NOMAD yes)
+;		(game-time > 240))
+;	(game-time > 300)) ;60
+;	(building-type-count town-center > 0)
+;=>
+;	(enable-timer town-size-timer 120)
+;	(chat-local-to-self "Starting town-size timer")
+;	(disable-self)
+;)
+
+;expand town size (default)
+;(defrule
+;	(timer-triggered town-size-timer)
+;	(building-type-count town-center > 0)
+;	(strategic-number sn-maximum-town-size > 0)
+;	(strategic-number sn-maximum-town-size <= 60)
+;=>
+;	(up-modify-sn sn-maximum-town-size c:+ 2)
+;	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+;)
+
+	;minimum town-size's depending on ages
+;DARK
+	(defrule
+	(current-age <= dark-age)
+	(current-age-time > 60)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size < 8)
+=>
+	;(chat-local-to-self "Town-size 8.")
+	(set-strategic-number sn-maximum-town-size 8)
+	(set-strategic-number sn-safe-town-size 8)
+	(disable-self)) ;happens once
+
+;FEUDAL
+	(defrule
+	(current-age == feudal-age)
+	(current-age-time > 60)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size < 12)
+=>
+	;(chat-local-to-self "Town-size 12.")
+	(set-strategic-number sn-maximum-town-size 12)
+	(set-strategic-number sn-safe-town-size 12)
+	(disable-self)) ;happens once
+
+;CASTLE
+	(defrule
+	(current-age == castle-age)
+	(current-age-time > 60)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size < 14)
+=>
+	;(chat-local-to-self "Town-size 16.")
+	(set-strategic-number sn-maximum-town-size 14)
+	(set-strategic-number sn-safe-town-size 14)
+	(disable-self))
+
+;IMPERIAL
+	(defrule
+	(current-age >= imperial-age)
+	(current-age-time > 60)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size < 16)
+=>
+	;(chat-local-to-self "Town-size 20.")
+	(set-strategic-number sn-maximum-town-size 16)
+	(set-strategic-number sn-safe-town-size 16)
+	(disable-self))
+
+
+;expand town-size for tc (any-age) (nomad or not nomad)
+(defrule
+	(building-type-count-total town-center == 0)
+	(up-pending-objects c: town-center-foundation <= 0)
+	(strategic-number sn-maximum-town-size < 100) ;100
+	(can-build town-center); should release escrow in other rules
+=>
+;	(chat-local-to-self "Expanding town-size for new town-center.")
+	(up-modify-sn sn-maximum-town-size c:= 100)
+)
+
+;reset town-size for tc (dark-age)
+(defrule
+	(current-age == dark-age)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size >= 100)
+	;(up-pending-objects c: town-center-foundation > 0)
+=>
+;	(chat-local-to-self "Town-size 8.")
+	(up-modify-sn sn-maximum-town-size c:= 12) ;default size
+	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+)
+
+;reset town-size for tc (feudal-age)
+(defrule
+	(current-age == feudal-age)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size >= 100)
+	;(up-pending-objects c: town-center-foundation > 0)
+=>
+;	(chat-local-to-self "Town-size 12.")
+	(up-modify-sn sn-maximum-town-size c:= 12)
+	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+)
+
+;reset town-size for tc (castle-age)
+(defrule
+	(current-age == castle-age)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size >= 100)
+	;(up-pending-objects c: town-center-foundation > 0)
+=>
+;	(chat-local-to-self "Town-size 16.")
+	(up-modify-sn sn-maximum-town-size c:= 14)
+	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+)
+
+;reset town-size for tc (imperial-age)
+(defrule
+	(current-age >= imperial-age)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size >= 100)
+	;(up-pending-objects c: town-center-foundation > 0)
+=>
+;	(chat-local-to-self "Town-size 20.")
+	(up-modify-sn sn-maximum-town-size c:= 16)
+	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+)
+
+;====================NEW dynamic town-size rules===================
+
+	;slow town size increase (supplemental)
+(defrule
+	;(goal is-town-under-attack no)
+	(timer-triggered camp-size-timer)
+	(building-type-count town-center > 0)
+	(strategic-number sn-maximum-town-size < 34) ;only supplement this up to 34
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 1))
+
+	;medium town size increase (supplemental) ;was increasing town-size too fast while the above rule was enabled too (obviously, especially after disabling goal is-town-under-attack condition)
+;(defrule
+	;(goal is-town-under-attack yes)
+;	(timer-triggered camp-size-timer)
+;	(building-type-count town-center > 0)
+;	(strategic-number sn-maximum-town-size < 30) ;only supplement this up to 30
+;=>
+;	(up-modify-sn sn-maximum-town-size c:+ 2))
+
+	;slow town size decrease (supplemental)
+(defrule
+	(timer-triggered camp-size-timer)
+	(strategic-number sn-maximum-town-size > 36) ;this slightly helps in balancing a healthy town size
+	(strategic-number sn-maximum-town-size < 50)
+=>
+	(up-modify-sn sn-maximum-town-size c:- 2))
+
+	;medium town size decrease (supplemental)
+(defrule
+	(timer-triggered camp-size-timer)
+	(strategic-number sn-maximum-town-size > 50) ;this helps in balancing a healthy town size
+	(strategic-number sn-maximum-town-size < 100)
+=>
+	(up-modify-sn sn-maximum-town-size c:- 4)) ;slowly decrease so that this doesn't out-do possibly needed town-size increases.
+
+	;safe-town-size
+(defrule
+	(game-time > 60)
+	(building-type-count town-center > 0)
+	(strategic-number sn-safe-town-size s:!= sn-maximum-town-size)
+=>
+	(up-modify-sn sn-safe-town-size s:= sn-maximum-town-size)
+	(up-modify-sn sn-safe-town-size c:- 2) ;town-size -2
+)
+
+	;enable town-size goal
+(defrule
+	(goal town-size-ready yes) ;prevents these rules in certain situations
+	(up-compare-goal town-size-goal != 1)
+(or	(and	(up-pending-placement c: town-center)
+		(up-pending-objects c: town-center-foundation < 1))
+(or	(and	(up-pending-placement c: farm) ;farms prevent needed expansion sometimes
+		(up-pending-objects c: farm < 1))
+(or	(and	(up-pending-placement c: house)
+		(up-pending-objects c: house < 1))
+(or	(and	(up-pending-placement c: barracks)
+		(up-pending-objects c: barracks < 1))
+(or	(and	(up-pending-placement c: archery-range)
+		(up-pending-objects c: archery-range < 1))
+	(and	(up-pending-placement c: stable)
+		(up-pending-objects c: stable < 1)))))))
+	(strategic-number sn-maximum-town-size < 100) ;max
+=>
+	;(chat-local-to-self "Enabling town size goal.")
+	(set-goal town-size-goal 1)
+	(enable-timer town-size-timer 5)) ;7
+
+	;enable town-size goal
+(defrule
+	(goal town-size-ready yes)
+	(up-compare-goal town-size-goal != 1)
+(or	(and	(up-pending-placement c: blacksmith)
+		(up-pending-objects c: blacksmith < 1))
+(or	(and	(up-pending-placement c: market)
+		(up-pending-objects c: market < 1))
+(or	(and	(up-pending-placement c: siege-workshop)
+		(up-pending-objects c: siege-workshop < 1))
+(or	(and	(up-pending-placement c: castle)
+		(up-pending-objects c: castle < 1))
+(or	(and	(up-pending-placement c: wonder)
+		(up-pending-objects c: wonder < 1))
+	(and	(up-pending-placement c: feitoria)
+		(up-pending-objects c: feitoria < 1)))))))
+	(strategic-number sn-maximum-town-size < 100) ;max
+=>
+	;(chat-local-to-self "Enabling town size goal.")
+	(set-goal town-size-goal 1)
+	(enable-timer town-size-timer 5)) ;7
+
+	;enable town-size goal (NEW)
+(defrule
+	(goal town-size-ready yes)
+	(up-compare-goal town-size-goal != 1)
+(or	(and	(up-pending-placement c: monastery)
+		(up-pending-objects c: monastery < 1))
+(or	(and	(up-pending-placement c: university)
+		(up-pending-objects c: university < 1))
+(or	(and	(up-pending-placement c: watch-tower-line) ;added
+		(up-pending-objects c: watch-tower-line < 1))
+(or	(and	(up-pending-placement c: krepost) ;added
+		(up-pending-objects c: krepost < 1))
+	(and	(up-pending-placement c: bombard-tower) ;added
+		(up-pending-objects c: bombard-tower < 1))))))
+=>
+	;(chat-local-to-self "Enabling town size goal.")
+	(set-goal town-size-goal 1)
+	(enable-timer town-size-timer 5)) ;7
+
+	;hold town-size
+(defrule
+	(goal town-size-goal 1)
+(or	(up-pending-objects c: town-center-foundation > 0)
+(or	(up-pending-objects c: farm > 0)
+(or	(up-pending-objects c: house > 0)
+(or	(up-pending-objects c: barracks > 0)
+(or	(up-pending-objects c: archery-range > 0)
+(or	(up-pending-objects c: stable > 0)
+(or	(up-pending-objects c: watch-tower-line > 0)
+(or	(up-pending-objects c: bombard-tower > 0)
+(or	(up-pending-objects c: monastery > 0) ;added
+(or (up-pending-objects c: university > 0) ;added
+(or (up-pending-objects c: wonder > 0) ;added
+	(up-pending-objects c: krepost > 0)))))))))))) ;added
+=>
+	(set-goal town-size-goal 0)
+	(disable-timer town-size-timer))
+	;(chat-local-to-self "Disabling town size goal.")
+
+	;hold town-size
+(defrule
+	(goal town-size-goal 1)
+(or	(up-pending-objects c: blacksmith > 0)
+(or	(up-pending-objects c: market > 0)
+(or	(up-pending-objects c: siege-workshop > 0)
+(or	(up-pending-objects c: castle > 0)
+;(or	(up-pending-objects c: dock > 0)
+	(up-pending-objects c: feitoria > 0)))));)
+=>
+	(set-goal town-size-goal 0)
+	(disable-timer town-size-timer))
+	;(chat-local-to-self "Disabling town size goal.")
+
+	;increase town-size
+(defrule
+	(goal town-size-ready yes)
+	(goal town-size-goal 1)
+	(timer-triggered town-size-timer)
+(or	(and	(up-pending-placement c: town-center)
+		(up-pending-objects c: town-center-foundation < 1))
+(or	(and	(up-pending-placement c: farm)
+		(up-pending-objects c: farm < 1))
+(or	(and	(up-pending-placement c: house)
+		(up-pending-objects c: house < 1))
+(or	(and	(up-pending-placement c: barracks)
+		(up-pending-objects c: barracks < 1))
+(or	(and	(up-pending-placement c: archery-range)
+		(up-pending-objects c: archery-range < 1))
+	(and	(up-pending-placement c: stable)
+		(up-pending-objects c: stable < 1)))))))
+	(strategic-number sn-maximum-town-size < 100) ;max
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 2)) ;1
+	;(chat-local-to-self "Increasing town size.")
+
+	;increase town-size
+(defrule
+	(goal town-size-ready yes)
+	(goal town-size-goal 1)
+	(timer-triggered town-size-timer)
+(or	(and	(up-pending-placement c: blacksmith)
+		(up-pending-objects c: blacksmith < 1))
+(or	(and	(up-pending-placement c: market)
+		(up-pending-objects c: market < 1))
+(or	(and	(up-pending-placement c: siege-workshop)
+		(up-pending-objects c: siege-workshop < 1))
+(or	(and	(up-pending-placement c: castle)
+		(up-pending-objects c: castle < 1))
+	(and	(up-pending-placement c: feitoria)
+		(up-pending-objects c: feitoria < 1))))))
+	(strategic-number sn-maximum-town-size < 100) ;max
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 2)) ;1
+	;(chat-local-to-self "Increasing town size.")
+
+	;increase town-size (NEWLY ADDED)
+(defrule
+	(goal town-size-ready yes)
+	(goal town-size-goal 1)
+	(timer-triggered town-size-timer)
+(or	(and	(up-pending-placement c: monastery)
+		(up-pending-objects c: monastery < 1))
+(or	(and	(up-pending-placement c: university)
+		(up-pending-objects c: university < 1))
+(or	(and	(up-pending-placement c: watch-tower-line)
+		(up-pending-objects c: watch-tower-line < 1))
+(or	(and	(up-pending-placement c: bombard-tower)
+		(up-pending-objects c: bombard-tower < 1))
+(or	(and	(up-pending-placement c: wonder)
+		(up-pending-objects c: wonder < 1))
+	(and	(up-pending-placement c: krepost)
+		(up-pending-objects c: krepost < 1)))))))
+	(strategic-number sn-maximum-town-size < 100) ;max
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 2)) ;1
+	;(chat-local-to-self "Increasing town size.")
+
+	;OVERRIDE TOWN SIZE FOR TOWN CENTERS
+(defrule
+	(timer-triggered town-size-timer) ;prevent excessive town-sizes
+	(game-time > 60) ;nomad games
+	(goal is-town-under-attack no)
+(not	(town-under-attack))
+	(unit-type-count-total villager >= 7)
+	(up-pending-placement c: town-center)
+	(up-pending-objects c: town-center < 1)
+	(can-build town-center)
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 3)
+	;(chat-to-all "Expanding town size for town-centers.")
+)
+
+	;OVERRIDE TOWN SIZE FOR HOUSES
+(defrule
+	(timer-triggered town-size-timer)	;prevent excessive town-sizes
+	(game-time > 60) ;nomad games
+	(goal is-town-under-attack no)
+(not	(civ-selected hun))
+(not	(town-under-attack))
+	(unit-type-count-total villager >= 7)
+	(housing-headroom <= 0) ;totally housed!
+	(population-headroom >= 2) ;still more potential population
+	(up-pending-placement c: house)
+	(up-pending-objects c: house < 1)
+	(can-build house)
+=>
+	(up-modify-sn sn-maximum-town-size c:+ 2)
+	;(chat-to-all "Expanding town size for houses.")
+)
+
+	;CUSTOM SN-SAFE-BORDER-DISTANCE		;custom sn that relates to up-building-placement & DUC rules
+(defrule
+	(game-time > 30) ;safety
+	(up-compare-sn sn-safe-border-distance s:!= sn-maximum-town-size)
+=>
+	(up-modify-sn sn-safe-border-distance s:= sn-maximum-town-size)		;set to safe-border to current max-town-size
+)
+	;CALCULATION
+(defrule
+	(up-compare-sn sn-safe-border-distance >= 10)	;between min & max
+	(up-compare-sn sn-safe-border-distance <= 35)
+=>
+	(up-modify-sn sn-safe-border-distance c:+ 5)
+)
+
+	;MINIMUM SN-SAFE-BORDER-DISTANCE
+(defrule
+	(game-time > 30) ;safety
+	(up-compare-sn sn-safe-border-distance < 15)
+=>
+	(up-modify-sn sn-safe-border-distance c:= 15)		;minimum distance
+)
+	;MAXIMUM SN-SAFE-BORDER-DISTANCE
+(defrule
+	(game-time > 30) ;safety
+	(up-compare-sn sn-safe-border-distance > 40)
+=>
+	(up-modify-sn sn-safe-border-distance c:= 40)		;maximum distance
+)
+
+	;continue looping until done
+(defrule
+	(timer-triggered town-size-timer)
+=>
+	(disable-timer town-size-timer)
+	(enable-timer town-size-timer 7)) ;8
+
+;======================lumber-camp distances======================
+
+;expand lumber camp size 1
+(defrule
+	(timer-triggered camp-size-timer)
+	;(building-type-count lumber-camp > 0)
+	(strategic-number sn-lumber-camp-max-distance <= 22)
+	(strategic-number sn-lumber-camp-max-distance c:< map-size)
+=>
+	(up-modify-sn sn-lumber-camp-max-distance c:+ 3);3
+)
+
+;expand lumber camp size 2
+(defrule
+	(timer-triggered camp-size-timer)
+	;(building-type-count lumber-camp > 0)
+	(strategic-number sn-lumber-camp-max-distance > 22)
+	(strategic-number sn-lumber-camp-max-distance c:< map-size)
+=>
+	(up-modify-sn sn-lumber-camp-max-distance c:+ 4);4
+)
+
+;======================mining-camp distances======================
+
+;expand mining camp 1
+(defrule
+	(timer-triggered camp-size-timer)
+	;(building-type-count mining-camp > 0); starts after first one is built
+	(strategic-number sn-mining-camp-max-distance <= 22)
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+=>
+	(up-modify-sn sn-mining-camp-max-distance c:+ 3)
+)
+
+;expand mining camp 2
+(defrule
+	(timer-triggered camp-size-timer)
+	;(building-type-count mining-camp > 0)
+	(strategic-number sn-mining-camp-max-distance > 22)
+	(strategic-number sn-mining-camp-max-distance <= 60)
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+=>
+	(up-modify-sn sn-mining-camp-max-distance c:+ 5)
+)
+
+;expand mining camp 3 (fast)
+(defrule
+	(timer-triggered camp-size-timer)
+	;(building-type-count mining-camp > 0)
+	(strategic-number sn-mining-camp-max-distance > 60)
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+=>
+	(up-modify-sn sn-mining-camp-max-distance c:+ 7)
+)
+
+;DECREASE HUNT-DROP-DISTANCE
+(defrule
+(game-time > 1500) ;25 minutes
+=>
+(up-modify-sn sn-maximum-hunt-drop-distance c:= 18) ;default now 25. (25 - 7 = 18)
+(disable-self)
+)
+
+;===================MULE-CART RESOURCE DISTANCES===================
+;normal (goal NOMAD no)
+(defrule
+	(goal NOMAD no)
+	(resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood <= 10); currently counts straggler trees too >:(
+	(unit-type-count-total villager > 6);gives some time to explore map
+	(strategic-number sn-lumber-camp-max-distance < 15)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 15) ;12 testing 
+;   (chat-local-to-self "lumber-camp distance 15.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+	(resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood >= 10)
+	(dropsite-min-distance wood < 13)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 16)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 16) ;14
+;   (chat-local-to-self "lumber-camp distance 16.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+	(resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood >= 13)
+	(dropsite-min-distance wood < 15)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 18)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 18) ;15
+;   (chat-local-to-self "lumber-camp distance 18.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+	(resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood >= 15)
+	(dropsite-min-distance wood < 17)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 20)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 20);17
+ ;  (chat-local-to-self "lumber-camp distance 20.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+   (dropsite-min-distance wood >= 17)
+   (dropsite-min-distance wood < 20)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 22)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 22);20
+;   (chat-local-to-self "lumber-camp distance 22.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+   (dropsite-min-distance wood >= 20)
+   (dropsite-min-distance wood < 22)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 24)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 24);22
+;   (chat-local-to-self "lumber-camp distance 24.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+   (dropsite-min-distance wood >= 22)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 30)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 30);30
+;   (chat-local-to-self "lumber-camp distance 30.")
+   (disable-self)
+)
+
+;NOMAD yes
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood <= 11)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 14)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 14);12
+;   (chat-local-to-self "lumber-camp distance 14.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood > 11)
+	(dropsite-min-distance wood <= 15)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 15)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 15)
+;   (chat-local-to-self "lumber-camp distance 15.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood > 15)
+	(dropsite-min-distance wood <= 20)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 20)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 20)
+;   (chat-local-to-self "lumber-camp distance 20.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood > 20)
+	(dropsite-min-distance wood <= 25)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 25)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 25)
+;   (chat-local-to-self "lumber-camp distance 25.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total mule-cart < 1)
+	(building-available mule-cart)
+	(dropsite-min-distance wood > 25)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 30)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 30); shouldn't be any farther than this for nomad games to start
+;   (chat-local-to-self "lumber-camp distance 30.")
+   (disable-self)
+)
+
+;starting gold mule-cart distances
+
+;1
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold <= 9)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 11)
+=>
+;	(chat-local-to-self "Gold distance 11.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 11)
+	(disable-self)
+)
+
+;2
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 9)
+	(dropsite-min-distance gold <= 14)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 16)
+=>
+;	(chat-local-to-self "Gold distance 16.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 16)
+	(disable-self)
+)
+
+;3
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 14)
+	(dropsite-min-distance gold <= 19)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 21)
+=>
+;	(chat-local-to-self "Gold distance 21.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 21)
+	(disable-self)
+)
+
+;4
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 19)
+	(dropsite-min-distance gold <= 24)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 26)
+=>
+;	(chat-local-to-self "Gold distance 26.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 26)
+	(disable-self)
+)
+
+;5
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 24)
+	(dropsite-min-distance gold <= 29)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 31)
+=>
+;	(chat-local-to-self "Gold distance 31.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 31)
+	(disable-self)
+)
+
+;6
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 29)
+	(dropsite-min-distance gold <= 36)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 38)
+=>
+;	(chat-local-to-self "Gold distance 38.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 38)
+	(disable-self)
+)
+
+;7
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 36)
+	(dropsite-min-distance gold <= 42)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 44)
+=>
+;	(chat-local-to-self "Gold distance 44.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 44)
+	(disable-self)
+)
+
+;8
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mule-cart == 1) ;2nd mule-cart goes for gold with SN preferring gold dropsite placement
+	(building-available mule-cart)
+	(dropsite-min-distance gold > 42)
+	(dropsite-min-distance gold <= 50)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 52)
+=>
+;	(chat-local-to-self "Gold distance 52.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 52)
+	(disable-self)
+)
+
+;9
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 50)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+=>
+;	(chat-local-to-self "Max Gold distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:= map-size)
+	(disable-self)
+)
+
+;==============emergency expand wood distances==============
+(defrule
+	(resource-found wood)
+	(goal is-town-under-attack no)
+(not	(town-under-attack))
+	(building-type-count town-center > 0)
+	(unit-type-count villager > 10);temporary fix
+	(dropsite-min-distance wood >= 8)
+	(strategic-number sn-lumber-camp-max-distance c:< map-size)
+	(strategic-number sn-wood-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(up-modify-sn sn-lumber-camp-max-distance c:+ 2)) ;6
+;	(chat-local-to-self "Increasing wood build distance.")
+;	(up-chat-data-to-player my-player-number "Lumber-camp distance: %d." s: sn-lumber-camp-max-distance)
+
+
+	;emergency expand gold-distances
+(defrule
+	(resource-found gold)
+	(goal is-town-under-attack no)
+	(building-type-count town-center > 0)
+	(unit-type-count villager > 10);temporary fix
+	(dropsite-min-distance gold >= 8)
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+(or	(dropsite-min-distance wood <= 8);safish woodline
+	(wood-amount >= 250))
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+;	(chat-local-to-self "Increasing gold build distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:+ 2)
+;	(up-chat-data-to-player my-player-number "Mining-camp distance: %d." s: sn-mining-camp-max-distance)
+)
+	;starting stone-mine distances
+;1
+(defrule
+	(resource-found stone)
+	(goal is-town-under-attack no)
+(or	(dropsite-min-distance wood <= 8);safish woodline
+	(wood-amount >= 250))
+	(dropsite-min-distance stone > 8)
+	(dropsite-min-distance stone c:< map-size)
+	(strategic-number sn-stone-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+;	(chat-local-to-self "Increasing camp-distances to cover stone distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:+ 2)
+)
+
+	;starting lumber-camp distances
+
+;IGNORE IF Armenian or Georgian Civs (they get mule carts)
+(defrule
+(or	(goal armenian-civ yes)
+	(goal georgian-civ yes))
+=>
+	(up-jump-rule 32))	;start jump (32)
+;normal (goal NOMAD no)
+(defrule
+	(goal NOMAD no)
+	(resource-found wood)
+	(building-type-count-total lumber-camp < 1)
+	(dropsite-min-distance wood <= 10); currently counts straggler trees too >:(
+	(unit-type-count-total villager > 6);gives some time to explore map
+	(strategic-number sn-lumber-camp-max-distance < 15)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 15) ;12 testing 
+;   (chat-local-to-self "lumber-camp distance 15.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 10)
+   (dropsite-min-distance wood < 13)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 16)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 16) ;14
+;   (chat-local-to-self "lumber-camp distance 16.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 13)
+   (dropsite-min-distance wood < 15)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 18)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 18) ;15
+;   (chat-local-to-self "lumber-camp distance 18.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 15)
+   (dropsite-min-distance wood < 17)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 20)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 20);17
+ ;  (chat-local-to-self "lumber-camp distance 20.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 17)
+   (dropsite-min-distance wood < 20)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 22)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 22);20
+;   (chat-local-to-self "lumber-camp distance 22.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 20)
+   (dropsite-min-distance wood < 22)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 24)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 24);22
+;   (chat-local-to-self "lumber-camp distance 24.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD no)
+   (resource-found wood)
+   (building-type-count-total lumber-camp < 1)
+   (dropsite-min-distance wood >= 22)
+   (unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 30)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 30);30
+;   (chat-local-to-self "lumber-camp distance 30.")
+   (disable-self)
+)
+
+;NOMAD yes
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1)
+	(dropsite-min-distance wood <= 11)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 14)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 14);12
+;   (chat-local-to-self "lumber-camp distance 14.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1)
+	(dropsite-min-distance wood > 11)
+	(dropsite-min-distance wood <= 15)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 15)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 15)
+;   (chat-local-to-self "lumber-camp distance 15.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1)
+	(dropsite-min-distance wood > 15)
+	(dropsite-min-distance wood <= 20)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 20)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 20)
+;   (chat-local-to-self "lumber-camp distance 20.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1)
+	(dropsite-min-distance wood > 20)
+	(dropsite-min-distance wood <= 25)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 25)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 25)
+;   (chat-local-to-self "lumber-camp distance 25.")
+   (disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(resource-found wood)
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1)
+	(dropsite-min-distance wood > 25)
+	(unit-type-count-total villager > 6)
+	(strategic-number sn-lumber-camp-max-distance < 30)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 30); shouldn't be any farther than this for nomad games to start
+;   (chat-local-to-self "lumber-camp distance 30.")
+   (disable-self)
+)
+
+	;starting gold and stone mining distances
+
+	;starting gold mining-camp distances
+
+;1
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold <= 9)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 11)
+=>
+;	(chat-local-to-self "Gold distance 11.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 11)
+	(disable-self)
+)
+
+;2
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 9)
+	(dropsite-min-distance gold <= 14)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 16)
+=>
+;	(chat-local-to-self "Gold distance 16.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 16)
+	(disable-self)
+)
+
+;3
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 14)
+	(dropsite-min-distance gold <= 19)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 21)
+=>
+;	(chat-local-to-self "Gold distance 21.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 21)
+	(disable-self)
+)
+
+;4
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 19)
+	(dropsite-min-distance gold <= 24)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 26)
+=>
+;	(chat-local-to-self "Gold distance 26.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 26)
+	(disable-self)
+)
+
+;5
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 24)
+	(dropsite-min-distance gold <= 29)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 31)
+=>
+;	(chat-local-to-self "Gold distance 31.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 31)
+	(disable-self)
+)
+
+;6
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 29)
+	(dropsite-min-distance gold <= 36)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 38)
+=>
+;	(chat-local-to-self "Gold distance 38.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 38)
+	(disable-self)
+)
+
+;7
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 36)
+	(dropsite-min-distance gold <= 42)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 44)
+=>
+;	(chat-local-to-self "Gold distance 44.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 44)
+	(disable-self)
+)
+
+;8
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 42)
+	(dropsite-min-distance gold <= 50)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance < 52)
+=>
+;	(chat-local-to-self "Gold distance 52.")
+	(up-modify-sn sn-mining-camp-max-distance c:= 52)
+	(disable-self)
+)
+
+;9
+(defrule
+	(resource-found gold)
+	(unit-type-count villager > 10)
+	(building-type-count-total mining-camp < 1)
+	(dropsite-min-distance gold > 50)
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+=>
+;	(chat-local-to-self "Max Gold distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:= map-size)
+	(disable-self)
+)
+
+;==============emergency expand wood-distances==============
+(defrule
+	(resource-found wood)
+	(goal is-town-under-attack no)
+(not	(town-under-attack))
+	(building-type-count town-center > 0)
+	(unit-type-count villager > 10);temporary fix
+	(dropsite-min-distance wood >= 8)
+	(strategic-number sn-lumber-camp-max-distance c:< map-size)
+	(strategic-number sn-wood-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: lumber-camp < 1)
+	(can-build lumber-camp)
+=>
+	(up-modify-sn sn-lumber-camp-max-distance c:+ 2)) ;6
+;	(chat-local-to-self "Increasing wood build distance.")
+;	(up-chat-data-to-player my-player-number "Lumber-camp distance: %d." s: sn-lumber-camp-max-distance)
+
+
+	;emergency expand gold-distances
+(defrule
+	(resource-found gold)
+	(goal is-town-under-attack no)
+	(building-type-count town-center > 0)
+	(unit-type-count villager > 10);temporary fix
+	(dropsite-min-distance gold >= 8)
+	(strategic-number sn-mining-camp-max-distance c:< map-size)
+(or	(dropsite-min-distance wood <= 8);safish woodline
+	(wood-amount >= 250))
+	(strategic-number sn-gold-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: mining-camp < 1)
+	(can-build mining-camp)
+=>
+;	(chat-local-to-self "Increasing gold build distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:+ 2)
+;	(up-chat-data-to-player my-player-number "Mining-camp distance: %d." s: sn-mining-camp-max-distance)
+)
+	;starting stone-mine distances
+;1
+(defrule
+	(resource-found stone)
+	(goal is-town-under-attack no)
+(or	(dropsite-min-distance wood <= 8);safish woodline
+	(wood-amount >= 250))
+	(dropsite-min-distance stone > 8)
+	(dropsite-min-distance stone c:< map-size)
+	(strategic-number sn-stone-gatherer-percentage > 0);indicates need
+	(up-pending-objects c: mining-camp < 1)
+	(can-build mining-camp)
+=>
+;	(chat-local-to-self "Increasing camp-distances to cover stone distance.")
+	(up-modify-sn sn-mining-camp-max-distance c:+ 2)
+)
+
+;====================LUMBER CAMP RULES====================
+
+	;1ST LUMBERCAMP (goal gurjara-civ no)
+(defrule
+(or	(civ-selected hun)
+	(building-type-count-total house > 0))
+	(building-type-count town-center > 0)
+	(goal gurjara-civ no) ;GURJARA BUILDS MILL FIRST NOW FOR SHEEP
+	;(building-type-count mill > 0) lumber camp first before mill
+	(resource-found wood)
+	(up-gaia-type-count c: wood > 50) ;less chance of missing a forest
+	(unit-type-count villager > 6) ; villager 7 builds a lumber-camp.
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1) ;defer dropsite SN now in use
+	(can-build lumber-camp)
+=>
+;	(chat-local-to-self "First normal lumber-camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 5) ;6
+	(build lumber-camp)
+)
+
+	;1ST LUMBERCAMP (goal gurjara-civ yes)
+(defrule
+	(goal gurjara-civ yes) ;GURJARA BUILDS MILL FIRST NOW FOR SHEEP
+	(building-type-count-total house >= 2)
+	(building-type-count town-center > 0)
+	(building-type-count-total mill > 0) ;MILL 1ST for gurjara
+	;(building-type-count mill > 0) lumber camp first before mill
+	(resource-found wood)
+	(up-gaia-type-count c: wood > 50) ;less chance of missing a forest
+	(unit-type-count villager >= 10) ; villager 10 builds a lumber-camp.
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1) ;defer dropsite SN now in use
+	(can-build lumber-camp)
+=>
+;	(chat-local-to-self "First normal lumber-camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 5) ;6
+	(build lumber-camp)
+)
+
+	;BACKUP 1ST LUMBERCAMP
+(defrule
+	(current-age-time > 420) ;backup
+(or	(civ-selected hun)
+	(building-type-count-total house > 0))
+	(building-type-count town-center > 0)
+	;(building-type-count mill > 0) lumber camp first before mill
+	;(resource-found wood)
+	;(up-gaia-type-count c: wood <= 60) ;low wood?
+	(unit-type-count villager >= 18)
+	(building-type-count-total lumber-camp < 1)
+	(up-pending-objects c: lumber-camp < 1) ;defer dropsite SN now in use
+	(can-build lumber-camp)
+=>
+;	(chat-local-to-self "Emergency 1st low-wood lumber camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 1)
+	(build lumber-camp)
+)
+
+	;DESPERATE 1ST lumber-camp
+(defrule
+	(game-time > 360)
+	(up-gaia-type-count c: wood > 50)
+(or   (unit-type-count villager >= 15) ;17
+	(unit-type-count villager >= max-vill-pop))
+   (building-type-count-total lumber-camp == 0)
+   (strategic-number sn-lumber-camp-max-distance < 35)
+   (can-build lumber-camp)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 35)
+ ;  (chat-local-to-self "lumber-camp distance 35.")
+   (disable-self)
+)
+	;Extra desperate 1ST lumber-camp
+(defrule
+	(game-time > 500)
+	(up-gaia-type-count c: wood > 50)
+(or   (unit-type-count villager >= 17) ;19
+	(unit-type-count villager >= max-vill-pop))
+   (strategic-number sn-lumber-camp-max-distance < 45)
+   (dropsite-min-distance wood < 45)
+   (building-type-count-total lumber-camp == 0)
+   (can-build lumber-camp)
+=>
+   (set-strategic-number sn-lumber-camp-max-distance 45)
+;   (chat-local-to-self "lumber-camp distance 45.")
+   (disable-self))
+
+	;EMERGENCY LUMBER-CAMP
+(defrule
+	(goal is-town-under-attack yes)
+	(unit-type-count villager > min-vills) ;20
+	(building-type-count town-center > 0)
+	(building-type-count-total lumber-camp < 3)
+	(up-pending-objects c: lumber-camp < 1)
+	(can-build lumber-camp)
+=>
+	(chat-local-to-self "Building emergency lumber-camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 20) ;NEW ;this forces a camp far away from others
+	(build lumber-camp)
+)
+	;2nd lumber-camp
+(defrule
+	(goal WOOD-REMAINING yes)
+	(up-gaia-type-count c: wood > 30)
+(or			(goal DRUSH no)
+	(and	(goal DRUSH yes)
+		(building-type-count-total barracks > 0)));barracks first for DRUSH yes
+	(building-type-count lumber-camp == 1)
+	(unit-type-count villager > min-vills) ;10
+	(dropsite-min-distance wood >= 3) ;2 ;delay it a little longer for other buildings
+	(dropsite-min-distance wood s:< sn-lumber-camp-max-distance)
+	(dropsite-min-distance wood c:< map-size)
+	(up-pending-objects c: lumber-camp < 1) ;defer dropsite SN now in use
+	(can-build lumber-camp)
+=>
+	;(chat-local-to-self "Second lumber-camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 11) ;6 ;go 11 to encourage building on another woodline
+	(build lumber-camp)
+	(disable-self)
+)
+	;MAIN LUMBER-CAMP RULE
+(defrule
+	(goal WOOD-REMAINING yes) ;yes = there are at least 15 trees still on the map, no = less-than 15 tree remain on the map
+	(unit-type-count villager > 6)
+	(dropsite-min-distance wood >= 4) ;>= 5 ;trying 4 for more LC's throughout the game
+	(dropsite-min-distance wood s:< sn-lumber-camp-max-distance)
+	(dropsite-min-distance wood c:< map-size)
+	(building-type-count town-center > 0)
+	(building-type-count lumber-camp > 0)
+	(building-type-count lumber-camp < 33); testing
+	(up-pending-objects c: lumber-camp < 1) ;defer dropsite SN now in use
+	(can-build lumber-camp)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 6)
+	(build lumber-camp)
+);end jump; 32 total
+
+	;MULE-CARTS
+
+	;MULE-CART LOGIC ;UPDATED
+	;WOOD
+(defrule
+(or	(building-type-count mule-cart <= 1)
+    (building-type-count mule-cart == 3))
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+)
+	;GOLD/STONE
+(defrule
+(or	(building-type-count mule-cart == 2)
+    (building-type-count mule-cart == 4))
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement mining-camp)
+)
+	;GOLD/STONE
+(defrule
+(or	(building-type-count mule-cart == 5)
+    (building-type-count mule-cart == 7))
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement mining-camp)
+)
+	;WOOD
+(defrule
+(or	(building-type-count mule-cart == 6)
+    (building-type-count mule-cart == 8))
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+)
+	;GOLD/STONE
+(defrule
+(or	(building-type-count mule-cart == 9)
+    (building-type-count mule-cart == 10))
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+)
+	;DEFAULT
+(defrule
+    (building-type-count mule-cart > 10)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement 0) ;default = any resource
+)
+;LEVEL 1 ;1 wood
+(defrule
+;(or (goal armenian-civ yes) ;explanatory not needed
+;	(goal georgian-civ yes))
+	(resource-found wood) ;1st mule-cart is for wood
+	(up-gaia-type-count c: wood > 50) ;less chance of missing a forest
+	(unit-type-count villager >= 7) ;7th vil builds a lumber-camp or mule-cart
+	(building-type-count-total house > 0)
+	(building-type-count town-center > 0)
+	(building-available mule-cart)
+	(building-type-count-total mule-cart < 1)
+	(up-pending-objects c: mule-cart < 1) ;needed for sn-defer-dropsite-placement == 1
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+	(build mule-cart)
+)
+
+;LEVEL 2
+(defrule
+(or	(unit-type-count villager >= min-vills)
+(or	(strategic-number sn-gold-gatherer-percentage > 0); we want gold
+(or	(strategic-number sn-stone-gatherer-percentage > 0); we want stone
+	(unit-type-count villager-wood >= 10)))); speed up 2nd dropsite for wood
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 1) ;we have 1, need 2
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement mining-camp) ;not needed as its defined above but safety for first few carts
+	(build mule-cart)
+)
+
+;LEVEL 3
+(defrule
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 25))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 2) ;need 3rd (2nd woodline)
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+	(build mule-cart)
+)
+
+;LEVEL 4
+(defrule
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 40))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 3) ;need 4th (2nd gold or stone)
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement mining-camp)
+	(build mule-cart)
+)
+
+;LEVEL 5
+(defrule
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 60))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 4) ;5th
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(build mule-cart)
+)
+
+;LEVEL 6
+(defrule
+	(population-cap >= 100)
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 75))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 5) ;6th
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(build mule-cart)
+)
+
+;LEVEL 7
+(defrule
+	(population-cap >= 125)
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 100))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 6) ;7th
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(build mule-cart)
+)
+
+;LEVEL 8
+(defrule
+	(population-cap >= 150)
+(or	(unit-type-count-total villager >= max-vill-pop) ;safety for low-pop games
+	(unit-type-count villager >= 115))
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 7) ;8th
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(build mule-cart)
+)
+
+;LEVEL 9
+(defrule
+	(population-cap >= 175)
+	(unit-type-count villager >= max-vill-pop)
+	(building-available mule-cart)
+	(building-type-count-total mule-cart == 8) ;max now for testing
+	(building-type-count town-center > 0)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+	(build mule-cart)
+)
+
+;emergency mule cart (wood)
+(defrule
+	(game-time > 20)
+    (resource-found wood)
+	(wood-amount < 275)
+(not	(can-build town-center))
+	(building-available mule-cart)
+    (building-type-count-total town-center < 1)
+    (building-type-count-total mule-cart < 1)
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement lumber-camp)
+    (build mule-cart)
+)
+
+;emergency mule cart (stone)
+(defrule
+	(game-time > 20)
+    (resource-found stone)
+	(wood-amount >= 275)
+	(stone-amount < 100)
+(not	(can-build town-center))
+	(building-available mule-cart)
+    (building-type-count-total town-center < 1)
+    (building-type-count-total mule-cart < 2) ;1st is wood
+	(dropsite-min-distance stone >= 15) ;only build if stone is far
+	(up-pending-objects c: mule-cart < 1)
+	(can-build mule-cart)
+=>
+    (set-strategic-number sn-mule-cart-dropsite-placement mining-camp) ;hopefully gets placed near wood for a double whammy ;in the future we should DUC the wood mule-cart to a stone-mine
+    (build mule-cart)
+)
+
+	;MAX GATHERING DISTANCES (food, wood, gold, and stone)
+	;remember, "resource-found" only works if it is within the max distance, so we don't use it here
+
+	;emergency max food gathering
+(defrule
+	(goal is-town-under-attack no)
+	(unit-type-count villager >= 6)
+	(unit-type-count villager-food < 1)
+	(strategic-number sn-food-gatherer-percentage > 0)
+	(dropsite-min-distance food s:>= sn-maximum-food-drop-distance) ;updated version 1.8
+	(strategic-number sn-maximum-food-drop-distance c:< map-size)
+=>
+;	(chat-local-to-self "Increasing max food gathering distance.")
+	;(set-strategic-number sn-food-dropsite-distance -1);this strategic-number is PREFERRED, not max, so it should not be changed
+	(up-modify-sn sn-maximum-food-drop-distance c:+ 1)
+)
+
+	;reset emergency max food gathering
+(defrule
+(or		(goal is-town-under-attack yes)
+(or		(strategic-number sn-maximum-food-drop-distance c:> map-size)
+(and	(strategic-number sn-food-gatherer-percentage > 0)
+(and	(unit-type-count villager >= 6)
+(and	(unit-type-count villager-food >= 1) ;food is restored
+		(dropsite-min-distance food s:<= sn-food-dropsite-distance)))))) ;and the minimum distance to food is restored
+=>
+;	(chat-local-to-self "Resetting max food gathering distance.")
+	(set-strategic-number sn-food-dropsite-distance 7) ;remember, THIS sn is the "preferred" gathering distance
+	(set-strategic-number sn-maximum-food-drop-distance 23) ;this sn is the absolute MAXIMUM gathering distance ;default is 23 (see Jester.per main file)
+)
+
+	;emergency max wood cutting
+(defrule
+	(goal WOOD-REMAINING yes)
+	(goal is-town-under-attack no)
+	(unit-type-count villager >= 10)
+	(unit-type-count villager-wood < 1)
+	(strategic-number sn-wood-gatherer-percentage > 0)
+	(dropsite-min-distance wood s:>= sn-maximum-wood-drop-distance) ;updated version 1.8
+	(strategic-number sn-maximum-wood-drop-distance c:< map-size)
+=>
+;	(chat-local-to-self "Increasing max wood cutting distance.")
+	;(set-strategic-number sn-wood-dropsite-distance -1);this strategic-number is PREFERRED, not max, so it should not be changed
+	(up-modify-sn sn-maximum-wood-drop-distance c:+ 1)
+)
+
+	;reset emergency max wood cutting
+(defrule
+(or		(goal is-town-under-attack yes)
+(or		(strategic-number sn-maximum-wood-drop-distance c:> map-size) ;expansion bugged out, reset it
+(or		(goal WOOD-REMAINING no) ;if no wood left dont send vils to their death across the map for the last 15 trees
+(and	(goal WOOD-REMAINING yes)
+(and	(unit-type-count villager >= 10)
+(and	(unit-type-count villager-wood >= 1) ;wood is restored
+(and	(strategic-number sn-wood-gatherer-percentage > 0)
+		(dropsite-min-distance wood s:<= sn-wood-dropsite-distance)))))))) ;wood gathering is restored ;5
+=>
+;	(chat-local-to-self "Resetting max wood cutting distance.")
+	(set-strategic-number sn-wood-dropsite-distance 5) ;7
+	(set-strategic-number sn-maximum-wood-drop-distance 25) ;default is 25 (see Jester.per main file)
+)
+
+	;emergency max gold mining 
+(defrule
+	(goal GOLD-REMAINING yes)
+	(goal is-town-under-attack no)
+	(unit-type-count villager >= min-vills) ;avg 20
+	(unit-type-count villager-gold < 1)
+	(strategic-number sn-gold-gatherer-percentage > 0)
+	(dropsite-min-distance gold s:>= sn-maximum-gold-drop-distance) ;25
+	(strategic-number sn-maximum-gold-drop-distance c:< map-size)
+=>
+;	(chat-local-to-self "Increasing max gold mining distance.")
+	;(set-strategic-number sn-gold-dropsite-distance -1) ;this strategic-number is PREFERRED, not max, so it should not be changed
+	(up-modify-sn sn-maximum-gold-drop-distance c:+ 1)
+)
+
+	;reset emergency max gold mining
+(defrule
+(or		(goal is-town-under-attack yes)
+(or		(strategic-number sn-maximum-gold-drop-distance c:> map-size) ;expansion bugged out, reset it
+(or		(goal GOLD-REMAINING no) ;if no gold left dont send vils to their death across the map for the last pile
+(and	(goal GOLD-REMAINING yes)
+(and	(unit-type-count villager >= min-vills) ;20
+(and	(unit-type-count villager-gold >= 1)
+(and	(strategic-number sn-gold-gatherer-percentage > 0)
+		(dropsite-min-distance gold s:<= sn-gold-dropsite-distance)))))))) ;gold gathering is restored ;5
+=>
+;	(chat-local-to-self "Resetting max gold mining distance.")
+	(set-strategic-number sn-gold-dropsite-distance 5)
+	(set-strategic-number sn-maximum-gold-drop-distance 25) ;default is 25 (see Jester.per main file)
+)
+
+	;emergency max stone mining 
+(defrule
+	(goal STONE-REMAINING yes)
+	(goal is-town-under-attack no)
+	(unit-type-count villager >= min-vills) ;20
+	(unit-type-count villager-stone < 1)
+	(strategic-number sn-stone-gatherer-percentage > 0)
+	(dropsite-min-distance stone s:>= sn-maximum-stone-drop-distance) ;25
+	(strategic-number sn-maximum-stone-drop-distance c:< map-size) ;max
+=>
+;	(chat-local-to-self "Increasing max stone mining distance.")
+	(up-modify-sn sn-maximum-stone-drop-distance c:+ 1)
+)
+
+	;reset emergency max stone mining
+(defrule
+(or		(goal is-town-under-attack yes)
+(or		(strategic-number sn-maximum-stone-drop-distance c:> map-size) ;expansion rule bugged out, reset it
+(or		(goal STONE-REMAINING no) ;if no stone left dont send vils to their death across the map for the last pile
+(and	(goal STONE-REMAINING yes)
+(and	(unit-type-count villager >= min-vills) ;20
+(and	(unit-type-count villager-stone >= 1)
+(and	(strategic-number sn-stone-gatherer-percentage > 0)
+		(dropsite-min-distance stone s:<= sn-stone-dropsite-distance)))))))) ;stone gathering is restored ;5
+=>
+;	(chat-local-to-self "Resetting max stone mining distance.")
+	(set-strategic-number sn-stone-dropsite-distance 5) ;default ;we want to prefer the closest stone-mine
+	(set-strategic-number sn-maximum-stone-drop-distance 25) ;default is 25 (see Jester.per main file)
+)
+
+;(defrule DISABLED FOR TESTING PURPOSES
+;   (building-type-count-total lumber-camp == 2)
+;   =>
+;   (set-strategic-number sn-maximum-wood-drop-distance 15)
+;   (disable-self)
+;)
+
+	;MILL RULES
+
+;preferred mill distance
+;0 = forage, 1 = deer, 2 = shore fish
+
+	;default mill (game-start)
+(defrule
+	(building-type-count-total mill <= 0)
+	(strategic-number sn-preferred-mill-placement != 0)
+=>
+	(set-strategic-number sn-preferred-mill-placement 0)
+	(disable-self))
+
+	;prefer fishing
+(defrule
+(up-gaia-type-count c: shore-fish-class > 4)
+(dropsite-min-distance food >= 5)
+(or	(unit-type-count male-forager < 1)
+(or	(unit-type-count female-forager < 1)
+(or	(unit-type-count male-hunter < 1)
+(or	(unit-type-count female-hunter < 1)
+(or	(building-type-count farm < 1)
+	(and	(building-type-count farm > 0)
+			(idle-farm-count <= 1)))))))
+	(strategic-number sn-preferred-mill-placement != 2)
+=>
+	(set-strategic-number sn-preferred-mill-placement 2))
+
+	;prefer berries/farms
+(defrule
+	(strategic-number sn-preferred-mill-placement != 0)
+(or	(unit-type-count male-forager > 0)
+(or	(unit-type-count female-forager > 0)
+	(and	(building-type-count farm > 0)
+			(idle-farm-count <= 1))))
+=>
+	(set-strategic-number sn-preferred-mill-placement 0))
+
+	;prefer hunting
+(defrule
+(or	(up-compare-goal boar-hunt == nomad-hunt)
+	(up-compare-goal boar-hunt == deer-hunt)); only consider these rules if we are following nomad hunting rules OR regular deer-hunting rules (due to general boar hunting)
+(or	(unit-type-count male-hunter > 1) ; minimal 2 males OR
+	(unit-type-count female-hunter > 1)) ; 2 females
+	(strategic-number sn-preferred-mill-placement != 1)
+=>
+	(set-strategic-number sn-preferred-mill-placement 1)
+	(up-modify-sn sn-mill-max-distance c:= 30) ;decent hunting distance
+)
+
+;MILL for sheep (gurjara-civ yes) ONLY
+(defrule
+	(goal gurjara-civ yes) ;GURJARA BUILDS MILL FIRST NOW FOR SHEEP
+	(up-object-type-count c: livestock-class >= 2) ;must be worthwhile
+	(resource-found food)
+	(building-type-count-total house >= 2)
+	(unit-type-count villager >= 8) ;at least some villagers and time to explore for bushes
+	(building-type-count town-center > 0)
+	(building-type-count-total mill < 1)
+	(can-build mill)
+=>
+	(build mill)
+)
+
+;MILL (NORMAL) (DRUSH no)
+(defrule
+	(goal DRUSH no)
+(or	(building-type-count-total house > 0)
+	(civ-selected hun))
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 8));ensures reliable wood supply
+   (building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0); Trying lumber-camp before mill now.
+		(unit-type-count-total mule-cart > 0)) ;NEW CIVS!!!
+   (building-type-count-total mill < 1)
+   (resource-found food)  
+   (can-build mill)
+=>
+	(chat-local-to-self "Normal mill.")
+	(set-strategic-number sn-allow-adjacent-dropsites 0)
+	(set-strategic-number sn-dropsite-separation-distance 8) ;6
+	(build mill))
+
+;MILL (NORMAL) (DRUSH yes)
+(defrule
+	(goal DRUSH yes)
+	(building-type-count-total barracks > 0)
+(or	(building-type-count-total house > 0)
+	(civ-selected hun))
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 8));ensures reliable wood supply
+	(building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(unit-type-count-total mule-cart > 0))
+	(building-type-count-total mill < 1)
+	(resource-found food)  
+	(can-build mill)
+=>
+	(chat-local-to-self "Drush mill.")
+	(set-strategic-number sn-allow-adjacent-dropsites 0)
+	(set-strategic-number sn-dropsite-separation-distance 10) ;6
+	(build mill))
+
+;2ND MILL (hunting)
+(defrule
+	(unit-type-count-total villager >= min-vills)
+	(building-type-count-total mill == 1)
+	(wood-amount > 275) ;must have sufficient wood to consider
+	;(dropsite-min-distance wood <= 7));ensures reliable wood supply
+(or		(building-type-count-total lumber-camp > 0)
+		(unit-type-count-total mule-cart > 0)) ;my ai isn't smart enough to utilize mule carts for hunting yet
+	(building-type-count town-center > 0)
+(or	(resource-found hunting)
+	(resource-found food))
+(or	(and	(dropsite-min-distance hunting >= 14)
+			(dropsite-min-distance hunting <= 38))
+(or	(and	(dropsite-min-distance boar-hunting >= 14)
+			(dropsite-min-distance boar-hunting <= 38))
+	(and	(dropsite-min-distance food >= 18)
+			(dropsite-min-distance food <= 38))))
+	(can-build mill)
+=>
+;	(chat-to-player my-player-number "Building a 2nd mill.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(set-strategic-number sn-dropsite-separation-distance 12) ;6
+	(build mill))
+
+;EMERGENCY MILL
+(defrule
+(or	(and	(goal DRUSH yes)
+			(building-type-count-total barracks > 0))
+	(and	(goal DRUSH no)
+		(current-age-time > 180))) ;150
+(or	(civ-selected hun)
+	(building-type-count house > 0))
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 8));ensures reliable wood supply
+(or	(sheep-and-forage-too-far)
+	(game-time > 600));MAX 10 MINUTES
+   (building-type-count town-center > 0)
+   (building-type-count-total mill < 1)
+   (can-build mill)
+=>
+	(chat-local-to-self "Building an emergency mill.")
+	(set-strategic-number sn-preferred-mill-placement 0); default for forage bush
+	(build mill)
+)
+
+;EMERGENCY MILL 2
+;(defrule
+;   (current-age-time > 250)
+;   (or (civ-selected hun)
+;   (building-type-count house > 0))
+;   (can-build mill)
+;   (building-type-count-total lumber-camp > 0) ; trying lumber camp before mill for now.
+;   (building-type-count-total town-center > 0)
+;   (building-type-count-total mill == 0)
+;=>
+;   (chat-local-to-self "Building an emergency mill.")
+;   (build mill)
+;)
+
+	;NEW Extra Farm Mills
+;Mill 2
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 1)
+	(building-type-count farm > 18)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 10)
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;Mill 3
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 2)
+	(building-type-count farm > 25)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 10) ;6
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;Mill 4
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 3)
+	(building-type-count farm > 40)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 10) ;6
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;Mill 5
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 4)
+	(building-type-count farm > 60)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 10) ;6
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;Mill 6
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 5)
+	(building-type-count farm > 80)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 8) ;6
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;Mill 7
+(defrule
+	(current-age-time > 60) ;any age (buffer)
+	(building-type-count-total mill == 6)
+	(building-type-count farm > 100)
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7));ensures reliable wood supply
+	(building-type-count town-center > 0)
+	(can-build mill)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 8) ;6
+	(up-modify-sn sn-mill-max-distance s:= sn-maximum-town-size)
+	(up-modify-sn sn-mill-max-distance c:+ 2)
+	(build mill)
+)
+
+;INCREASE MILL MAX DISTANCE (1)
+(defrule
+	(building-type-count mill == 1)
+	(strategic-number sn-mill-max-distance < 38)
+=>
+;	(chat-to-player my-player-number "mill-max-distance 25.")
+	(set-strategic-number sn-mill-max-distance 38) ;38
+	(disable-self)
+)
+	;mining-camp rules
+
+	;emergency mining-camp
+;	(defrule
+;	(unit-type-count villager > 19)
+;	(building-type-count-total mining-camp == 0)
+;	(strategic-number sn-mining-camp-max-distance < 50)
+;=>
+;	(chat-local-to-self "Mining camp distance 50.")
+;	(set-strategic-number sn-mining-camp-max-distance 50)
+;	(disable-self)
+;)
+
+
+		;MINING-CAMP BUILDINGS
+	;IGNORE IF Armenian or Georgian Civs (they get mule carts)
+(defrule
+(or	(goal armenian-civ yes)
+	(goal georgian-civ yes))
+=>
+	(up-jump-rule 4))	;start jump
+
+	;first mining-camp (gold)
+	(defrule
+(or	(and	(goal DRUSH yes)
+			(building-type-count-total barracks > 0))
+(or	(and	(goal DRUSH no)
+			(unit-type-count villager > 17))
+	(unit-type-count villager >= max-vill-pop)))
+	(resource-found gold)
+	(strategic-number sn-gold-gatherer-percentage > 0)
+	(up-pending-objects c: mining-camp < 1)
+	(building-type-count-total mining-camp < 1)
+	(building-type-count lumber-camp > 0);fully built
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 7)); to ensure wood is used for a new lumbercamp instead of wasted
+	(dropsite-min-distance gold s:< sn-mining-camp-max-distance)
+	(dropsite-min-distance gold c:< map-size)
+	(up-pending-objects c: mining-camp < 1) ;defer dropsite SN now in use
+	(can-build mining-camp)
+=>
+;	(chat-to-player my-player-number "Building first gold mining camp.")
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 1)
+	(build mining-camp)
+	;(disable-self) ;this may have caused a bug for first camp not getting built for a long time
+)
+	;main gold mining-camp
+	(defrule
+	(goal GOLD-REMAINING yes)
+	(up-gaia-type-count c: gold-mine > 0) 
+	(resource-found gold)
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 7))
+	(dropsite-min-distance gold >= 5)
+	(dropsite-min-distance gold s:< sn-mining-camp-max-distance)
+	(dropsite-min-distance gold c:< map-size)
+	(strategic-number sn-gold-gatherer-percentage > 0)
+	(building-type-count lumber-camp > 0)
+	(building-type-count town-center > 0)
+	(building-type-count mining-camp < 16)
+	(up-pending-objects c: mining-camp < 1) ;defer dropsite SN now in use
+	(can-build mining-camp)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 7) ;8
+	(build mining-camp)
+)
+	;main stone mining-camp
+	(defrule
+	(goal STONE-REMAINING yes)
+	(up-gaia-type-count c: stone-mine > 0) 
+	(resource-found stone)
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 7))
+	(dropsite-min-distance stone >= 5)
+	(dropsite-min-distance stone s:< sn-mining-camp-max-distance)
+	(dropsite-min-distance stone c:< map-size)
+	(strategic-number sn-stone-gatherer-percentage > 0);must want stone
+	(building-type-count lumber-camp > 0)
+	(building-type-count town-center > 0)
+	(building-type-count mining-camp > 0); gold camp first
+	(building-type-count mining-camp < 16)
+	(up-pending-objects c: mining-camp < 1) ;defer dropsite SN now in use
+	(can-build mining-camp)
+=>
+	(set-strategic-number sn-allow-adjacent-dropsites 1) ;0
+	(set-strategic-number sn-dropsite-separation-distance 7) ;8
+	(build mining-camp)
+)
+
+	;TRUSH FIX
+	(defrule
+	(goal TRUSH yes)
+	(goal is-town-under-attack no)
+	(unit-type-count-total villager >= min-vills)
+	(dropsite-min-distance stone s:< sn-mining-camp-max-distance)
+	(building-type-count-total mining-camp < 1)
+	(up-pending-objects c: mining-camp < 1) ;defer dropsite SN now in use
+	(can-build mining-camp)
+=>
+	(build mining-camp)
+); end jump (4)
+
+	;keep track of lumber and mining camp max distances!
+
+	;(1st pass) lumber-camp-max-distance
+;(defrule
+;	(strategic-number sn-lumber-camp-max-distance >= 14); minimum
+;	(strategic-number current-lumber-distance s:!= sn-lumber-camp-max-distance)
+;=>
+	;(up-get-fact sn-lumber-camp-max-distance 0 current-lumber-distance)) ;UP-GET-FACT DOES NOT WORK WITH SN'S, only goals!
+
+	;Track lumber distances
+(defrule
+	(strategic-number sn-lumber-camp-max-distance >= 14); minimum
+	(strategic-number current-lumber-distance s:!= sn-lumber-camp-max-distance)
+=>
+	(up-modify-goal current-lumber-distance s:= sn-lumber-camp-max-distance))
+
+	;mining-camp-max-distance
+;(defrule
+;	(strategic-number sn-mining-camp-max-distance >= 10); minimum
+;	(up-compare-goal current-mining-distance s:!= sn-mining-camp-max-distance)
+;=>
+;	(up-get-fact sn-mining-camp-max-distance 0 current-mining-distance))
+
+	;Track mining distances
+(defrule
+	(strategic-number sn-mining-camp-max-distance >= 10); minimum
+	(up-compare-goal current-mining-distance s:!= sn-mining-camp-max-distance)
+=>
+	(up-modify-goal current-mining-distance s:= sn-mining-camp-max-distance))
+
+	;GATHERING MICRO
+
+	;force drop food when in need of villagers
+	(defrule
+(not	(town-under-attack))
+	(goal feudal-pending no) ;not currently researching any ages
+	(goal castle-pending no)
+	(goal imperial-pending no)
+	(building-type-count town-center > 0)
+	(unit-type-count villager < high-res-vil-pop)
+	;(research-completed ri-loom)
+(or	(and	(up-pending-objects c: villager == 0) ;PANIK
+			(food-amount < 50))
+	(and	(up-pending-objects c: villager == 1) ;KALM
+	(and	(food-amount < 50)
+			(food-amount >= 25))))
+	=>
+	;(chat-local-to-self "Force dropping food for a villager.")
+	(up-drop-resources 949 c: 5)
+	(up-drop-resources 907 c: 5)
+	(up-drop-resources 910 c: 10))
+
+	;force drop food for feudal-age
+	(defrule
+	(current-age == dark-age)
+	(goal feudal-pending no)
+	(goal is-town-under-attack no)
+	(research-completed ri-loom)
+(or	(and	(goal FAST-CASTLE yes)
+		(unit-type-count-total villager >= 27)) ;default fast-castle vills
+	(and	(goal FAST-CASTLE no)
+		(unit-type-count-total villager >= 21))) ;default flush vills
+	(food-amount >= 450)
+	(food-amount < 500)
+=>
+	;(chat-local-to-self "Force dropping food for next age.")
+	(up-drop-resources 949 c: 5)
+	(up-drop-resources 907 c: 5)
+	(up-drop-resources 910 c: 10))
+
+	;force drop food for castle-age
+	(defrule
+	(goal castle-pending no)
+	(goal is-town-under-attack no)
+	(current-age == feudal-age)
+	(gold-amount >= 200)
+	(food-amount >= 750)
+	(food-amount < 800)
+=>
+	;(chat-local-to-self "Force dropping food for next age.")
+	(up-drop-resources 949 c: 5)
+	(up-drop-resources 907 c: 5)
+	(up-drop-resources 910 c: 10))
+
+	;force drop gold for castle-age
+	(defrule
+	(goal castle-pending no)
+	(goal is-town-under-attack no)
+	(current-age == feudal-age)
+	(gold-amount >= 175)
+	(gold-amount < 200)
+	(food-amount >= 750) ;very close
+=>
+	;(chat-local-to-self "Force dropping gold for next age.")
+	(up-drop-resources gold c: 5))
+
+	;force drop food for imperial-age
+	(defrule
+	(goal imperial-pending no)
+	(goal is-town-under-attack no)
+	(current-age == castle-age)
+	(gold-amount > 750)
+	(food-amount >= 950)
+	(food-amount < 1000)
+=>
+	(chat-local-to-self "Force dropping food for next age.")
+	(up-drop-resources 949 c: 7)
+	(up-drop-resources 907 c: 7)
+	(up-drop-resources 910 c: 15))
+
+	;force drop gold for imperial-age
+	(defrule
+	(goal imperial-pending no)
+	(goal is-town-under-attack no)
+	(current-age == castle-age)
+	(food-amount > 950)
+	(gold-amount >= 750)
+	(gold-amount < 800)
+=>
+	;(chat-local-to-self "Force dropping gold for next age.")
+	(up-drop-resources gold c: 7))
+
+	;force drop wood for most buildings
+(defrule
+	(unit-type-count-total villager >= min-vills)
+	(building-type-count town-center > 0)
+	(wood-amount < 175) ;for important buildings
+	(wood-amount >= 150)
+	(dropsite-min-distance wood <= 7) ;don't force drop if far drop distances
+=>
+	;(chat-local-to-self "Force dropping wood for buildings.")
+	(up-drop-resources wood c: 7)
+)
+
+	;force drop wood for town centers
+(defrule
+	(unit-type-count-total villager >= min-vills)
+(or	(and	(unit-type-count villager >= 75)
+	(and		(wood-amount < 275)
+				(wood-amount >= 200)))
+	(and	(unit-type-count villager < 75)
+	(and		(wood-amount < 275)
+				(wood-amount >= 230))))
+	(dropsite-min-distance wood <= 7) ;don't force drop if far drop distances
+=>
+	;(chat-local-to-self "Force dropping wood for a town center.")
+	(up-drop-resources wood c: 7)
+)
+	;force drop stone for castles
+(defrule
+	(unit-type-count-total villager >= min-vills)
+	(building-type-count town-center > 0)
+(or	(and	(not	(civ-selected frankish))
+	(and			(stone-amount < 650) ;for non-frank castles
+					(stone-amount >= 615)))
+	(and	(civ-selected frankish)
+	(and		(stone-amount < 488) ;for frank castles
+				(stone-amount >= 450))))			
+	(dropsite-min-distance stone <= 5) ;don't force drop if far drop distances
+=>
+	;(chat-local-to-self "Force dropping stone for a castle.")
+	(up-drop-resources stone c: 6)
+)
+
+	;TESTING
+
+	;task a villager to farms (DOESN'T WORK)
+;(defrule
+;	(unit-type-count villager-farmer < 2) ;cap
+;	(unit-type-count villager-forager > 5)
+;	(unit-type-count villager-builder < 1)
+;	(idle-farm-count > 0)
+;=>
+;	(chat-local-to-self "Retasking a forager to farming.")
+;	(up-retask-gatherers 907 c: 3))
+
+	;retask more villagers to wood (too many on food!) (DOESN'T WORK EITHER)
+;(defrule
+;	(unit-type-count villager <= 20);baseline
+;	(unit-type-count villager < max-vill-pop); don't interfere with low pop games
+;	(unit-type-count villager-hunter > 0); there are hunters present
+;	(unit-type-count villager-food >= 8); too many on food
+;	(unit-type-count villager-wood < 4); minimum required
+;	(unit-type-count villager-builder < 1); don't freak out when building stuff
+;	(strategic-number sn-food-gatherer-percentage > 60) ;minimum 60%
+;	(strategic-number sn-wood-gatherer-percentage < 40) ;maximum 40%
+;=>
+;	(chat-to-all "Tasking a food villager to wood.")
+;	(up-modify-sn sn-food-gatherer-percentage c:- 5)
+;	(up-modify-sn sn-wood-gatherer-percentage c:+ 5) ;change percentages until its balanced
+;	(up-retask-gatherers food c: 1)) ;give extra reason to quit being a turd
+
+
+;--------------------------------------------------start of main boar hunt rules----------------------------------------------------------------
+
+;as of May 3 patch, up-remaining-boar-amount == 65535 DOESNT WORK ANYMORE
+
+	;default initial hunting
+	(defrule
+	(true)
+=>
+	(set-strategic-number sn-enable-boar-hunting 0)
+	(set-strategic-number sn-minimum-number-hunters 0)
+	(set-strategic-number sn-minimum-boar-lure-group-size 0)
+	(set-strategic-number sn-minimum-boar-hunt-group-size 0)
+	(set-goal boar-hunt no);no is only used initially
+	(disable-self)
+)
+
+	;simple boar hunting rules
+
+	;capture boar (rule must be here to give one last chance of triggering another boar)
+(defrule
+	(goal boar-hunt capture)
+	(timer-triggered boar-timer)
+	(up-remaining-boar-amount < 340);currently eating a boar
+;(and	(dropsite-min-distance live-boar s:< sn-maximum-hunt-drop-distance); theres another boar we are not eating
+;(and	(dropsite-min-distance live-boar s:> 6);outside tc
+;	(up-remaining-boar-amount == 65535)))); no longer works in DE
+=>
+	(chat-local-to-self "Boar captured.")
+	(set-strategic-number sn-enable-boar-hunting 0);reset
+	(set-strategic-number sn-minimum-boar-lure-group-size 0)
+	(set-strategic-number sn-minimum-boar-hunt-group-size 0)
+	(set-strategic-number sn-minimum-number-hunters 0)
+	(set-goal boar-hunt no);restart process
+	(disable-timer boar-timer)
+)
+
+	;NOMAD no (1st rule)
+(defrule
+	(goal NOMAD no)
+	(goal boar-hunt no);initial goal
+	(unit-type-count villager >= 8) ;on vil 8 now
+(or	(up-remaining-boar-amount >= 340); just means NOT currently eating a boar
+	(up-remaining-boar-amount < 120)); get another boar lol
+	(dropsite-min-distance live-boar s:< sn-maximum-hunt-drop-distance)
+	(dropsite-min-distance live-boar > 3);outside tc range
+	(strategic-number sn-enable-boar-hunting != 2)
+=>
+	(chat-local-to-self "Hunting a boar.")
+	(set-goal boar-hunt lure)
+	(set-strategic-number sn-enable-boar-hunting 2)
+	(set-strategic-number sn-minimum-boar-lure-group-size 1)
+	(set-strategic-number sn-minimum-boar-hunt-group-size 1);none until boar is close
+	(set-strategic-number sn-minimum-number-hunters 1)
+	(up-request-hunters c: 1)
+	(up-retask-gatherers villager-food c: 2)); get someone to do something!
+
+
+(defrule
+	(goal boar-hunt lure)
+	(dropsite-min-distance live-boar <= 10);close enough
+	(strategic-number sn-enable-boar-hunting == 2)
+	(strategic-number sn-minimum-boar-hunt-group-size <= 7) ;min 7
+=>
+	(chat-local-to-self "Adding boar hunters.")
+	(up-modify-sn sn-minimum-boar-hunt-group-size c:= 7)
+	(up-modify-sn sn-minimum-number-hunters c:= 7)
+	(up-request-hunters c:= 7)
+	(up-retask-gatherers villager-food c: 7)
+	(set-goal boar-hunt capture)
+	(enable-timer boar-timer 12))
+
+(defrule
+	(up-compare-goal boar-hunt != nomad-hunt)
+	(up-compare-goal boar-hunt != deer-hunt)
+	(game-time > 180)
+	(unit-type-count villager > 10)
+	;(up-remaining-boar-amount == 65535) ;testing without
+	(building-type-count-total farm > 1)
+(not	(dropsite-min-distance live-boar s:< sn-maximum-hunt-drop-distance))
+	;(up-gaia-type-count c: live-boar < 1))
+	(strategic-number sn-enable-boar-hunting != 1)
+=>
+	(set-goal boar-hunt deer-hunt)
+)
+
+(defrule
+	(goal boar-hunt deer-hunt)
+	(strategic-number sn-enable-boar-hunting != 1)
+=>
+	;(chat-local-to-self "Disabling hunting restrictions.")
+	(set-strategic-number sn-enable-boar-hunting 1)
+	(set-strategic-number sn-minimum-boar-lure-group-size 1)
+	(set-strategic-number sn-minimum-boar-hunt-group-size 4)
+	(set-strategic-number sn-minimum-number-hunters 3));for deer
+
+	;FORCE no hunting restrictions after 15 minutes
+
+(defrule
+	(game-time > 600)
+	(up-compare-goal boar-hunt != deer-hunt)
+=>
+	;(chat-local-to-self "Force disabling hunting restrictions.")
+	(set-goal boar-hunt deer-hunt))
+
+	;NOMAD yes
+(defrule
+	(goal NOMAD yes)
+	(goal boar-hunt no)
+	(game-time > 300) ;minimum time to consider hunting & gathering sheep
+	(building-type-count town-center > 0)
+(or	(sheep-and-forage-too-far)
+(or	(and	(up-object-type-count c: livestock-class <= 1) ;last sheep or none remaining
+	(or		(building-type-count lumber-camp > 0); gives some time to find and prioritze sheep before hunting
+			(building-type-count-total mule-cart > 0)))
+	(current-age-time >= 540))) ;safety after 9 minutes
+=>
+	;(chat-local-to-self "Enabling Nomad hunting tactics.")
+	(set-goal boar-hunt nomad-hunt)
+	(disable-self)
+)
+
+(defrule
+	(goal NOMAD yes)
+	(goal boar-hunt nomad-hunt)
+(or	(strategic-number sn-enable-boar-hunting != 1)
+(or	(strategic-number sn-minimum-boar-lure-group-size != 1)
+	(strategic-number sn-minimum-boar-hunt-group-size != 4)))
+=>
+	(set-strategic-number sn-enable-boar-hunting 1)
+	(set-strategic-number sn-minimum-number-hunters 4);5
+	(set-strategic-number sn-minimum-boar-lure-group-size 1)
+	(set-strategic-number sn-minimum-boar-hunt-group-size 4)
+);don't disable
+
+;--------------------------------------------------end of main boar hunt rules----------------------------------------------------------------
+
+	;TOO MANY BOAR HUNTERS!!!
+(defrule
+	(strategic-number sn-enable-boar-hunting == 2)
+	(unit-type-count villager-hunter >= 10)
+=>
+	;(chat-local-to-self "Retasking boar hunters.")
+	(up-retask-gatherers 910 c: 2))
+
+	;too many foragers (aim for 5 max)
+;	(defrule
+;	(unit-type-count villager-forager > 5)
+;	(idle-farm-count > 0)
+;=>
+;	(chat-local-to-self "Retasking a forager to farming.")
+;	(up-retask-gatherers 907 c: 1)
+;)
+
+	;not enough deer hunters
+;(defrule
+;	(strategic-number sn-enable-boar-hunting == 1)
+;	(dropsite-min-distance deer-hunting s:< sn-maximum-hunt-drop-distance)
+;	(unit-type-count villager-hunter < 4)
+;	(unit-type-count villager-farmer > 3);retask from farmers
+;=>
+;	(chat-local-to-self "Retasking a farmer to hunting deer.")
+;	(up-retask-gatherers 949 c: 1)
+;)
+
+	;simple deer luring (wont be implementing anytime soon)
+;(defrule
+;	(goal NOMAD no)
+;	(goal deer-luring no)
+;	(game-time > 120)
+;	(unit-type-count villager > 6)
+;	(dropsite-min-distance s:< deer-hunting)
+;	(up-gaia-type-count c: 909 > 0)
+;=>
+;	(chat-local-to-self "Deer luring possible.")
+;	(set-goal deer-luring lure)
+;	(disable-self); only happens once
+;)
+
+;chat size numbers
+(defrule
+	(timer-triggered camp-size-timer)
+=>
+	(up-chat-data-to-player my-player-number "Town-size: %d." s: sn-maximum-town-size)
+	(up-chat-data-to-player my-player-number "Lumber-camp distance: %d." s: sn-lumber-camp-max-distance)
+	(up-chat-data-to-player my-player-number "Mining-camp distance: %d." s: sn-mining-camp-max-distance)
+	(up-delete-distant-farms c: 12); occasional farm delete check
+)
+
+;disable camp-size-timer
+(defrule
+	(timer-triggered camp-size-timer)
+=>
+	(disable-timer camp-size-timer)
+	(enable-timer camp-size-timer 360) ;every 6 minutes
+)
+
+;(defrule DISABLED FOR TESTING PURPOSES
+;   (building-type-count-total mining-camp > 0)
+;   (dropsite-min-distance gold <= 5)
+;   =>
+;   (set-strategic-number sn-gold-dropsite-distance -1)
+;   (set-strategic-number sn-stone-dropsite-distance -1)
+;   (disable-self)
+;)
+

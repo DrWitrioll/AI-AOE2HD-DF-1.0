@@ -1,0 +1,1336 @@
+
+	;Attacking rules for Jester.per , includes sn-focus-player & sn-target-player rules
+
+(defrule
+	(true)
+=>
+	(set-goal ATTACK no)
+	(set-goal EMERGENCY-ATTACK no)
+	(set-goal stop-attacking no)
+	(disable-self))
+
+	;miscellaneous sn's for attacking
+(defrule
+(or	(goal stop-attacking yes)
+(or	(goal ATTACK no)
+	(goal RETREAT yes)))
+(or	(strategic-number sn-percent-attack-soldiers != 0)
+(or	(strategic-number sn-percent-attack-boats != 0)
+(or	(strategic-number sn-number-attack-groups != 0)
+	(strategic-number sn-number-boat-attack-groups != 0))))
+=>
+	(up-modify-sn sn-percent-attack-soldiers c:= 0)
+	(up-modify-sn sn-percent-attack-boats c:= 0)
+	(up-modify-sn sn-number-attack-groups c:= 0)
+	(up-modify-sn sn-number-boat-attack-groups c:= 0)
+)
+
+	;stop-attacking = force no attacking
+(defrule
+(or	(goal stop-attacking yes)
+	(and	(goal EMERGENCY-ATTACK no)
+			(strategic-number sn-military-level <= -4)));suicide
+	(up-compare-goal ATTACK != no)
+=>
+	(chat-local-to-self "Forcing no attacking.")
+	(set-goal ATTACK no)
+)
+
+			;ATTACK RULES
+
+	;target-player-timer starting
+(defrule
+	(game-time > 30)
+=>
+	(enable-timer focus-player-timer 3) ;10 ;lowered to 3 as it was taking too long sometimes to update targets (especially for initial TC arrow dodging)
+	(chat-to-player my-player-number "Enabling focus-player timer.")
+	(disable-self))
+
+	;BACKUP focus-player rule
+(defrule
+	;(goal GL-FOCUS-PLAYER 3) ;this rule accounts for this
+	(up-compare-goal GL-FOCUS-PLAYER != 1)
+(not	(goal GL-FOCUS-PLAYER 0)) ;my-player-number
+	(game-time > 60) ;buffer time
+	(goal ENEMY-LOCATED yes) ;found initial enemy already
+(not	(player-in-game target-player)) ;current target is not in the game anymore
+	(players-building-count any-enemy > 0) ;enemy buildings left
+=>
+	(chat-local-to-self "INVALID TARGET PLAYER. Targeting closest enemy.")
+	(set-goal GL-FOCUS-PLAYER 1)
+)
+
+;DEFAULT ENABLE TARGET-PLAYER (closest-enemy)
+(defrule
+		(up-compare-goal GL-FOCUS-PLAYER != 1)
+(not	(goal GL-FOCUS-PLAYER 0)) ;my-player-number	;1 = closest enemy
+(not	(goal GL-FOCUS-PLAYER 2)) ;temp attacking player
+(not	(goal GL-FOCUS-PLAYER 3)) ;specific enemy player
+(not	(goal GL-FOCUS-PLAYER 4)) ;allies
+		(timer-triggered focus-player-timer)
+=>
+	(set-goal GL-FOCUS-PLAYER 1)
+)
+
+;ENABLE ATTACKING TARGET-PLAYER (attacking-enemy)
+(defrule
+	(up-compare-goal GL-FOCUS-PLAYER != 2)
+	(goal is-town-under-attack yes)
+=>
+	;(chat-local-to-self "Targeting attacking player.")
+	(set-goal GL-FOCUS-PLAYER 2)
+)
+
+;DISABLE ATTACKING TARGET-PLAYER (attacking-enemy)
+(defrule
+	(up-compare-goal GL-FOCUS-PLAYER != 1)
+	(goal GL-FOCUS-PLAYER 2)
+	(goal is-town-under-attack no)
+=>
+	;(chat-local-to-self "Attack is over, retargeting closest enemy.")
+	(set-goal GL-FOCUS-PLAYER 1)
+)
+;==========HELP OUR ALLIES==========	(WIP)
+
+	;deleted these rules because they would bug Jester out. Will be fixed in the future.
+
+
+	;CHECK IF ALLY NEEDS HELP
+;(defrule
+;	(up-compare-goal GL-FOCUS-PLAYER != 4)
+;	(up-allied-goal closest-ally-goal 11 == 1)		;common under-attack goal for AI's
+;	(goal is-town-under-attack no)
+;	(strategic-number sn-military-level > -4)
+;	(building-type-count town-center > 0)
+;	(unit-type-count-total villager > min-vills)
+;=>
+;	(do-nothing))
+
+
+
+
+	;ENABLE ALLY-HELP-TIMER
+;(defrule
+;	(goal GL-FOCUS-PLAYER 4)
+;	(up-timer-status ally-help-timer < timer-running) ;timer IS NOT currently running
+;=>
+;	(disable-timer ally-help-timer) ;safety
+;	(enable-timer ally-help-timer 15)
+;	(chat-to-allies "Enabling ally help timer.")
+;)
+
+	;DISABLE ALLY-HELP-TIMER
+;(defrule
+;	(up-compare-goal GL-FOCUS-PLAYER != 4)
+;	(up-timer-status ally-help-timer == timer-running) ;timer IS currently running
+;=>
+;	(disable-timer ally-help-timer)
+;	;(up-reset-attack-now) ;this makes military go idle?
+;)
+
+;ENABLE ALLY TARGET-PLAYER (for any human ally)
+;(defrule
+;(not	(goal GL-FOCUS-PLAYER 0)) ;my-player-number
+;(not	(goal GL-FOCUS-PLAYER 2)) ;attacking enemy overrides helping allies
+;	(up-compare-goal GL-FOCUS-PLAYER != 4)
+;	(strategic-number sn-military-level >= -3)
+;	(military-population >= 5)
+;	(building-type-count town-center > 0)
+;	(taunt-detected any-human-ally 48)
+;=>
+;	(set-goal GL-FOCUS-PLAYER 4)
+;)
+
+;SPECIAL TARGET-PLAYER (specific enemy taunt)
+	;not ready to target a specific enemy
+;player 1
+(defrule
+		(taunt-detected any-ally 61) ;we detect a specific taunt
+	(or	(player-number 1)
+	(or	(goal is-town-under-attack yes) ;targeting goes to attacking player
+	(or	(players-stance 1 ally) ;don't target allies perpetually
+	(or	(players-building-count 1 < 1) ;no targetable buildings
+	(or	(not	(player-in-game 1))
+		(up-timer-status focus-player-timer < timer-triggered)))))) ;disabled-timer
+=>
+	(acknowledge-taunt this-any-ally 61)
+	(chat-to-player this-any-ally specific-player-chat-no))	;using defconst chats saves alot of string chat slots!!!
+;player 2
+(defrule
+		(taunt-detected any-ally 62)
+	(or	(player-number 2)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 2 ally)
+	(or	(players-building-count 2 < 1)
+	(or	(not	(player-in-game 2))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 62)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 3
+(defrule
+		(taunt-detected any-ally 63)
+	(or	(player-number 3)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 3 ally)
+	(or	(players-building-count 3 < 1)
+	(or	(not	(player-in-game 3))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 63)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 4
+(defrule
+		(taunt-detected any-ally 64)
+	(or	(player-number 4)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 4 ally)
+	(or	(players-building-count 4 < 1)
+	(or	(not	(player-in-game 4))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 64)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 5
+(defrule
+		(taunt-detected any-ally 65)
+	(or	(player-number 5)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 5 ally)
+	(or	(players-building-count 5 < 1)
+	(or	(not	(player-in-game 5))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 65)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 6
+(defrule
+		(taunt-detected any-ally 66)
+	(or	(player-number 6)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 6 ally)
+	(or	(players-building-count 6 < 1)
+	(or	(not	(player-in-game 6))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 66)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 7
+(defrule
+		(taunt-detected any-ally 67)
+	(or	(player-number 7)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 7 ally)
+	(or	(players-building-count 7 < 1)
+	(or	(not	(player-in-game 7))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 67)
+	(chat-to-player this-any-ally specific-player-chat-no))
+;player 8
+(defrule
+		(taunt-detected any-ally 68)
+	(or	(player-number 8)
+	(or	(goal is-town-under-attack yes)
+	(or	(players-stance 8 ally)
+	(or	(players-building-count 8 < 1)
+	(or	(not	(player-in-game 8))
+		(up-timer-status focus-player-timer < timer-triggered))))))
+=>
+	(acknowledge-taunt this-any-ally 68)
+	(chat-to-player this-any-ally specific-player-chat-no))
+
+	;target specific-player YES (until (town-under-attack) or enemy is no longer in-game)
+;player 1
+(defrule
+	(taunt-detected any-ally 61)
+=>
+	(acknowledge-taunt this-any-ally 61)
+	(chat-to-allies specific-player-chat-yes) ;defconst chat strings saves alot of chat string slots for other uses!
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 1)
+	(set-strategic-number sn-focus-player-number 1))
+;player 2
+(defrule
+	(taunt-detected any-ally 62)
+=>
+	(acknowledge-taunt this-any-ally 62)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 2)
+	(set-strategic-number sn-focus-player-number 2))
+;player 3
+(defrule
+	(taunt-detected any-ally 63)
+=>
+	(acknowledge-taunt this-any-ally 63)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 3)
+	(set-strategic-number sn-focus-player-number 3))
+;player 4
+(defrule
+	(taunt-detected any-ally 64)
+=>
+	(acknowledge-taunt this-any-ally 64)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 4)
+	(set-strategic-number sn-focus-player-number 4))
+;player 5
+(defrule
+	(taunt-detected any-ally 65)
+=>
+	(acknowledge-taunt this-any-ally 65)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 5)
+	(set-strategic-number sn-focus-player-number 5))
+;player 6
+(defrule
+	(taunt-detected any-ally 66)
+=>
+	(acknowledge-taunt this-any-ally 66)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 6)
+	(set-strategic-number sn-focus-player-number 6))
+;player 7
+(defrule
+	(taunt-detected any-ally 67)
+=>
+	(acknowledge-taunt this-any-ally 67)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 7)
+	(set-strategic-number sn-focus-player-number 7))
+;player 8
+(defrule
+	(taunt-detected any-ally 68)
+=>
+	(acknowledge-taunt this-any-ally 68)
+	(chat-to-allies specific-player-chat-yes)
+	(set-goal GL-FOCUS-PLAYER 3)
+	(set-strategic-number sn-target-player-number 8)
+	(set-strategic-number sn-focus-player-number 8))
+
+	;RESET SPECIFIC-ENEMY TARGET-PLAYER
+(defrule
+	(up-compare-goal GL-FOCUS-PLAYER != 1)
+	(goal GL-FOCUS-PLAYER 3) ;specific-enemy
+(or	(goal is-town-under-attack yes)				;STOP targeting the taunted player if we are under attack OR,
+	(not	(player-in-game target-player)))	;the enemy has resigned or died
+=>
+	(set-goal GL-FOCUS-PLAYER 1)
+)	
+
+	;TARGET-PLAYER (my-player-number)
+(defrule
+	(goal GL-FOCUS-PLAYER 0)
+	(timer-triggered focus-player-timer)
+=>
+	;(up-modify-sn sn-target-player-number c:= my-player-number) ;we don't ever need to target ourselves, only enemies for attacking
+	(up-modify-sn sn-focus-player-number c:= my-player-number) 	;focus-player is for DUC & getting information about that player
+)
+
+	;TARGET-PLAYER (closest)
+(defrule
+	(goal GL-FOCUS-PLAYER 1)
+	(up-allied-goal every-ally 11 != 1)	;11 is general ai under-attack goal
+	(timer-triggered focus-player-timer)
+=>
+	(up-find-player enemy find-closest TARGET-ENEMY)
+	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY)
+	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+)
+
+	;TARGET-PLAYER (help allies)
+(defrule
+	(goal GL-FOCUS-PLAYER 1)
+	(up-allied-goal any-ally 11 == 1)	;11 is general ai under-attack goal
+	(timer-triggered focus-player-timer)
+=>
+	;(up-find-player enemy find-closest TARGET-ENEMY)
+	(up-modify-sn sn-target-player-number == -1) ;-1 is supposed to target allies for helping?
+	(up-modify-sn sn-focus-player-number == -1)
+)
+
+	;TARGET-PLAYER (attacking-enemy)
+(defrule
+	(goal GL-FOCUS-PLAYER 2)
+	(timer-triggered focus-player-timer)
+=>
+	(up-find-player enemy find-attacker TARGET-ENEMY)
+	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY)
+	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+)
+
+	;TARGET-PLAYER (specific taunt) ;this is already set-up when taunted, don't change the focus or target player
+;(defrule
+;	(goal GL-FOCUS-PLAYER 3)
+;	(timer-triggered focus-player-timer)
+;=>
+;	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY) ;should update specific player
+;	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+;)
+
+(defrule
+	(game-time > 30)	;safety
+	(goal ENEMY-LOCATED no) ;safety
+=>
+	(up-jump-rule 4)
+)
+
+	;FOCUS-PLAYER TIMER (not helping allies)
+(defrule
+	(game-time > 30) ;safety
+	(up-allied-goal every-ally 11 != 1)
+(or	(timer-triggered focus-player-timer)
+	(up-timer-status focus-player-timer < timer-running)) ;may have bugged out ;safety
+=>
+	;(chat-to-player my-player-number "Looping focus-player timer.")
+	(disable-timer focus-player-timer)
+	(enable-timer focus-player-timer 3)) ;10 ;the lower the better
+
+	;FOCUS-PLAYER TIMER (helping allies)
+(defrule
+	(game-time > 30) ;safety
+	(up-allied-goal any-ally 11 == 1)
+(or	(timer-triggered focus-player-timer)
+	(up-timer-status focus-player-timer < timer-running)) ;may have bugged out ;safety
+=>
+	;(chat-to-player my-player-number "Looping focus-player timer.")
+	(disable-timer focus-player-timer)
+	(enable-timer focus-player-timer 30)) ;sometime to help allies
+
+
+	;DEBUG FOCUS & TARGET-PLAYER RULES
+	;fix invalid focus-player
+(defrule
+	(game-time > 30)	;safety
+(or	(strategic-number sn-focus-player-number <= -2)	;only players 0 to 8 exists, -1 is for allies
+	(strategic-number sn-focus-player-number >= 9))
+=>
+	;(chat-to-player my-player-number "ERROR: focus-player does not exist. Debugging.")
+	(up-find-player enemy find-closest TARGET-ENEMY)	;default
+	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY)
+	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+)
+	;fix invalid-target-player
+(defrule
+	(game-time > 30)	;safety
+(or	(strategic-number sn-target-player-number <= -2)	;only players 0 to 8 exists, -1 is for allies
+	(strategic-number sn-target-player-number >= 9))
+=>
+	;(chat-to-player my-player-number "ERROR: target-player does not exist. Debugging.")
+	(up-find-player enemy find-closest TARGET-ENEMY)
+	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY)
+	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+)
+	;fix bugged closest-enemy target-player
+(defrule
+	(game-time > 30)	;safety
+	(goal GL-FOCUS-PLAYER 1)
+(or	(strategic-number sn-target-player-number == my-player-number)
+	(strategic-number sn-target-player-number == 0))
+=>
+	;(chat-to-player my-player-number "ERROR: invalid target-player. Debugging.")
+	(up-find-player enemy find-closest TARGET-ENEMY)
+	(up-modify-sn sn-target-player-number g:= TARGET-ENEMY)
+	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+)
+
+	;END OF FOCUS-PLAYER RULES
+
+;FOUND THE ENEMY
+(defrule
+	(goal ENEMY-LOCATED no); default goal
+	(players-building-count any-enemy > 0); testing 1 building but may change to more specific later, like a town-center
+=>
+	(chat-to-allies "An enemy has been located.")
+	(set-goal ENEMY-LOCATED yes)
+	(disable-self))
+
+;====================FIRST ATTACK====================
+
+	;drush
+(defrule
+	(current-age == dark-age)
+	(goal ATTACK no)
+	(goal ENEMY-LOCATED yes)
+	(goal DRUSH yes)
+	(goal stop-attacking no)
+	(strategic-number sn-military-level >= -3) ;don't attack if extremely outnumbered
+(or	(goal EMERGENCY-ATTACK yes); triggers if population is maxed out.
+	(soldier-count >= 3)); minimal 2 militia plus 1 scout (or 3 militia) to start attack
+=>
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby)
+	(chat-to-player my-player-number "Preparing an attack.")
+	(disable-self))
+
+	;flush
+(defrule
+	(current-age == feudal-age)
+	(building-type-count-total wonder < 1) ;unlikely but you never know these days!
+	;(up-compare-goal ATTACK != yes)
+	(goal ENEMY-LOCATED yes)
+	(goal FLUSH yes)
+	(goal stop-attacking no)
+	(strategic-number sn-military-level >= -2) ;don't attack if outnumbered
+(or	(goal EMERGENCY-ATTACK yes)
+	(soldier-count >= 5)) ;5
+=>
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby)
+	(chat-to-player my-player-number "Preparing an attack.")
+	(disable-self))
+
+	;castle-age attack
+	(defrule
+	(current-age == castle-age)
+	(building-type-count-total wonder < 1)
+	(goal ENEMY-LOCATED yes)
+	(goal stop-attacking no)
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= 2));3
+	(soldier-count >= 5)
+=>
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby)
+	(chat-to-player my-player-number "Preparing an attack.")
+	(disable-self)
+)
+	;imperial-age attack
+	(defrule
+	(current-age >= imperial-age)
+	(building-type-count-total wonder < 1)
+	(goal ENEMY-LOCATED yes)
+	(goal stop-attacking no)
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= 2))
+	(soldier-count >= 5)
+=>
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby)
+	(chat-to-player my-player-number "Preparing an attack.")
+	(disable-self)
+)
+
+;====================SPECIAL POCKET ATTACK RULES====================
+
+;castle-age FIRST attack only (POCKET)
+	(defrule
+	(current-age == castle-age)
+	(up-compare-goal WATER-MAP != separated) ;no rush on water-maps as pocket players
+	(building-type-count wonder < 1)
+	(goal ENEMY-LOCATED yes)
+	(goal stop-attacking no)
+	(goal position-goal pocket) ;pocket
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= -3)) ;pockets attack to help flanks, but should retreat if hugely outnumbered
+	(soldier-count >= 8) ;minimal 8 military though
+=>
+	(up-gather-inside c: barracks c: 0) ;just in case...
+	(up-gather-inside c: archery-range c: 0)
+	(up-gather-inside c: stable c: 0)
+	(up-gather-inside c: siege-workshop c: 0)
+	(up-gather-inside c: donjon c: 0)
+	(up-gather-inside c: krepost c: 0)
+	(up-gather-inside c: castle c: 0)
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(attack-now) ;this will force a 1 wave attack
+	(disable-self)
+)
+;imperial-age FIRST attack only (POCKET)
+	(defrule
+	(current-age >= imperial-age)
+	(up-compare-goal WATER-MAP != separated) ;no rush on water-maps as pocket players
+	(building-type-count wonder < 1)
+	(goal ENEMY-LOCATED yes)
+	(goal stop-attacking no)
+	(goal position-goal pocket) ;pocket
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= -3)) ;pockets attack to help flanks, but should retreat if hugely outnumbered
+	(soldier-count >= 8) ;minimal 8 military though
+=>
+	(up-gather-inside c: barracks c: 0) ;just in case...
+	(up-gather-inside c: archery-range c: 0)
+	(up-gather-inside c: stable c: 0)
+	(up-gather-inside c: siege-workshop c: 0)
+	(up-gather-inside c: donjon c: 0)
+	(up-gather-inside c: krepost c: 0)
+	(up-gather-inside c: castle c: 0)
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(attack-now) ;this will force a 1 wave attack
+	(disable-self)
+)
+;====================END OF SPECIAL POCKET ATTACK RULES====================
+
+;====================END OF FIRST ATTACK====================
+
+;====================STOP ATTACKING====================
+	;NEW Stop attacking (dark-age)
+(defrule
+	(current-age == dark-age) ;stop if:
+	(goal ATTACK yes) ;we were set to attack
+	(goal EMERGENCY-ATTACK no) ;we are NOT emergency attacking (maxed-out pop)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle > 0)) ;the enemy has a castle (we don't have siege to deal with it)
+(or	(goal stop-attacking yes); we've been told to stop attacking (taunt from ally)
+(or	(goal is-town-under-attack yes) ;we are under attack
+	(soldier-count <= 1)))) ;lost some soldiers
+=>
+	(chat-local-to-self "Disabling attacking.")
+	(set-goal attack-goal wait)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	;(up-reset-unit c: -1) ;was affecting trade units (they stop trading).
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+	;NEW Stop attacking (feudal-age)
+(defrule
+	(current-age == feudal-age) ;stop if:
+	(current-age-time > 260);safety for hopefully getting out first attack out
+	(goal ATTACK yes) ;we were set to attack
+	(goal EMERGENCY-ATTACK no) ;we are NOT emergency attacking (maxed-out pop)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle > 0)) ;the enemy has a castle (we don't have siege to deal with it)
+(or	(goal stop-attacking yes); we've been told to stop attacking (taunt from ally)
+(or (building-type-count-total wonder > 0) ;imagine xD
+(or	(goal is-town-under-attack yes)
+(or	(and	(soldier-count <= 3); low on military
+		(current-age-time > 260))
+	(strategic-number sn-military-level <= -1)))))) ;we are outnumbered.
+=>
+	(chat-to-player my-player-number "Disabling attacking.")
+	(set-goal attack-goal wait)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	;(up-reset-unit c: -1)
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+
+;Don't attack (feudal-age) level 2
+;	(defrule
+;	(current-age == feudal-age)
+;	(goal FLUSH yes) ;TAKE NOTE
+;	(goal ATTACK yes)
+;	(goal SIEGE-FOR-CASTLE no)
+;	(players-building-type-count target-player castle > 1)
+;(or	(and	(goal EMERGENCY-ATTACK yes)
+;	(or	(strategic-number sn-military-level <= -1);different than >= castle-age rule 1 rule below
+;		(military-population < 15)))
+;(or	(and	(goal EMERGENCY-ATTACK no)
+;	(strategic-number sn-military-level <= -2))
+;	(goal stop-attacking yes)))
+;=>
+;	(chat-to-player my-player-number "Retreating.")
+;	(disable-timer attack-timer)
+;	(set-goal attack-goal wait)
+;	(set-goal ATTACK no)
+;	(up-reset-unit c: -1)
+;	(up-retreat-now))
+
+	; NEW Stop attacking (>= castle-age) (FLANKS)
+(defrule
+	(current-age == castle-age) ;stop if:
+	(goal position-goal flank)
+	(goal ATTACK yes) ;we were set to attack
+	(goal EMERGENCY-ATTACK no) ;we are NOT emergency attacking (maxed-out pop)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle > 0)) ;the enemy has a castle and we don't have any siege to deal with it
+(or	(goal stop-attacking yes); we've been told to stop attacking (taunt from ally)
+(or	(strategic-number sn-military-level <= 0) ;we are outnumbered.
+(or	(soldier-count <= 5) ;too few
+(or	(building-type-count-total wonder > 0)
+	(goal is-town-under-attack yes)))))) ;we are under attack
+=>
+	(chat-to-player my-player-number "Disabling attacking.")
+	(set-goal attack-goal wait)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	;(up-reset-unit c: -1)
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+
+	; NEW Stop attacking (== imperial-age) (FLANKS)
+(defrule
+	(current-age >= imperial-age) ;stop if:
+	(goal position-goal flank)
+	(goal ATTACK yes) ;we were set to attack
+	(goal EMERGENCY-ATTACK no) ;we are NOT emergency attacking (maxed-out pop)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle > 0)) ;the enemy has a castle and we don't have any siege to deal with it
+(or	(goal stop-attacking yes); we've been told to stop attacking (taunt from ally)
+(or	(strategic-number sn-military-level <= -1) ;we are outnumbered.
+(or	(soldier-count <= 5) ;too few
+(or	(building-type-count-total wonder > 0)
+	(goal is-town-under-attack yes)))))) ;we are under attack
+=>
+	(chat-to-player my-player-number "Disabling attacking.")
+	(set-goal attack-goal wait)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	;(up-reset-unit c: -1)
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+	; NEW Stop attacking (>= castle-age) (POCKETS)
+(defrule
+	(current-age >= castle-age) ;stop if:
+	(goal position-goal pocket)
+	(goal ATTACK yes) ;we were set to attack
+	(goal EMERGENCY-ATTACK no) ;we are NOT emergency attacking (maxed-out pop)
+;(or	(and	(goal SIEGE-FOR-CASTLE no) ;we can dodge their arrows ;)
+;		(players-building-type-count target-player castle > 0))
+(or	(goal stop-attacking yes); we've been told to stop attacking (taunt from ally)
+(or	(strategic-number sn-military-level <= -4) ;we are completely outnumbered.
+(or	(soldier-count <= 3) ;we lost almost everyone
+(or	(building-type-count-total wonder > 0)
+	(goal is-town-under-attack yes))))) ;we are under attack
+=>
+	(chat-to-player my-player-number "Disabling attacking.")
+	(set-goal attack-goal wait)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	;(up-reset-unit c: -1)
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+;====================END OF STOP ATTACKING====================
+
+;====================PREPARE ATTACK====================
+
+	;prepare attack
+(defrule
+	(current-age <= feudal-age)
+	(goal ATTACK yes)
+	(goal attack-goal standby)
+;(or	(goal WATER-MAP no)
+;	(goal WATER-MAP connected))
+=> 
+	(set-strategic-number sn-group-form-distance 90) ;30
+	(set-strategic-number sn-attack-group-gather-spacing 10) ;20 ;testing
+	(set-strategic-number sn-maximum-attack-group-size 0) 
+	(set-strategic-number sn-minimum-attack-group-size 0) 
+	(set-strategic-number sn-number-attack-groups 0)
+	(set-strategic-number sn-number-boat-attack-groups 0)
+	(set-strategic-number sn-minimum-boat-attack-group-size 0)
+	(set-strategic-number sn-maximum-boat-attack-group-size 0)
+	(set-goal attack-goal offence);this goal does nothing. This keeps this rule from repeating itself a million times a second.
+	;(disable-timer attack-timer)
+	(enable-timer attack-timer 30)
+)
+
+	;prepare attack
+(defrule
+	(current-age >= castle-age)
+	(goal ATTACK yes)
+	(goal attack-goal standby)
+;(or	(goal WATER-MAP no)
+;	(goal WATER-MAP connected))
+=> 
+	(set-strategic-number sn-group-form-distance 90) ;60
+	(set-strategic-number sn-attack-group-gather-spacing 15) ;20 ;testing
+	(set-strategic-number sn-maximum-attack-group-size 0) 
+	(set-strategic-number sn-minimum-attack-group-size 0) 
+	(set-strategic-number sn-number-attack-groups 0)
+	(set-strategic-number sn-number-boat-attack-groups 0)
+	(set-strategic-number sn-minimum-boat-attack-group-size 0)
+	(set-strategic-number sn-maximum-boat-attack-group-size 0)
+	(set-goal attack-goal offence);This keeps this rule from repeating itself a million times a second.
+	;(disable-timer attack-timer)
+	(enable-timer attack-timer 30)
+)
+;====================END OF PREPARE ATTACK====================
+
+;====================ATTACK!====================
+	;LOW POP ATTACKS
+
+	(defrule
+	(current-age <= feudal-age)
+	(military-population <= 30)
+	(goal EMERGENCY-ATTACK no)
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+	;(unit-type-count transport-ship < 1)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500) ;100
+	(set-strategic-number sn-number-boat-attack-groups 500) ;100
+	(set-strategic-number sn-maximum-attack-group-size 40) ;10
+	(set-strategic-number sn-minimum-attack-group-size 40) ;1
+	(set-strategic-number sn-maximum-boat-attack-group-size 10) ;10
+	(set-strategic-number sn-minimum-boat-attack-group-size 10) ;1
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby) ;loops attacking
+)
+
+	(defrule
+	(current-age == castle-age)
+	(military-population <= 30)
+	(goal EMERGENCY-ATTACK no)
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+	;(unit-type-count transport-ship < 1)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500)
+	(set-strategic-number sn-number-boat-attack-groups 500)
+	(set-strategic-number sn-maximum-attack-group-size 40)
+	(set-strategic-number sn-minimum-attack-group-size 40)
+	(set-strategic-number sn-maximum-boat-attack-group-size 10)
+	(set-strategic-number sn-minimum-boat-attack-group-size 10)
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby)
+)
+
+	(defrule
+	(current-age >= imperial-age)
+	(military-population <= 30)
+	(goal EMERGENCY-ATTACK no)
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500)
+	(set-strategic-number sn-number-boat-attack-groups 500)
+	(set-strategic-number sn-maximum-attack-group-size 40) ;40
+	(set-strategic-number sn-minimum-attack-group-size 40) ;10
+	(set-strategic-number sn-maximum-boat-attack-group-size 10)
+	(set-strategic-number sn-minimum-boat-attack-group-size 10)
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby)
+)
+
+	;HIGH POP ATTACKS
+	(defrule
+	(current-age <= feudal-age)
+(or	(military-population > 30)
+	(goal EMERGENCY-ATTACK yes))
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+	;(unit-type-count transport-ship < 1)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500) ;100
+	(set-strategic-number sn-number-boat-attack-groups 500) ;100
+	(set-strategic-number sn-maximum-attack-group-size 5) ;40 ;all updated
+	(set-strategic-number sn-minimum-attack-group-size 5) ;40
+	(set-strategic-number sn-maximum-boat-attack-group-size 5) ;40
+	(set-strategic-number sn-minimum-boat-attack-group-size 5) ;40
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby) ;loops attacking
+)
+
+	(defrule
+	(current-age == castle-age)
+(or	(military-population > 30)
+	(goal EMERGENCY-ATTACK yes))
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+	;(unit-type-count transport-ship < 1)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500)
+	(set-strategic-number sn-number-boat-attack-groups 500)
+	(set-strategic-number sn-maximum-attack-group-size 5)
+	(set-strategic-number sn-minimum-attack-group-size 5)
+	(set-strategic-number sn-maximum-boat-attack-group-size 5)
+	(set-strategic-number sn-minimum-boat-attack-group-size 5)
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby)
+)
+
+	(defrule
+	(current-age >= imperial-age)
+(or	(military-population > 30)
+	(goal EMERGENCY-ATTACK yes))
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+(or	(goal WATER-MAP no)
+	(goal WATER-MAP connected))
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500)
+	(set-strategic-number sn-number-boat-attack-groups 500)
+	(set-strategic-number sn-maximum-attack-group-size 5)
+	(set-strategic-number sn-minimum-attack-group-size 5)
+	(set-strategic-number sn-maximum-boat-attack-group-size 5)
+	(set-strategic-number sn-minimum-boat-attack-group-size 5)
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby)
+)
+
+	;water attacks (pop doesn't matter)
+
+;WATER-MAP separated
+	(defrule
+	(current-age >= dark-age)
+	(goal ATTACK yes)
+	(goal attack-goal offence)
+	(goal WATER-MAP separated)
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Attacking.")
+	(set-strategic-number sn-percent-attack-soldiers 100)
+	(set-strategic-number sn-percent-attack-boats 100)
+	(set-strategic-number sn-number-attack-groups 500)
+	(set-strategic-number sn-number-boat-attack-groups 500)
+	(set-strategic-number sn-maximum-attack-group-size 5)
+	(set-strategic-number sn-minimum-attack-group-size 5)
+	(set-strategic-number sn-maximum-boat-attack-group-size 5)
+	(set-strategic-number sn-minimum-boat-attack-group-size 5)
+	;(attack-now)
+	(disable-timer attack-timer)
+	(set-goal attack-goal standby)
+)
+;====================END OF ATTACKING====================
+
+;====================RE-ENABLE ATTACKING====================
+
+	; NEW Re-enable attacking (feudal-age)
+	(defrule
+	(current-age == feudal-age)
+	(goal ENEMY-LOCATED yes) ;don't attack unless an enemy has been found
+	(building-type-count-total wonder < 1)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal stop-attacking no)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle < 1))
+		(goal SIEGE-FOR-CASTLE yes))
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= 2))
+	(soldier-count > 4); must have some soldiers
+=>
+	;(set-strategic-number sn-group-form-distance 40) ;30
+	(chat-to-player my-player-number "Prepping for an attack.")
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby)); preps attackers, just on standby. use "no" to disable attacking, use "standby and attack" when re-enabling attacking.
+	;(up-reset-unit c: -1)
+	;(up-retreat-now)) ;gathers units into town (only initially [not for looping]) ;removed - was causing too many bugs
+
+	; NEW Re-enable attacking (castle-age) (FLANKS)
+	(defrule
+	(current-age == castle-age)
+	(goal position-goal flank)
+	(goal ENEMY-LOCATED yes)
+	(building-type-count-total wonder < 1)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal stop-attacking no)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle < 1))
+		(goal SIEGE-FOR-CASTLE yes))
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= 2))
+	(soldier-count >= 10)
+=>
+	;(set-strategic-number sn-group-form-distance 40) ;30
+	(chat-to-player my-player-number "Prepping for an attack.")
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby))
+	;(up-reset-unit c: -1)
+	;(up-retreat-now)) ;removed - was causing too many bugs
+
+	;NEW Re-enable attacking (imperial-age) (FLANKS)
+	(defrule
+	(current-age >= imperial-age)
+	(goal position-goal flank)
+	(goal ENEMY-LOCATED yes)
+	(building-type-count-total wonder < 1)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal stop-attacking no)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle < 1))
+		(goal SIEGE-FOR-CASTLE yes))
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= 1));0
+	(soldier-count >= 10)
+=>
+	;(set-strategic-number sn-group-form-distance 40) ;30
+	(chat-to-player my-player-number "Prepping for an attack.")
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby))
+	;(up-reset-unit c: -1)
+	;(up-retreat-now))
+
+	; NEW Re-enable attacking (castle-age) (POCKETS)
+	(defrule
+	(current-age == castle-age)
+	(goal position-goal pocket)
+	(goal ENEMY-LOCATED yes)
+	(building-type-count-total wonder < 1)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal stop-attacking no)
+(or	(and	(goal SIEGE-FOR-CASTLE no) ;don't stop a current attack but don't start a new one if no siege for castle
+		(players-building-type-count target-player castle < 1))
+		(goal SIEGE-FOR-CASTLE yes))
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= -3)) ;go very aggressive
+	(soldier-count >= 10) ;minimal 10 soldiers to attack
+=>
+	;(set-strategic-number sn-group-form-distance 40) ;30
+	(chat-to-player my-player-number "Prepping for an attack.")
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby))
+	;(up-reset-unit c: -1)
+	;(up-retreat-now))
+
+	;NEW Re-enable attacking (imperial-age) (POCKETS)
+	(defrule
+	(current-age >= imperial-age)
+	(goal position-goal pocket)
+	(goal ENEMY-LOCATED yes)
+	(building-type-count-total wonder < 1)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal stop-attacking no)
+(or	(and	(goal SIEGE-FOR-CASTLE no)
+		(players-building-type-count target-player castle < 1))
+		(goal SIEGE-FOR-CASTLE yes))
+(or	(goal EMERGENCY-ATTACK yes)
+	(strategic-number sn-military-level >= -3)) ;go very aggressive
+	(soldier-count >= 10); don't retreat scout at beginning of the game.
+=>
+	;(set-strategic-number sn-group-form-distance 40) ;30
+	(chat-to-player my-player-number "Prepping for an attack.")
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby))
+	;(up-reset-unit c: -1)
+	;(up-retreat-now))
+
+
+; OLD Re-Enable Attacking
+;	(defrule
+;	(current-age == castle-age)
+;	(building-type-count wonder < 1)
+;	(goal ATTACK no)
+;	(goal is-town-under-attack no)
+;	(goal stop-attacking no)
+;(or	(and	(goal SIEGE-FOR-CASTLE no)
+;		(players-building-type-count target-player castle < 1))
+;		(goal SIEGE-FOR-CASTLE yes))
+;(or	(goal EMERGENCY-ATTACK yes)
+;	(strategic-number sn-military-level >= 2))
+;=>
+;	(set-goal ATTACK yes)
+;	(set-goal attack-goal standby))
+
+;OLD Re-Enable Attacking
+;	(defrule
+;	(current-age >= imperial-age)
+;	(building-type-count wonder < 1)
+;	(goal stop-attacking no)
+;(or	(and	(goal SIEGE-FOR-CASTLE no)
+;		(players-building-type-count target-player castle < 1))
+;		(goal SIEGE-FOR-CASTLE yes))
+;	(goal is-town-under-attack no)
+;(or	(goal ATTACK standby)
+;	(goal attack-goal wait))
+;(or	(goal EMERGENCY-ATTACK yes)
+;	(strategic-number sn-military-level >= 1))
+;=>
+;	(set-goal ATTACK yes)
+;	(set-goal attack-goal standby))
+
+;====================END OF RE-ENABLE ATTACKING====================
+
+;====================SPECIAL ATTACKING RULES====================
+
+;Rule 1: don't attack if we have a wonder
+	(defrule
+	(building-type-count wonder > 1)
+	(goal ATTACK yes)
+	(up-compare-goal stop-attacking != yes)
+=>
+	;(chat-to-allies "Defending my wonder.")
+	(set-goal IS-WONDER-ALIVE yes) ;just in case
+	(set-goal stop-attacking yes)
+	(set-goal ATTACK no)
+	(disable-timer attack-timer)
+	(set-goal attack-goal reset-attack) ; reset-attack does nothing so that the attack-goal doesnt trigger again.
+	(set-goal RETREAT yes)
+	(up-retreat-now)
+)
+
+;Rule 2: EMERGENCY-ATTACK, if population is maxed out (basically a stalemate).
+;Re-Enable Attacking
+	(defrule
+	(building-type-count wonder < 1)
+	(goal EMERGENCY-ATTACK no)
+	(population >= max-pop)
+	(goal stop-attacking no)
+=>
+	(chat-to-player my-player-number "Enabling emergency attacking.")
+	(set-goal EMERGENCY-ATTACK yes)
+	(set-goal ATTACK yes)
+	(set-goal attack-goal standby))
+
+;Disable EMERGENCY ATTACK
+(defrule
+	(goal EMERGENCY-ATTACK yes)
+(or	(and	(strategic-number sn-military-level <= -1) ;-2
+			(population < min-emergency-attack-pop)) ;allows time for attack to be successful
+(or	(goal stop-attacking yes)
+	(military-population <= 5))) ;7
+=>
+	(chat-to-player my-player-number "Canceling emergency attack.")
+	(set-goal EMERGENCY-ATTACK no)
+	(set-goal ATTACK no)
+	(set-goal RETREAT yes)
+	(up-retreat-now) ;extra needed most times
+	(disable-timer attack-timer))
+
+;Rule 3: RESUME ATTACK GOAL IF WONDER IS DESTROYED
+(defrule
+(goal IS-WONDER-ALIVE yes)
+(building-type-count wonder < 1)
+=>
+(chat-to-player my-player-number "26 The wonder has been destroyed! Resetting attack rules!")
+(set-goal stop-attacking no) ;safety
+(set-goal IS-WONDER-ALIVE no)
+(set-goal ATTACK yes)
+(set-goal attack-goal standby))
+
+;Rule 4: special attack types ;thanks Gandalf!
+	;SPECIAL TARGETING ORDER
+	;SECTION 1: NO SIEGE
+(defrule
+	(unit-type-count armored-elephant-line < 1) ;NEW
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1) ;includes houfnice?
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 wonder) ;priority always
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager > 0) ;once wonders are dead, go for all villagers
+=>
+	(set-strategic-number sn-special-attack-type2 villager);this one line makes more difference than you would ever dream, early on.
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1) ;wonders are the priority
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center > 0) ;once villagers are dead then town-centers, and so on (rules below)
+=>
+	(set-strategic-number sn-special-attack-type2 town-center)
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-building-type-count target-player monastery > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 monastery)
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-building-type-count target-player monastery < 1)
+	(players-building-type-count target-player lumber-camp > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 lumber-camp)
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-building-type-count target-player monastery < 1)
+	(players-building-type-count target-player lumber-camp < 1)
+	(players-building-type-count target-player mining-camp > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 mining-camp)
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-building-type-count target-player monastery < 1)
+	(players-building-type-count target-player lumber-camp < 1)
+	(players-building-type-count target-player mining-camp < 1)
+	(players-building-type-count target-player mule-cart > 0) ;NEW ;this is a building
+=>
+	(set-strategic-number sn-special-attack-type2 mule-cart)
+)
+
+(defrule
+	(unit-type-count armored-elephant-line < 1)
+	(unit-type-count battering-ram-line < 1)
+	(unit-type-count bombard-cannon-line < 1)
+	(unit-type-count trebuchet-set < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-unit-type-count target-player villager < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-building-type-count target-player monastery < 1)
+	(players-building-type-count target-player lumber-camp < 1)
+	(players-building-type-count target-player mining-camp < 1)
+	(players-building-type-count target-player mule-cart < 1)
+	(players-building-type-count target-player castle > 0) ;castle is last because we have no siege in these rules (siege rules order below)
+=>
+	(set-strategic-number sn-special-attack-type2 castle)
+)
+
+	;SECTION 2: HAVE SIEGE
+	;prioritize enemy wonder
+(defrule
+	(or (unit-type-count armored-elephant-line > 0) ;NEW
+	(or	(unit-type-count battering-ram-line > 0)
+	(or	(unit-type-count bombard-cannon-line > 0)
+		(unit-type-count trebuchet-set > 0))))
+	(players-building-type-count target-player wonder > 0) ;wonders are top priority
+=>
+	(set-strategic-number sn-special-attack-type2 wonder)
+)
+	;prioritize enemy castles
+(defrule
+	(or (unit-type-count armored-elephant-line > 0)
+	(or	(unit-type-count battering-ram-line > 0)
+	(or	(unit-type-count bombard-cannon-line > 0)
+		(unit-type-count trebuchet-set > 0))))
+	(players-building-type-count target-player wonder < 1)
+	(players-building-type-count target-player castle > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 castle)
+)
+	;prioritize enemy town-centers
+(defrule
+	(or (unit-type-count armored-elephant-line > 0)
+	(or	(unit-type-count battering-ram-line > 0)
+	(or	(unit-type-count bombard-cannon-line > 0)
+		(unit-type-count trebuchet-set > 0))))
+	(players-building-type-count target-player wonder < 1)
+	(players-building-type-count target-player castle < 1)
+	(players-building-type-count target-player town-center > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 town-center)
+)
+	;prioritize enemy villagers
+(defrule
+	(or (unit-type-count armored-elephant-line > 0)
+	(or	(unit-type-count battering-ram-line > 0)
+	(or	(unit-type-count bombard-cannon-line > 0)
+		(unit-type-count trebuchet-set > 0))))
+	(players-building-type-count target-player castle < 1)
+	(players-building-type-count target-player wonder < 1)
+	(players-building-type-count target-player town-center < 1)
+	(players-unit-type-count target-player villager > 0)
+=>
+	(set-strategic-number sn-special-attack-type2 villager)
+)
+
+;====================END OF SPECIAL ATTACKING RULES====================
+
+;====================ATTACK TIMER====================
+
+	;attack == no
+(defrule
+(or	(goal ATTACK no)
+	(goal stop-attacking yes))
+	(up-timer-status attack-timer == timer-running) ;active timer
+=>
+	(chat-local-to-self "Disabling attack timer.")
+	(disable-timer attack-timer)
+)
+
+	;attack == yes (loop rule)
+(defrule
+	(goal ATTACK yes)
+	(goal stop-attacking no)
+	(timer-triggered attack-timer)
+=>
+	(chat-local-to-self "Normal attack timer.")
+	(disable-timer attack-timer)
+	(enable-timer attack-timer 30)
+)
+
+	;safety enable
+(defrule
+	(goal ATTACK yes)
+	(goal stop-attacking no)
+	(up-timer-status attack-timer < timer-running) ;disabled timer
+=>
+	(chat-local-to-self "Looping attack timer.")
+	(enable-timer attack-timer 30)
+)
+;====================END OF ATTACK TIMER====================
+
+	;END OF ATTACKING RULES
+
+

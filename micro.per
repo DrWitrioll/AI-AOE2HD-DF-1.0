@@ -1,0 +1,1599 @@
+
+	;Unit micro for Jester (direct unit control - DUC file)
+;
+;=========IMPORTANT INFORMATION ABOUT DUC:
+;
+; 	"search-local" store objects we want to control. MAX: 240 items. ONLY the ai itself.
+;	use "up-find-local" with search-local
+; 	"search-remote" stores objects we want to target. MAX: 40 items. Can be any player including the ai itself.
+;	use "up-find-remote" with search-remote
+;
+;	All "point goals" values must be greater-than 40
+;
+; I am a beginner with DUC in ai, so only basic DUC has been added to limit ai breaking errors.
+
+;NOTE: gl-temp-state is a split rule goal. So every micro rule has its own goal. REMEMBER THIS SCREAMING!
+
+;GET INTIAL POSITIONS ON THE MAP (other rules will update these later)
+(defrule
+	(game-time > 30)						;safety
+	(building-type-count town-center > 0)	;safety
+	(unit-type-count villager > 0)			;safety
+=>
+	(up-full-reset-search)
+	(up-get-point position-center gl-position-center-x)		;store the map-center
+	(up-get-point position-self gl-position-self-x)			;store our home TC position & use another point goal for lerping tiles later
+	(up-get-point position-corner gl-position-corner-x)		;for market-placement or other corner activities
+	(disable-self)
+	;(up-get-point position-map-size gl-point-x) ;for later
+)
+
+	;enable temp-timer to be used for resetting military attack stance
+(defrule
+	(game-time > 30)
+	(goal sheep-micro no)
+	(building-type-count town-center > 0)
+	(up-timer-status attack-timer < timer-running) ;timer disabled or not running
+=>
+	(enable-timer temp-timer 10) ;10 seconds to prevent lag & units getting stuck at the border when retreating to town ;15 seconds for looping
+	(disable-self)
+)
+
+;==========SCOUT MICRO==========
+
+	;set scouting unit stance to no-attack
+(defrule
+	(game-time < 360)
+	(unit-type-count scout-unit > 0) ;should be no duc leaks
+=>
+	(up-full-reset-search)
+	(up-find-local c: scout-unit c: 1)
+	(up-target-objects 0 action-default -1 stance-no-attack)		;no-attack prevents Jester from attacking buildings after retreating from tc or other fortifications.
+	(disable-self))
+
+	;NEW reset scouting unit stance to defensive
+(defrule
+	(goal is-town-under-attack yes)
+(or	(up-enemy-units-in-town > 1)
+	(enemy-buildings-in-town))
+	(unit-type-count scout-unit > 0)
+=>
+	(up-full-reset-search)
+	(up-find-local c: scout-unit c: 1)
+	(up-target-objects 0 action-default -1 stance-defensive)
+	(disable-self))
+
+;==========Make Scout Gather Sheep==========
+
+(defrule
+	;IF:													;===the following are conditions===
+	(game-time <= 1000) 									;only execute before 1000 game seconds
+	(unit-type-count scout-unit > 0) 						;we have 1 scout-cavalry, eagle-scout, or camel-scout (defined in constants.per file)
+	(building-type-count town-center > 0)					;we have at least 1 built town center still alive
+	(up-gaia-type-count c: livestock-class > 0) 			;we currently see at least 1 alive livestock
+=>	;THEN:													;===the following are actions if the conditions are met===
+	(up-full-reset-search)									;reset (or clear) all search and filters for new micro (prevents DUC leaks from affecting other DUC rules)
+	(up-find-local c: scout-unit c: 1) 						;find our scout-unit (scout cavalry, eagle warrior, or camel-line from before)
+	(up-get-search-state gl-local-total) 					;store search state information (1 scout unit in results)
+	(set-goal gl-temp-state 1)								;update our temp-state goal for further progression to next rule below (prevents DUC leaks)
+)
+
+(defrule
+	(game-time <= 1000)										;only execute before 1000 game seconds
+	(goal gl-temp-state 1)									;our temporary goal set from before that allows us to progress
+	(unit-type-count scout-unit > 0)						;our scout unit is still alive
+	(building-type-count town-center > 0)					;we have at least 1 built town center still alive
+	(up-compare-goal gl-local-total c:== 1) 				;we have found our scout
+	(up-gaia-type-count c: livestock-class > 0)				;we have spotted an alive gaia-owned livestock-class in our sights
+=> 
+	(up-set-target-object search-local c: 0) 				;set-up our scout for DUC (0 is the first unit in the list found, 1 would be 2, 2 would be 3 and so on)
+	(up-get-point position-object gl-fort-point1-x)			;find the point the scout is in our X and Y coordinates value on the map
+	(up-set-target-point gl-fort-point1-x) 					;target the point the scout is located on the map
+	(up-filter-distance c: -1 c: 30) 						;set up a distance filter to only find objects up to 30 tiles away from our scout (in this case, livestock)
+	(up-modify-sn sn-focus-player-number s:= gaia)			;with up-find-remote coming up next, we will focus on gaia as we want to find sheep not owned by any other players
+	(up-find-remote c: livestock-class c: 1) 				;search for the first sheep owned by gaia (with the filter on)
+	(up-target-objects 0 action-move -1 stance-no-attack) 	;send our scout to the first sheep found in the results
+	(up-full-reset-search) 									;clear filters and search results (so future micro is not affected)
+	;(chat-local-to-self "I am a micro god for sheep!") 	;confirmation message for debugging purposes (to see if the rule is working correctly)
+)
+
+;==========Make Shepherds Focus on 1 Sheep at a Time========== ;TESTING WIP
+;(defrule
+;	(game-time < 1000)
+;	(unit-type-count villager-shepherd >= 1)
+;	(up-object-type-count c: livestock-class >= 1)
+;	(building-type-count town-center == 1) ;for now to prevent villagers walking to other town-centers
+;=>
+;	(up-full-reset-search)
+;	(up-find-local c: villager-class c: 40)
+;	(up-clean-search search-local -1 search-order-asc) ;oldest to newest villagers
+;	(up-remove-objects search-local object-data-gather-type != food) ;only find food villagers
+;	(up-get-search-state gl-local-total)
+;	(set-goal gl-temp-state ?)
+;)
+;(defrule
+;	(goal gl-temp-state ?)
+;	(up-compare-goal gl-local-total >= 1) ;at least 1 shepherd found
+;	(game-time < 1000)
+;	(unit-type-count villager-shepherd >= 1)
+;	(up-object-type-count c: livestock-class >= 1)
+;	(building-type-count town-center == 1)
+;=>
+;	(up-modify-sn sn-focus-player-number s:= my-player-number) ;focus on finding sheep we own
+;	(up-find-remote c: livestock-class c: 40)
+;	(up-clean-search search-remote -1 search-order-asc) ;sort from oldest to newest sheep
+;	(up-get-search-state gl-remote-total)
+;	(up-set-target-object search-remote c: 0)
+;	(up-target-objects 0 action-default -1 -1)
+;)
+
+;==========END OF SCOUT MICRO==========
+
+	;NEW TESTING TECHNIQUES
+
+;==========GATHER VILS INSIDE TC IF ENEMY WITHIN RANGE==========
+;rules here
+
+;==========;enable sheep-micro goal==========
+(defrule
+	(goal NOMAD yes)
+	(goal sheep-micro no)
+	(building-type-count town-center > 0)
+	(up-object-type-count c: livestock-class > 0)
+=>
+	;(chat-local-to-self "Enabling sheep-micro.")
+	(enable-timer temp-timer 10)
+	(set-goal sheep-micro yes)
+	(set-goal GL-FOCUS-PLAYER 0) ;my-player-number
+	(set-goal DODGE-ARROWS no)
+	(disable-self)
+)
+
+;==========;NOMAD sheep-micro==========
+	;GET HOME TC POSITION
+(defrule
+	(goal sheep-micro yes)
+	;(timer-triggered temp-timer)
+	(building-type-count town-center > 0)							;any number of town-centers because we set the point of our home tc (oldest built or first built one)
+	(up-object-type-count c: livestock-class > 0)
+=>
+	;(chat-local-to-self "Rule 1.")
+	(up-reset-search 1 1 1 1)
+	(up-reset-filters)
+	;(set-strategic-number sn-focus-player-number my-player-number)	;make sure we are only finding units owned by us (for remote-search)
+	(up-find-local c: town-center c: 10)
+	(up-clean-search search-local -1 search-order-asc)				;sort the search-local results from the oldest TC built as the first result 
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 2) ;all DUC rules use their own values! NEVER CROSS THEM TOGETHER ;this is like a split-rule-goal
+)
+
+(defrule
+	(goal sheep-micro yes)
+	(goal gl-temp-state 2)
+	;(timer-triggered temp-timer)
+	(up-compare-goal gl-local-total > 0)
+	(building-type-count town-center > 0)
+	(up-object-type-count c: livestock-class > 0)
+	(up-set-target-object search-local c: 0)			;since we sorted from oldest to newest search-local results, set the target as our oldest built tc, therefore our home town-center
+=>
+	;(chat-local-to-self "Rule 2.")
+	(up-get-point position-object gl-fort-point1-x)			;store gl-point-x of the TC for lerping later
+	(up-set-target-point gl-fort-point1-x)					;got the home TC position
+	(set-goal gl-temp-state 3);split rule goal
+)
+
+(defrule
+	(goal sheep-micro yes)
+	(goal gl-temp-state 3)
+	(building-type-count town-center > 0)
+	(up-object-type-count c: livestock-class > 0)
+	(timer-triggered temp-timer)
+=>
+	;(chat-local-to-self "Rule 3.")
+	(up-filter-distance c: 7 c: -1) 								;this filter will only find new search-local results (sheep) if they are MORE THAN 7 tiles away from the tc using gl-fort-point1-x
+	(up-filter-exclude -1 -1 -1 904)								;not really needed to filter out villager-class
+	(up-reset-search 1 1 1 1)										;remove the town-center from the search-local list
+	(up-find-local c: livestock-class c: 20) 						;find up to 20 livestock at once outside the filter-distance parameters (7 tiles)
+	(up-clean-search search-local -1 search-order-asc) 				;sort results from oldest to newest (so the first sheep found will be first in the list)
+	(up-cross-tiles gl-fort-point1-x gl-position-center-x c: 3)		;this works better than lerp-tiles in this specific situation
+	;(up-lerp-tiles gl-fort-point1-x gl-position-center-x c: -3) 	;on nomad games we can shift the point position at the TC away a few tiles using the map center as a point of reference so sheep don't bunch touching the TC
+	(up-set-target-point gl-fort-point1-x)
+	(up-target-point gl-fort-point1-x action-move -1 -1)
+)
+
+;disable sheep-micro goal
+(defrule
+		(game-time > 240) ;min time to consider cancelling
+		(up-compare-goal sheep-micro != no)
+(or	(and	(unit-type-count villager > 10)				
+			(up-pending-objects c: villager > 0))		;indicates we have a tc & actively creating villagers
+	(up-object-type-count c: livestock-class <= 2))	
+=>
+	(chat-local-to-self "Disabling sheep-micro.")
+	(set-goal sheep-micro no)
+	(set-goal GL-FOCUS-PLAYER 1) ;this is an early game thing so we need to manually reset our default focus & target player to the closest enemy
+	(disable-timer temp-timer)
+	(disable-self)
+)
+
+(defrule
+	(goal sheep-micro yes)
+	(timer-triggered temp-timer);use for sheep timer
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 10) ;15
+)
+
+
+	;CORNER MARKETS (part 1) - set-up corner position
+(defrule
+	(goal REACTIVE-GATHERING no)									;don't attempt this market rule if we are trying to rebuild
+	(up-compare-goal WATER-MAP == no)								;only land maps for now
+(or	(player-in-game any-ally) 										;a currently alive ally
+	(players-building-type-count any-ally market > 0))				;OR if they are dead we can trade with their market
+	(unit-type-count villager > min-vills)							;don't waste resources with low villagers
+	(building-type-count town-center >= 3)							;must have 3 tc's minimal
+	(building-type-count-total market < 6)							;don't build endless markets if it bugs out
+	(wood-amount > 700)												;don't affect other needed buildings earlier on
+	(up-pending-objects c: market < 1)								;only 1 attempt at a time
+	(up-can-build 0 c: market)										;can build with no escrow
+=>
+	;(chat-to-all "Attempting to build corner market.")
+	(up-full-reset-search)
+	(up-get-point position-corner gl-position-corner-x)				;refresh the tile at position-corner
+	(up-bound-point gl-position-corner-x gl-position-corner-x)		;make sure the point is not outside of the map bounds
+	(up-copy-point building-point-x gl-position-corner-x)			;copy from the bounded position-corner point into our own building point
+	(up-lerp-tiles building-point-x gl-position-center-x c: 5)		;shift the position from the far corner towards the map-center by 5 tiles
+	(up-set-target-point building-point-x)							;target the point for other rules to check if its reachable
+	(set-goal gl-temp-state 23)
+)
+; (part 2) - target corner
+(defrule
+	(goal REACTIVE-GATHERING no)									;don't attempt this market rule if we are trying to rebuild
+	(up-compare-goal WATER-MAP == no)								;only land maps for now
+(or	(player-in-game any-ally) 										;a currently alive ally
+	(players-building-type-count any-ally market > 0))				;OR if they are dead we can trade with their market
+	(unit-type-count villager > min-vills)							;don't waste resources with low villagers
+	(building-type-count town-center >= 3)							;must have 3 tc's minimal
+	(building-type-count-total market < 6)							;don't build endless markets if it bugs out
+	(wood-amount > 700)												;don't affect other needed buildings earlier on
+	(up-pending-objects c: market < 1)								;only 1 attempt at a time
+	(goal gl-temp-state 23)
+;(not	(up-point-contains gl-position-corner-x c: tree-class))		;might not be needed?
+(not	(up-point-contains building-point-x c: market))				;this only turns true if the exact center tile of the building is actually on top of the point
+	(up-point-explored building-point-x != explored-no)				;this means the point has been explored in the past or can currently be seen (same as == explored-yes OR == explored-active)
+	(up-path-distance building-point-x 0 != 65535)  				;this makes sure the corner point can be pathed to
+	(up-can-build 0 c: market)										;can build with no escrow
+=>
+	;(chat-to-all "Attempting to build corner market.")
+	(up-assign-builders c: market c: 1)								;1 builder needed only
+	(up-build place-point 0 c: market)								;build the market without escrow on the point targeted in the rule previous
+)
+
+
+;====================stop villager training to research feudal-age==================== ;NOT WORKING
+;(defrule
+;	(current-age == dark-age)
+;	(goal feudal-pending no)
+;	(building-type-count town-center > 0)
+;	(building-type-count mill > 0) ;must
+;(or	(civ-selected khmer)
+;(or	(building-type-count lumber-camp > 0)
+;(or	(building-type-count mule-cart > 0)
+;(or	(building-type-count barracks > 0)
+;	(building-type-count dock > 0)))))
+;(or	(and	(goal FLUSH yes)
+;			(unit-type-count villager >= 22)) ;safety ;not worried about low-pop games for this rule
+;	(and	(goal FLUSH no)
+;			(unit-type-count villager >= 28))) ;safety
+;	(food-amount >= 500) ;safety
+;	(can-research feudal-age)
+;	(up-pending-objects c: villager-class >= 1)
+;=>
+;	(up-full-reset-search)
+;	(up-find-local c: town-center c: 1)
+;	(up-set-target-object search-local c: 0)
+;	(up-target-objects 0 action-stop -1 -1)
+;	(chat-local-to-self "Cancelling villager training for age up.")
+;)
+;
+;stop villager training to research castle-age
+;(defrule
+;	(current-age == feudal-age)
+;	(goal castle-pending no)
+;	(building-type-count town-center > 0)
+;	(food-amount >= 800) ;safety
+;	(gold-amount >= 200) ;safety
+;	(can-research castle-age)
+;(or	(civ-selected khmer) ;doesn't need buildings for advancing
+;(and	(building-type-count blacksmith > 0)
+;			(or	(building-type-count market > 0)
+;				(or	(building-type-count archery-range > 0)
+;						(building-type-count stable > 0)))))
+;	(unit-type-count villager >= 30) ;not worried about low-pop games here
+;	(up-pending-objects c: villager-class >= 1)
+;=>
+;	(up-full-reset-search)
+;	(up-find-local c: town-center c: 1)
+;	(up-set-target-object search-local c: 0)
+;	(up-target-objects 0 action-stop -1 -1)
+;	(chat-local-to-self "Cancelling villager training for age up.")
+;)
+
+;==========RETASK 1ST GEORGIAN MULE-CART TO A FOREST==========
+(defrule
+	(game-time > 120)								;enough time to find a forest
+	(building-type-count town-center > 0)
+	(unit-type-count villager >= 3)					;we are on track for a normal game
+	(goal georgian-civ yes)							;only georgians start the game with a free mule-cart
+	(building-type-count mule-cart > 0)
+	(up-gaia-type-count c: wood > 40) 				;likely a forest nearby ;this helps in ally games too so that we have time to find our own trees (if shared exploration is turned on)
+=>
+	(up-full-reset-search)
+	(up-get-point position-self gl-position-self-x)
+	(up-set-target-point gl-position-self-x)
+	(up-filter-distance c: 9 c: 30)					;try to avoid stragglers near our TC (min distance 9, max distance 30)
+	(up-find-resource c: wood c: 100) 				;must be at least some trees in range
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 24)
+	(disable-self)									;this entire section is only attempted 1 time (if it fails its not a big deal)
+)
+(defrule
+	(game-time > 120)
+	(building-type-count town-center > 0)
+	(unit-type-count villager >= 3)
+	(goal georgian-civ yes)
+	(building-type-count mule-cart > 0)
+	(up-gaia-type-count c: wood > 40)
+	(up-compare-goal gl-remote-total > 15)
+	(goal gl-temp-state 24)
+=>
+	(up-clean-search search-remote object-data-distance search-order-asc)	;sort the trees that are greater than 9 tiles from our TC to within 30 tiles of the TC of the shortest distance
+	(up-set-target-object search-remote c: 0)								;target the closest found tree
+	(up-get-point position-object gl-point1-x)								;get the point of the tree
+	(up-full-reset-search)
+	(up-set-target-point gl-point1-x)										;target the point of the tree so we can make sure the tree is apart of a forest
+	(up-filter-distance c: -1 c: 3)											;filter up to 3 tiles from the tree to find other trees
+	(up-find-resource c: wood c: 10)										;try to find up to 10 other trees around the point of this tree
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 25)
+	(disable-self)
+)
+(defrule
+	(game-time > 120)
+	(building-type-count town-center > 0)
+	(unit-type-count villager >= 3)
+	(goal georgian-civ yes)
+	(building-type-count mule-cart > 0)
+	(up-gaia-type-count c: wood > 40)
+	(up-compare-goal gl-remote-total >= 4)									;there MUST be at least 4 other trees in the 3 tile zone of this tree for this rule to fire
+	(goal gl-temp-state 25)
+=>
+	(up-clean-search search-remote object-data-distance search-order-asc)	;now we sort the closest found tree to our initial tree for targeting (if we are at this point we have found a nearby forest)
+	(up-set-target-object search-remote c: 0)								;target this object so our mule-cart can be sent to it
+	(up-reset-filters)														;clear the distance filter set-up earlier so we can find our mule-cart wherever it is
+	(up-find-local c: mule-cart c: 1)
+	(up-target-objects 0 action-default -1 -1)
+	(chat-local-to-self "Retasking mule-cart to nearby forest.")			;mission accomplished
+	(disable-self)
+)
+;====================fix bad lumber-camp & mining-camp placement====================
+(defrule
+	(up-gaia-type-count c: wood > 30) ;in-case we are building an emergency lumber-camp with no trees in sight
+	(resource-found wood)
+	(up-pending-objects c: lumber-camp >= 1)
+	(strategic-number sn-lumber-camp-max-distance < 40) ;max 40 for this rule
+=>
+	(up-full-reset-search)
+	(up-filter-status c: status-pending c: list-active)
+	(up-find-status-local c: lumber-camp c: 1)
+	(up-set-target-object search-local c: 0)
+	(up-get-point position-object building-point-x)
+	(up-set-target-point building-point-x)
+	(up-reset-filters)
+	(up-filter-distance c: -1 c: 4)
+	(up-find-resource c: wood c: 3)
+	(up-get-search-state gl-local-total))
+(defrule
+	(resource-found wood)
+	(strategic-number sn-lumber-camp-max-distance < 40) ;max 40 for this rule
+	(up-gaia-type-count c: wood > 30)
+	(up-pending-objects c: lumber-camp >= 1)
+	(up-pending-objects c: mule-cart < 1)
+	(up-compare-goal gl-local-total >= 1)
+	(up-compare-goal gl-remote-total <= 2)
+	(up-object-data object-data-hitpoints <= 1)
+=>
+	;(chat-local-to-self "Fixing bad lumber-camp placement.")
+	(up-target-point 0 action-delete -1 -1)
+	(up-reset-placement c: lumber-camp)
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(up-modify-sn sn-lumber-camp-max-distance c:+ 1)
+)
+
+(defrule
+(or	(goal GOLD-REMAINING yes)				;these goals ensure there is gold or stone physically somewhere on the map
+	(goal STONE-REMAINING yes))
+(or	(up-gaia-type-count c: gold >= 1)		;these ensure we have sighted at least 1 gold-mine or 1 stone-mine
+	(up-gaia-type-count c: stone >= 1))		;this prevents an endless cycle of deleting mining-camps and prevents bugs
+	(up-pending-objects c: mining-camp >= 1)
+	(strategic-number sn-mining-camp-max-distance < 30) ;max 30 for this rule
+=>
+	(up-full-reset-search)
+	(up-filter-status c: status-pending c: list-active)
+	(up-find-status-local c: mining-camp c: 1)
+	(up-set-target-object search-local c: 0)
+	(up-get-point position-object building-point-x)
+	(up-set-target-point building-point-x)
+	(up-reset-filters)
+	(up-filter-distance c: -1 c: 4)
+	(set-strategic-number sn-focus-player-number 0)	;fixed ;since we are using search-remote to find gold or stone we need to focus on gaia
+	(up-find-remote c: gold-mine c: 1)
+	(up-find-remote c: stone-mine c: 1)
+	(up-get-search-state gl-local-total) ;fixed
+)
+(defrule
+(or	(goal GOLD-REMAINING yes)
+	(goal STONE-REMAINING yes))
+(or	(up-gaia-type-count c: gold >= 1)
+	(up-gaia-type-count c: stone >= 1))
+	(strategic-number sn-mining-camp-max-distance < 30) ;max 30 for this rule
+	(up-pending-objects c: mining-camp >= 1)
+	(up-compare-goal gl-local-total >= 1)
+	(up-compare-goal gl-remote-total <= 0) ;fixed ;no gold or stone found near mining-camp THEN delete the foundation
+	(up-object-data object-data-hitpoints <= 1)
+=>
+	;(chat-local-to-self "Fixing bad mining-camp placement.")
+	(up-target-point 0 action-delete -1 -1)
+	(up-reset-placement c: mining-camp)
+	(set-strategic-number sn-allow-adjacent-dropsites 1)
+	(up-modify-sn sn-mining-camp-max-distance c:+ 1)
+)
+;----------delete old lumber-camps----------
+;PART 1
+(defrule
+	(building-type-count lumber-camp >= 7) 					;when we have more than 6 total LC's, AND:
+	(up-pending-objects c: lumber-camp < 1)					;none currently getting built
+=>
+	(up-full-reset-search)									;clear all search & filters
+	(up-find-local c: lumber-camp c: 30)					;find up to a max of 30 LC's
+	(up-clean-search search-local -1 search-order-desc)		;sort the search-local results from newest first to oldest last
+	(up-remove-objects search-local object-data-index <= 6) 	;remove our newest built LC's from search-local (so we target the old ones only)
+	(up-get-search-state gl-local-total)					;store our results in gl-local-total (local-total goal)
+	(set-goal gl-temp-state 26)								;this is a split-rule-goal for keeping our DUC rules separate to prevent DUC leaks
+)
+;PART 2
+(defrule
+	(building-type-count lumber-camp >= 7) 					;copy same 2 conditions from above ;1
+	(up-pending-objects c: lumber-camp < 1)					;2
+	(up-compare-goal gl-temp-state == 26)					;our split-rule-goal matches up with the above rule
+	(up-compare-goal gl-local-total > 0)					;search-local returned more than 1 lumber-camp after deleting the newest results, these will be the old lc's
+=>
+	(up-set-target-object search-local c: 0)				;target the first search-local result
+	(up-get-point position-object gl-point1-x)				;find & store the point on the map of the LC into one of our coordinates
+	(up-set-target-point gl-point1-x)						;target the point so we can delete the LC.
+	(up-target-point gl-point1-x action-delete -1 -1)		;delete the LC at the point.
+	;(chat-to-all "Deleting oldest lumber-camp.")			;chat verification
+)
+;----------delete old mining-camps----------
+;PART 1
+(defrule
+	(building-type-count mining-camp >= 8) 			;when we have more than 7 total MC's, AND:
+	(up-pending-objects c: mining-camp < 1)					;none currently getting built
+=>
+	(up-full-reset-search)									;clear all search & filters
+	(up-find-local c: mining-camp c: 30)					;find up to a max of 30 MC's
+	(up-clean-search search-local -1 search-order-desc)		;sort the search-local results from newest first to oldest last
+	(up-remove-objects search-local object-data-index <= 7) 	;remove our newest built MC's from search-local (so we target the old ones only)
+	(up-get-search-state gl-local-total)					;store our results in gl-local-total (local-total goal)
+	(set-goal gl-temp-state 26)								;this is a split-rule-goal for keeping our DUC rules separate to prevent DUC leaks
+)
+;PART 2
+(defrule
+	(building-type-count mining-camp >= 6) 					;copy same 2 conditions from above ;1
+	(up-pending-objects c: mining-camp < 1)					;2
+	(up-compare-goal gl-temp-state == 26)					;our split-rule-goal matches up with the above rule
+	(up-compare-goal gl-local-total > 0)					;search-local returned more than 1 mining-camp after deleting the newest results, these will be the old MC's
+=>
+	(up-set-target-object search-local c: 0)				;target the first search-local result
+	(up-get-point position-object gl-point1-x)				;find & store the point on the map of the MC into one of our coordinates
+	(up-set-target-point gl-point1-x)						;target the point so we can delete the MC.
+	(up-target-point gl-point1-x action-delete -1 -1)		;delete the MC at the point.
+	;(chat-to-all "Deleting oldest mining-camp.")			;chat verification
+)
+
+;===================EXPERIMENTAL hold vils in town when under heavy attacks===================
+	;town-center garrison hold
+;(defrule
+;	(goal is-town-under-attack yes)
+;(or	(soldier-count <= 3)
+;(or	(up-enemy-units-in-town >= 20)
+;	(strategic-number sn-military-level <= -3)))
+;=>
+;	(up-gather-inside c: town-center c: 1) ;hold
+;)
+;	;town-center garrison release
+;(defrule
+;	;(goal is-town-under-attack no) ;holds them too long because of this
+;(or	(soldier-count > 3)
+;(or	(up-enemy-units-in-town < 10)
+;	(strategic-number sn-military-level >= -1)))
+;=>
+;	(up-gather-inside c: town-center c: 0) ;release
+;)
+
+;==========;NOMAD: flare allies position at start of game==========
+(defrule
+	(goal NOMAD yes)
+	(building-type-count town-center <= 0)
+	(building-type-count-total town-center >= 1)
+	(unit-type-count villager >= 1)
+	(game-time >= 16)
+=>
+	(up-full-reset-search)
+	(up-filter-status c: status-pending c: list-active)
+	(up-find-status-local c: town-center-foundation c: 16)
+	(disable-self))
+
+(defrule
+	(goal NOMAD yes)
+	(up-set-target-object search-local c: 0)
+	(building-type-count town-center <= 0)
+	(building-type-count-total town-center >= 1)
+	(unit-type-count villager >= 1)
+	(game-time >= 16)
+=>
+	(up-get-point position-object gl-fort-point1-x)
+	(up-send-flare gl-fort-point1-x)
+	(chat-to-allies "I will settle here.")
+	(disable-self))
+
+	;=========MICRO TESTING=========
+
+	;==========GURJARA GARRISON SHEEP IN A MILL;==========
+
+	;Garrison sheep-class into mills (Gurjara's)
+(defrule
+	(goal gurjara-civ yes)
+	(up-object-type-count c: livestock-class >= 1)
+	(up-object-type-count c: livestock-class <= 10) ;NEW ignore these rules if we have more than 10 sheep (can't garrison more than 10)
+	(building-type-count mill > 0) ;as soon as a mill is built then we garrison immediately
+=>
+;	(chat-to-player my-player-number "Time for you to pull your weight around here, silly livestock!")
+	(up-gather-inside c: mill c: 1) ;hold forever for now
+	(up-garrison mill c: livestock-class)
+	(disable-self) ;only happens once
+)
+	;Villagers avoid killing sheep (testing)
+(defrule
+	(game-time < 300) ;safety
+	(goal gurjara-civ yes)
+	(unit-type-count villager-shepherd >= 1)
+	(up-object-type-count c: livestock-class >= 1) ;must have at least 1 sheep
+	(up-object-type-count c: livestock-class <= 10) ;BUT NO MORE THAN 10
+	(up-gaia-type-count c: forage-bush-class >= 1) ;must be at least 1 scouted forage bush (for gurjara they spawn with them, so this is a backup to prevent bugs)
+	(building-type-count mill < 1)
+	(building-type-count town-center > 0)
+=>
+	(up-full-reset-search)
+	(up-find-local c: villager-class c: 12) ;its hard to get more than even 10 on 2 berry bushes, but this will do for now
+	(up-clean-search search-local -1 search-order-asc)
+	(up-remove-objects search-local object-data-gather-type != food) ;only find food villagers
+	;(up-object-data object-data-target == 958) ;sheep-food
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 4)
+)
+(defrule
+	(game-time < 300)
+	(goal gurjara-civ yes)
+	(unit-type-count villager-shepherd >= 1)
+	(up-object-type-count c: livestock-class >= 1)
+	(up-object-type-count c: livestock-class <= 10)
+	(up-gaia-type-count c: forage-bush-class > 0)
+	(building-type-count mill < 1)
+	(building-type-count town-center > 0)
+	(goal gl-temp-state 4)
+	(up-compare-goal gl-local-total >= 1) ;at least 1 shepherd found
+=>
+	(up-get-point position-self gl-position-self-x)
+	(up-set-target-point gl-position-self-x)
+	(up-filter-distance c: -1 c: 20) ;no more going across the map for a teammates berries!
+	(up-modify-sn sn-focus-player-number s:= gaia) ;focus on finding forage bushes
+	(up-filter-status c: status-resource c: list-active)
+	(up-find-resource c: forage-bush-class c: 1) ;goes into remote-results
+	(up-set-target-object search-remote c: 0)
+	(up-target-objects 0 action-default -1 -1)
+)
+;DEBUG - send food villagers back to boar when avoiding killing sheep
+(defrule
+	(game-time < 400)
+	(goal gurjara-civ yes)
+	(strategic-number sn-enable-boar-hunting == 2) ;currently targeting boars only
+	(up-remaining-boar-amount <= 349) ;boar is dead
+	(unit-type-count villager-hunter <= 5)
+	(unit-type-count villager-class >= 10)
+	(building-type-count town-center > 0)
+=>
+	;(up-retask-gatherers food c: 3)
+	(up-request-hunters c: 2)
+)
+
+;====================PREVENT UNITS FROM GETTING LURED OUT OF TOWN-SIZE====================
+;part 1 (flanks only for now)
+(defrule
+	(goal position-goal flank)
+	(goal is-town-under-attack no)						;better to have units defend than retreat forever and slowly die
+	(goal ATTACK no)									;town-under-attack makes units retreat forever and slowly die, so only this for now
+	(goal EMERGENCY-ATTACK no) 							;if this is on, ignore all of these rules
+	(up-compare-goal GL-FOCUS-PLAYER != 4) 				;don't do this if we are defending an ally
+	(up-enemy-buildings-in-town < 1)					;prevents sn-safe-town-size from bugging units out
+	(up-compare-goal WATER-MAP != separated) 			;don't run this rule on full water maps
+	(strategic-number sn-number-attack-groups < 1) 		;don't retreat our early first attack or taunt 31 attacks
+	(strategic-number sn-percent-attack-soldiers < 1)	 ;don't retreat if we are ever attacking
+	(soldier-count > 1)									;scout bug fixed
+	(building-type-count town-center > 0)
+=>
+	(up-full-reset-search)
+	(up-get-point position-self gl-position-self-x)
+	(up-set-target-point gl-position-self-x)
+	(up-filter-include cmdid-military -1 -1 -1) 									;include only military units, then EXCLUDE ALL:
+	;(up-filter-exclude -1 actionid-explore orderid-explore -1)						;scouts (need to explore!) ; BUGGED
+	(up-filter-exclude -1 actionid-explore -1 -1)									;fix scouts?
+	(up-filter-exclude -1 -1 -1 warship-class) 										;warship-class (they don't belong in our town-size!!!)
+	(up-filter-exclude cmdid-monk -1 -1 -1) 										;monks (might be getting needed relics)
+	(up-filter-distance s: sn-safe-border-distance c: -1)							;MINIMUM distance is our border distance, maximum distance has no limit ;bugs if sn-safe-town-size gets bigger than this number
+	(up-find-local c: all-units-class c: 100)										;downside of finding up to this many units at once is they tend to create annoying formations on the border of sn-maximum-town-size
+	(up-clean-search search-local -1 search-order-desc) 							;sort from newest created to oldest created, oldest is most likely a scout and we don't want scouts in this (filter doesn't appear to work for explorers?)
+	(up-remove-objects search-local object-data-order == orderid-explore)			;remove scouts
+	(up-remove-objects search-local object-data-class == warship-class)				;never make warships try to go near our town-center lol
+	(up-remove-objects search-local object-data-attack-stance == stance-no-attack)	;prevent constantly DUCing units already heading back to town
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 5)
+)
+;part 2 (flanks only for now)
+(defrule
+	(goal position-goal flank)
+	(goal is-town-under-attack no)
+	(goal ATTACK no)
+	(goal EMERGENCY-ATTACK no)
+	(up-compare-goal GL-FOCUS-PLAYER != 4)
+	(up-enemy-buildings-in-town < 1)
+	(up-compare-goal WATER-MAP != separated)
+	(strategic-number sn-number-attack-groups < 1)
+	(strategic-number sn-percent-attack-soldiers < 1)
+	(soldier-count >= 2)
+	(building-type-count town-center > 0)
+	(up-compare-goal gl-local-total > 0) ;scout bug fixed
+	(goal gl-temp-state 5)
+=>
+	(up-copy-point gl-fort-point1-x gl-position-self-x)						;copy our home town-center point into gl-fort-point1-x (so we don't mess with gl-position-self-x, it should always be our home town-center)
+	(up-get-point position-center gl-position-self-x)						;refresh the center point of the map for reference
+	(up-lerp-tiles gl-fort-point1-x gl-position-center-x c: -6)				;shift gl-fort-point1-x away from the center of the map by 6 tiles, so our units won't crowd the town-center, and the TC can help defend the units
+	(up-bound-point gl-fort-point1-x gl-fort-point1-x)						;make sure the point we are retreating to is inside the map bounds
+	(up-target-point gl-fort-point1-x action-move -1 stance-no-attack)		;order our units to retreat back to the home town-center AND set stance to no-attack
+	;(chat-to-all "Preventing units from getting lured.")
+)
+;====================TARGET BATTERING-RAMS IN OUR TOWN====================
+;part 1
+(defrule
+	;(timer-triggered temp-timer)									;prevent excessive DUC ;disabled for better results, doesn't appear to affect performance
+	(building-type-count town-center > 0)
+(or	(players-unit-type-count target-player battering-ram-line > 0)
+	(players-unit-type-count target-player armored-elephant-line > 0))
+(or	(up-unit-type-in-town c: battering-ram-line > 0)				;if not target-players ram, focus-player rules should update to target the attacking enemy
+	(up-unit-type-in-town c: armored-elephant-line > 0))
+	(unit-type-count villager >= min-vills)
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number)			
+	(up-get-point position-self gl-position-self-x)
+	(up-set-target-point gl-position-self-x)
+	(up-filter-distance c: -1 s: sn-safe-border-distance)				;find battering rams & armored-elephants within our town-size + a few tiles more
+	(up-find-remote c: battering-ram-line c: 4)
+	(up-find-remote c: armored-elephant-line c: 4)
+	(up-find-local c: villager-class c: 7)
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 6)
+)
+
+(defrule
+	;(timer-triggered temp-timer)									;prevent excessive DUC ;disabled for better results, doesn't appear to affect performance
+	(building-type-count town-center > 0)
+(or	(players-unit-type-count target-player battering-ram-line > 0)
+	(players-unit-type-count target-player armored-elephant-line > 0))
+(or	(up-unit-type-in-town c: battering-ram-line > 0)				;if not target-players ram, focus-player rules should update to target the attacking enemy
+	(up-unit-type-in-town c: armored-elephant-line > 0))
+	(unit-type-count villager >= min-vills)
+	(up-compare-goal gl-local-total > 0)							;this was working without checking local and remote total, but better be safe in preventing DUC leaks
+	(up-compare-goal gl-remote-total > 0)
+	(goal gl-temp-state 6)
+=>
+	(up-target-objects 0 action-default -1 -1)
+	;(chat-to-all "Using villagers to destroy a siege.")
+)
+
+;==========MAKE FARMERS GO TO BERRIES==========
+(defrule
+	(game-time < 1800)										;safety
+(or	(unit-type-count male-farmer > 0)
+	(unit-type-count female-farmer > 0))					;we have started making farms
+	(unit-type-count villager-forager < 6)					;we have less than 10 villagers on berries
+	(up-gaia-type-count c: forage-bush-class >= 2)			;must be at least 2 remaining (remember team games can affect this)
+	(building-type-count mill > 0)
+	(building-type-count town-center > 0)
+=>
+	(up-full-reset-search)
+	(up-find-local c: mill c: 10)							;find local mill (was using TC but was causing far walk distances in Yucatan sometimes)
+	(up-clean-search search-local -1 search-order-asc)
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 27)
+)
+(defrule
+	(game-time < 1800)
+(or	(unit-type-count male-farmer > 0)
+	(unit-type-count female-farmer > 0))
+	(unit-type-count villager-forager < 6)
+	(up-gaia-type-count c: forage-bush-class >= 2)
+	(building-type-count mill > 0)
+	(building-type-count town-center > 0)
+	(up-compare-goal gl-local-total > 0)
+	(goal gl-temp-state 27)
+=>
+	(up-set-target-object search-local c: 0)								;target the first search-local result (home tc)
+	(up-get-point position-object gl-point2-x)								;find & store the point on the map of the mill into one of our coordinate points
+	(up-set-target-point gl-point2-x)
+	(up-reset-search 1 1 1 1)												;clear the mill from our search results
+	(up-filter-distance c: -1 c: 8)											;only find close forage bushes close to our lovely mill (from the gl-point2-x)
+	(up-filter-status c: status-resource c: list-active)					;for active resources
+	(up-find-resource c: forage-bush-class c: 10) 							;find up to 10 forage bushes ;this goes into remote-results
+	(up-clean-search search-remote object-data-distance search-order-asc)	;sort the forage-bushes by the closest distance to the mill
+	(up-get-search-state gl-local-total)									;store the berries into search-remote, we will check if they exist in the next rule
+	(set-goal gl-temp-state 28)
+)
+(defrule
+	(game-time < 1800)
+(or	(unit-type-count male-farmer > 0)
+	(unit-type-count female-farmer > 0))
+	(unit-type-count villager-forager < 6)
+	(up-gaia-type-count c: forage-bush-class >= 2)
+	(building-type-count mill > 0)
+	(building-type-count town-center > 0)
+	(up-compare-goal gl-remote-total > 1)					;at least 2 bushes have been found, so yes, they do exist! Continue! (don't want to clobber farmers to berries if only 1 bush left)
+	(goal gl-temp-state 28)
+=>
+	(up-set-target-object search-remote c: 0)				;target the forage bush now that it for sure exists
+	(up-reset-filters)										;clear the distance filter so we can find villagers anywhere
+	(up-find-local c: male-farmer c: 10)					;must define these in constants (userpatch file probably)
+	(up-find-local c: female-farmer c: 10)
+	(up-clean-search search-local -1 search-order-asc)
+	;(up-remove-objects search-local object-data-gather-type != food) ;safety for farmers (not needed now)
+	(up-target-objects 0 action-default -1 -1)				;use 0 so they spread to multiple bushes?
+)
+
+	;==========SEND TROOPS TO THE FRONT WHEN ATTACKING==========
+(defrule
+	(goal ATTACK yes)
+	(goal ENEMY-LOCATED yes)
+	(timer-triggered eco-timer)
+	(building-type-count town-center > 0)
+	(military-population >= 4) ;scout plus a few military
+	(players-building-count any-enemy > 0)
+=>
+	(up-full-reset-search)
+	(up-get-point position-self gl-position-self-x)
+	(up-set-target-point gl-position-self-x)
+	(up-filter-distance c: -1 s: sn-safe-border-distance)
+	(up-filter-include cmdid-military -1 -1 -1)
+	(up-filter-exclude -1 actionid-explore -1 -1)
+	(up-find-local c: all-units-class c: 240)
+	(up-remove-objects search-local object-data-order == orderid-explore)
+    (up-clean-search search-local -1 search-order-asc)
+	(up-get-search-state gl-local-total)
+	(set-goal gl-temp-state 29)
+	;(chat-to-all "Attack rule 1.") ;debug
+)
+(defrule
+	(goal ATTACK yes)
+	(goal ENEMY-LOCATED yes)
+	(timer-triggered eco-timer)
+	(building-type-count town-center > 0)
+	(military-population >= 4) ;scout plus a few military
+	(players-building-count any-enemy > 0)
+	(up-compare-goal gl-local-total >= 1) 	
+	(goal gl-temp-state 29)
+=>
+	(up-reset-filters)
+    (up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)
+    (up-find-remote c: building-class c: 1)
+	(up-find-remote c: tower-class c: 1)
+	(up-find-remote c: wall-class c: 1)
+	(up-find-remote c: gate-class c: 1)
+    (up-clean-search search-remote -1 search-order-asc)
+	(up-target-objects 0 action-default -1 -1)
+	;(chat-to-all "Attack rule 2.") ;debug
+)
+
+
+
+
+	;MAKE SIEGE TARGET CLOSEST BUILDINGS (WIP - need to disable attack groups for this to likely work)
+;(defrule
+;	(goal ATTACK yes)
+;	(up-compare-goal WATER-MAP != separated)
+;	(building-type-count town-center > 0)
+;	(unit-type-count villager > min-vills)
+;	(timer-triggered temp-timer)
+;(or	(unit-type-count trebuchet-set > 0)
+;(or	(unit-type-count battering-ram-line > 0)
+;	(unit-type-count armored-elephant-line > 0)))
+;=>
+;	(up-full-reset-search)
+;	(up-find-local c: town-center c: 10)					;find home TC
+;	(up-clean-search search-local -1 search-order-asc)
+;	(up-get-search-state gl-local-total)
+;	(set-goal gl-temp-state 29) ;IN USE NOW
+;)
+;(defrule
+;	(goal ATTACK yes)
+;	(up-compare-goal WATER-MAP != separated)
+;	(building-type-count town-center > 0)
+;	(unit-type-count villager > min-vills)
+;	(timer-triggered temp-timer)
+;(or	(unit-type-count trebuchet-set > 0)
+;(or	(unit-type-count battering-ram-line > 0)
+;	(unit-type-count armored-elephant-line > 0)))
+;	(up-compare-goal gl-local-total > 0)
+;	(goal gl-temp-state 29) ;IN USE NOW
+;=>
+;	(up-set-target-object search-local c: 0)
+;	(up-get-point position-object gl-point2-x)
+;	(up-set-target-point gl-point2-x)
+;	(up-reset-search 1 1 1 1)
+;	(up-modify-sn sn-focus-player-number g:= TARGET-ENEMY)		;focus on default closest enemy
+ ;   (up-find-remote c: building-class c: 40)
+;	(up-find-remote c: tower-class c: 20)
+;	(up-find-remote c: wall-class c: 20)
+;	(up-find-remote c: gate-class c: 20)
+;	(up-clean-search search-remote object-data-distance search-order-asc)
+;	(set-goal gl-temp-state 30) ;IN USE NOW
+;)
+;(defrule
+;	(goal ATTACK yes)
+;	(up-compare-goal WATER-MAP != separated)
+;	(building-type-count town-center > 0)
+;	(unit-type-count villager > min-vills)
+;	(timer-triggered temp-timer)
+;(or	(unit-type-count trebuchet-set > 0)
+;(or	(unit-type-count battering-ram-line > 0)
+;	(unit-type-count armored-elephant-line > 0)))
+;	(up-compare-goal gl-remote-total > 0)
+;	(goal gl-temp-state 30) ;IN USE NOW
+;=>
+;	(up-set-target-object search-remote c: 0)
+;	(up-find-local c: unpacked-trebuchet c: 10)
+;	(up-find-local c: packed-trebuchet c: 10)
+;	(up-find-local c: battering-ram-line c: 10)
+;	(up-find-local c: armored-elephant-line c: 10)
+;	(up-clean-search search-local -1 search-order-asc)
+;	(up-target-objects 1 action-default -1 -1)
+;)
+
+
+;====================RETREAT UNITS FROM ARROW FIRE====================
+
+	;default TURN ON dodge-arrows
+(defrule
+	(goal DODGE-ARROWS wait)
+	(building-type-count town-center > 0)
+(or	(and	(goal NOMAD yes)
+	(and	(goal sheep-micro no)
+			(game-time > 180)))
+(or	(and	(goal NOMAD no)
+		(game-time > 30))
+	(up-projectile-detected projectile-any < 5000))) ;10,000
+=>
+	;(chat-local-to-self "Arrow dodging micro enabled.")
+	(set-goal DODGE-ARROWS yes)
+	(disable-self))
+
+	;BACKUP DODGE ARROWS RULE
+(defrule
+	(game-time > 480)
+	(building-type-count town-center > 0)
+	(goal is-town-under-attack no)
+	(up-compare-goal DODGE-ARROWS != yes)
+=>
+	(set-goal DODGE-ARROWS yes)
+	(disable-self))
+
+	;wait by default (see main Jester.per)
+	;these two rules help prevent Jester from getting all glitchy
+	;ON
+	(defrule
+	(up-compare-goal DODGE-ARROWS != yes) ;starts off as "wait"
+	(goal is-town-under-attack no) ;added 2 conditions to prevent spam turning on & off
+(not	(enemy-buildings-in-town))
+	(game-time > 30) ;safety
+=>
+	;(chat-local-to-self "Enabling arrow dodging.")
+	(set-goal DODGE-ARROWS yes)
+)
+	;OFF
+	(defrule
+	(up-compare-goal DODGE-ARROWS != no)
+(or	(goal is-town-under-attack yes)
+	(enemy-buildings-in-town))
+	(game-time > 30) ;safety
+;(or	(up-building-type-in-town c: town-center-foundation > 0)
+;(or	(up-building-type-in-town c: town-center > 0)
+;(or	(up-building-type-in-town c: watch-tower-line > 0)
+;(or	(up-building-type-in-town c: donjon > 0)
+;(or	(up-building-type-in-town c: bombard-tower > 0)
+;(or	(up-building-type-in-town c: krepost > 0)
+;	(up-building-type-in-town c: castle > 0))))))))
+=>
+	(chat-local-to-self "Disabling arrow dodging.")
+	(set-goal DODGE-ARROWS no)
+)
+
+;======================LEGEND FOR PROJECTILE-TYPES======================;thanks Leif
+
+;ID	Name							;Description
+;0	projectile-town-center			Town Center arrows.
+;1	projectile-castle				Castle arrows.
+;2	projectile-watch-tower			Watch Tower, Guard Tower, and Keep.
+;3	projectile-bombard-tower		Bombard Tower cannonballs.
+;4	projectile-ship					Projectiles from any warship.
+;5	projectile-siege				Projectiles from any ranged siege weapon, except scorpions.
+;6	projectile-fortification		Projectiles from Kreposts or Donjons.
+;7	projectile-any					Any projectile from soldiers, siege weapons, scorpions, ships, or buildings.
+
+(defrule
+(or	(goal DODGE-ARROWS no) 											;ignore when we aren't focusing on dodging arrows
+(or	(town-under-attack)												;ignore if we are under attack at any time (prevents weird behavior)
+(or	(goal is-town-under-attack yes)									;ignore if we are actively defending our town (prevents weird behavior)
+(or	(strategic-number sn-focus-player-number == my-player-number)	;ignore when we are using other DUC rules while focused on ourself (prevents weird behavior)
+(or	(goal EMERGENCY-ATTACK yes) 									;ignore when we are pop-capped
+(or	(game-time < 30)												;ignore at game start
+(or	(goal MEME-STRATEGY 1) 											;ignore when meme-strategy "the liar" is activated
+(or	(soldier-count > 50)											;ignore if high military count
+(or	(military-population >= max-mil-pop)							;ignore if maxed out military (low-pop games)
+;(or	(goal ENEMY-LOCATED no)										;ignore if we have not seen any enemies (causes early scouts to run into arrows)
+	(building-type-count town-center < 1))))))))))					;ignore if no fully built town-center
+=>
+	(up-jump-rule 24)) ;save performance by skipping altogether
+
+;------------------------------
+; Dodge Fortification Arrow Fire From any enemy Fortifications
+;------------------------------
+;ENEMY KREPOST RETREAT (ANY KREPOST TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player krepost > 0)					;enemy has at least 1 krepost
+	(up-projectile-detected projectile-fortification < 20000)
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: krepost c: 10) 										;try to find up to 10 kreposts from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 krepost firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any kreposts that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 7)												;used for continuing rules
+)
+	;ENEMY KREPOST (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)														;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player krepost > 0)
+	(goal gl-temp-state 7)														;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 										;we have successfully found and stored at least 1 krepost in the results, so now we can target the krepost
+	(up-set-target-object search-remote c: 0) 									;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-fortification < 20000)					;retreat from the krepost IF: any krepost has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))							;just retreat from last fired krepost
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the krepost position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the krepost
+	(up-set-target-point gl-fort-point1-x) 										;set the krepost's position as the target-point
+	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.)
+	(up-filter-distance c: -1 c: 13) 										;this command uses the target-point as the center and will find our units up to 13 tiles away from the center of it (within the kreposts approximate range)
+	(set-goal gl-temp-state 8) 											;continue on the next rule if possible
+)
+	;ENEMY KREPOST (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player krepost > 0)
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 krepost in the results, so now we can target the krepost
+	(goal gl-temp-state 8) 												;continuing only if the previous rule worked
+(or	(up-projectile-detected projectile-fortification < 20000)					;retreat from the krepost IF: any krepost has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;we are within distance of the krepost last fired krepost
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within the distance filter by tiles of the enemy krepost and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913)
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+;ENEMY CASTLE RETREAT (ANY castle TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player castle > 0)					;enemy has at least 1 castle
+	(up-projectile-detected projectile-castle < 20000)
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: castle c: 10) 										;try to find up to 10 castles from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 castle firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any castles that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 9)												;used for continuing rules
+)
+	;ENEMY CASTLE (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)														;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player castle > 0)
+	(goal gl-temp-state 9)														;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 										;we have successfully found and stored at least 1 castle in the results, so now we can target the castle
+	(up-set-target-object search-remote c: 0) 									;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-castle < 20000)							;retreat from the castle IF: any castle has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))							;just retreat from last fired castle
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the castle position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the castle
+	(up-set-target-point gl-fort-point1-x) 										;set the castle's position as the target-point
+	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.)
+	(up-filter-distance c: -1 c: 16) 										;this command uses the target-point as the center and will find our units up to 16 tiles away from the center of it (within the castles approximate range)
+	(set-goal gl-temp-state 10) 											;continue on the next rule if possible
+)
+	;ENEMY CASTLE (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player castle > 0)
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 castle in the results, so now we can target the castle
+	(goal gl-temp-state 10) 												;continuing only if the previous rule worked
+(or	(up-projectile-detected projectile-castle < 20000)					;retreat from the castle IF: any castle has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;we are within distance of the castle last fired castle
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within the distance filter by tiles of the enemy castle and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913)
+	(generate-random-number 5) 												;get a random number from 1 to 5 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 4) 										;add 4 to gl-random, so its range is now 5 to 9
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+
+;ENEMY WATCH TOWER RETREAT (ANY TOWER TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player watch-tower > 0)				;watch-tower-line wasn't working ;must use individual tower buildings
+	(up-projectile-detected projectile-watch-tower < 20000) 
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: watch-tower c: 10) 									;try to find up to 10 towers from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 tower firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any watch-towers that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 11)												;used for continuing rules
+)
+	;ENEMY WATCH TOWER 2 (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player watch-tower > 0)
+	(goal gl-temp-state 11)													;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the watch-tower IF: any watch-tower has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired watch-tower
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the tower position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the tower
+	(up-set-target-point gl-fort-point1-x) 										;set the tower's position as the target-point
+;	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.) ;UP-FILTER-EXCLUDE APPEARS TO BE BUGGED!!!
+;	(up-filter-exclude -1 -1 -1 906) 										;exclude infantry-class
+;	(up-filter-exclude -1 -1 -1 912) 										;exclude cavalry-class
+	(up-filter-distance c: -1 c: 12) 										;this command uses the target-point as the center and will find our units up to 12 tiles away from the center of it (within the towers approximate range)
+	(set-goal gl-temp-state 12) 											;continue on the next rule if possible
+)
+	;ENEMY WATCH TOWER 3 (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player watch-tower > 0)
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(goal gl-temp-state 12) 												;continuing only if the previous rule worked
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the watch-tower IF: any watch-tower has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired watch-tower
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within 12 tiles of the enemy tower and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913) ;manually remove units until up-filter-exclude works again... ; ALL UNITS EXCEPT THE FOLLOWING WILL DODGE ARROWS: siege excluding scorpions & trebs
+	(up-remove-objects search-local object-data-class == 906)				;infantry-class
+	(up-remove-objects search-local object-data-class == 912)				;cavalry-class - all mounted melee units except scout cavalry?
+	(up-remove-objects search-local object-data-class == 947)				;scout-cavalry-class
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+;ENEMY GUARD TOWER RETREAT (ANY TOWER TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player guard-tower > 0)				;watch-tower-line wasn't working ;must use individual tower buildings
+	(up-projectile-detected projectile-watch-tower < 20000) 
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: guard-tower c: 10) 									;try to find up to 10 towers from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 tower firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any guard-towers that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 13)												;used for continuing rules
+)
+	;ENEMY GUARD TOWER 2 (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player guard-tower > 0)
+	(goal gl-temp-state 13)													;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the guard-tower IF: any guard-tower has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired guard-tower
+;(or	(up-projectile-target projectile-watch-tower == archery-class) 			;at a foot archer unit, OR:
+;	(up-projectile-target projectile-watch-tower == cavalry-archer-class)) 	;at a cavalry archer unit (we don't want our melee units to retreat from the tower)
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the tower position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the tower
+	(up-set-target-point gl-fort-point1-x) 										;set the tower's position as the target-point
+;	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.) ;BUGGED
+;	(up-filter-exclude -1 -1 -1 906) 										;exclude infantry-class
+;	(up-filter-exclude -1 -1 -1 912) 										;exclude cavalry-class
+	(up-filter-distance c: -1 c: 12) 										;this command uses the target-point as the center and will find our units up to 12 tiles away from the center of it (within the towers approximate range)
+	(set-goal gl-temp-state 14) 											;continue on the next rule if possible
+)
+	;ENEMY GUARD TOWER 3 (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player guard-tower > 0)
+	(goal gl-temp-state 14) 												;continuing only if the previous rule worked
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the guard-tower IF: any guard-tower has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired guard-tower
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within 12 tiles of the enemy tower and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913) ;manually remove units until up-filter-exclude works again... ; ALL UNITS EXCEPT THE FOLLOWING WILL DODGE ARROWS: siege excluding scorpions & trebs
+	(up-remove-objects search-local object-data-class == 906)				;infantry-class
+	(up-remove-objects search-local object-data-class == 912)				;cavalry-class - all mounted melee units except scout cavalry?
+	(up-remove-objects search-local object-data-class == 947)				;scout-cavalry-class
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit)
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 									;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+;ENEMY KEEP RETREAT (ANY TOWER TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player keep > 0)				;watch-tower-line wasn't working ;must use individual tower buildings
+	(up-projectile-detected projectile-watch-tower < 20000) 
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: keep c: 10) 									;try to find up to 10 towers from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 tower firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any keeps that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 15)												;used for continuing rules
+)
+	;ENEMY KEEP 2 (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player keep > 0)
+	(goal gl-temp-state 15)													;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the keep IF: any keep has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired keep
+;(or	(up-projectile-target projectile-watch-tower == archery-class) 			;at a foot archer unit, OR:
+;	(up-projectile-target projectile-watch-tower == cavalry-archer-class)) 	;at a cavalry archer unit (we don't want our melee units to retreat from the tower)
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the tower position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the tower
+	(up-set-target-point gl-fort-point1-x) 										;set the tower's position as the target-point
+;	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.)
+;	(up-filter-exclude -1 -1 -1 906) 										;exclude infantry-class
+;	(up-filter-exclude -1 -1 -1 912) 										;exclude cavalry-class
+	(up-filter-distance c: -1 c: 13) 										;this command uses the target-point as the center and will find our units up to 12 tiles away from the center of it (within the towers approximate range)
+	(set-goal gl-temp-state 16) 											;continue on the next rule if possible
+)
+	;ENEMY KEEP 3 (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player keep > 0)
+	(goal gl-temp-state 16) 												;continuing only if the previous rule worked
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+(or	(up-projectile-detected projectile-watch-tower < 20000)					;retreat from the keep IF: any keep has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired keep
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within 12 tiles of the enemy tower and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913) ;manually remove units until up-filter-exclude works again... ; ALL UNITS EXCEPT THE FOLLOWING WILL DODGE ARROWS: siege excluding scorpions & trebs
+	(up-remove-objects search-local object-data-class == 906)				;infantry-class
+	(up-remove-objects search-local object-data-class == 912)				;cavalry-class - all mounted melee units except scout cavalry?
+	(up-remove-objects search-local object-data-class == 947)				;scout-cavalry-class
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+;ENEMY DONJON RETREAT (ANY TOWER TEST) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player donjon > 0)				;watch-tower-line wasn't working ;must use individual tower buildings
+	(up-projectile-detected projectile-fortification < 20000)
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: donjon c: 10) 									;try to find up to 10 donjons from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 tower firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any donjons that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 17)												;used for continuing rules
+)
+	;ENEMY DONJON 2 (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player donjon > 0)
+	(goal gl-temp-state 17)													;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-fortification < 20000)				;retreat from the donjon IF: any donjon has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired donjon
+;(or	(up-projectile-target projectile-fortification == archery-class) 			;at a foot archer unit, OR:
+;	(up-projectile-target projectile-fortification == cavalry-archer-class)) 	;at a cavalry archer unit (we don't want our melee units to retreat from the tower)
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the tower position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the tower
+	(up-set-target-point gl-fort-point1-x) 										;set the tower's position as the target-point
+;	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.)
+;	(up-filter-exclude -1 -1 -1 906) 										;exclude infantry-class
+;	(up-filter-exclude -1 -1 -1 912) 										;exclude cavalry-class
+	(up-filter-distance c: -1 c: 12) 										;this command uses the target-point as the center and will find our units up to 12 tiles away from the center of it (within the towers approximate range)
+	(set-goal gl-temp-state 18) 											;continue on the next rule if possible
+)
+	;ENEMY DONJON 3 (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 50)
+	(players-building-type-count target-player donjon > 0)
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 tower in the results, so now we can target the tower
+	(goal gl-temp-state 18) 												;continuing only if the previous rule worked
+(or	(up-projectile-detected projectile-fortification < 20000)				;retreat from the donjon IF: any donjon has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired donjon
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within 12 tiles of the enemy tower and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913) ;manually remove units until up-filter-exclude works again... ; ALL UNITS EXCEPT THE FOLLOWING WILL DODGE ARROWS: siege excluding scorpions & trebs
+	(up-remove-objects search-local object-data-class == 906)				;infantry-class
+	(up-remove-objects search-local object-data-class == 912)				;cavalry-class - all mounted melee units except scout cavalry?
+	(up-remove-objects search-local object-data-class == 947)				;scout-cavalry-class
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+)
+	;TOWN-CENTER RETREAT (1 town-center only) (step 1)
+(defrule
+	;(true)
+	(goal DODGE-ARROWS yes)													;our MUST HAVE conditions at all times
+	(soldier-count <= 50);testing
+	(players-building-type-count target-player town-center == 1)			;no projectile-detected for this specific rule
+=>
+	(up-full-reset-search)														;ALWAYS reset search stuff before starting new DUC
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, we are only worried about our current target-player for this example
+	(up-find-remote c: town-center c: 1) 									;find the 1 town-center from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort the search-remote results from oldest to newest town-center, we want to find their home town-center
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object if it exists
+	(up-get-search-state gl-local-total) 									;store all search state information into consecutive goals
+	(set-goal gl-temp-state 19) 											;create a split-goal-rule for continuing rules, set-up for step-2
+)
+	;TOWN-CENTER RETREAT (1 town-center only) (step 2)
+(defrule
+	(goal DODGE-ARROWS yes)													;our MUST HAVE conditions at all times
+	(soldier-count <= 50)
+	(players-building-type-count target-player town-center == 1)
+	(goal gl-temp-state 19)														;we've successfully moved onto step 2
+	(up-compare-goal gl-remote-total == 1) 									;we have successfully stored the 1 town-center in the results
+(or	(and	(soldier-count < 40) 											;avoid tc at all costs with under 30 soldiers number or,
+			(up-object-data object-data-garrison-count >= 0))				;under 30 soldiers ALWAYS avoids TC no matter the garrison
+	(and		(soldier-count <= 50) 										;only avoid arrow-fire if between 30 and 39 soldiers, AND either
+	(and		(soldier-count >= 40)
+			(or		(up-projectile-detected projectile-town-center < 20000)	;an arrow has been fired in the last 10 seconds by this TC, OR:
+					(up-object-data object-data-garrison-count > 1)))))		;at least 2 unit garrisoned in the enemy TC (2 minimum to fire arrows)
+=>
+																			;prepare our units for retreat
+	(up-get-point position-object gl-fort-point1-x) 								;store the town-center position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y)
+	(up-set-target-point gl-fort-point1-x) 										;set the town-center position as the target-point
+	(up-filter-distance c: -1 c: 9)										;set up a filter to include only objects that are up to 9 tiles away from the center of the target-point
+	(up-filter-exclude -1 -1 -1 913) 										;filter out any unit class 913 (siege weapons like rams, etc.) that were included following the previous filter
+	(set-goal gl-temp-state 20) 											;set-up step-3 if everything here is TRUE
+)
+	;TOWN-CENTER RETREAT (1 town-center only) (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;our MUST HAVE conditions at all times
+	(soldier-count <= 50)
+	(players-building-type-count target-player town-center == 1)
+	(goal gl-temp-state 20) 													;begin step-3
+	(up-compare-goal gl-remote-total == 1) 									;we still have the 1 enemy town-center from our search-remote results from step 1
+(or	(and	(soldier-count < 40) 											;keep all of the same conditions from step-2 to prevent DUC leaks
+			(up-object-data object-data-garrison-count >= 0))
+		(and	(soldier-count <= 50)
+		(and	(soldier-count >= 40)
+			(or		(up-projectile-detected projectile-town-center < 20000)
+					(up-object-data object-data-garrison-count > 1)))))
+	(up-find-local c: all-units-class c: 1) 								;LASTLY: find up to a max of 1 of our units that are within 9 tiles of the enemy town-center and are not class 913 (siege)
+=>
+	;if we're here, we have found a matching unit
+	(up-remove-objects search-local object-data-class == 913)
+	(generate-random-number 4) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 1) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set our matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store our unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -3)				;shift the point of our soldier relative to the point of the town-center so our unit slowly circles the town-center rather than runs away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-fort-point1-x (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)						;make sure the point we are retreating to is inside the map bounds
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 -1) 									;move our unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit)
+	(up-set-target-point gl-fort-point1-x) 									;set the target-point back to the enemy town-center for our next unit to use
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this rule
+)
+
+;TOWN-CENTER RETREAT 2 (ANY TOWN-CENTER) (step 1)
+(defrule
+	(goal DODGE-ARROWS yes)
+	(soldier-count <= 45);testing
+	(players-building-type-count target-player town-center > 1)				;must be only when more than 1 town-center
+	(up-projectile-detected projectile-town-center < 20000)					;at least 1 enemy town-center has fired in the last 20 seconds
+=>
+	(up-full-reset-search)
+	(up-modify-sn sn-focus-player-number s:= sn-target-player-number) 		;find-remote works with the focus-player, so set it to the target
+	(up-find-remote c: town-center c: 10) 									;try to find up to 10 town-centers from the focus-player
+	(up-clean-search search-remote -1 search-order-asc) 					;sort from oldest built first to newest built (this helps in situations with more than 1 town-center firing at the same time)
+	(up-remove-objects search-remote object-data-action != actionid-attack)	;remove any town-centers that are not currently attacking something
+	(up-get-search-state gl-local-total) 									;store search state information NOTE: ALWAYS use the local-total as 4 goals in ascending order get stored for local & remote
+	(set-goal gl-temp-state 21)												;used for continuing rules
+)
+;TOWN-CENTER RETREAT 2 (ANY TOWN-CENTER) (step 2)
+(defrule
+	;please add a timer or goal check here to block these rules from repeating each pass 
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 45)
+	(players-building-type-count target-player town-center > 1)
+	(goal gl-temp-state 21)													;the first rule fired, so we are on the next step
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 town-center in the results, so now we can target one of the town-centers
+	(up-set-target-object search-remote c: 0) 								;set the first search-remote result as the target-object
+(or	(up-projectile-detected projectile-town-center < 20000)					;retreat from the town-center IF: any town-center has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired town-center
+=>
+	;prepare to check my own units
+	(up-get-point position-object gl-fort-point1-x) 								;find and store the tower position (x,y) into gl-fort-point1-x (gl-fort-point1-x and gl-fort-point1-y), so we are targeting the point on the map, not the tower
+	(up-set-target-point gl-fort-point1-x) 										;set the tower's position as the target-point
+	(up-filter-exclude -1 -1 -1 913) 										;set up filters to exclude certain units from retreating: this excludes unit class 913 (siege weapons like rams, etc.)
+	(up-filter-distance c: -1 c: 10) 										;this command uses the target-point as the center and will find our units up to 10 tiles away from the center of it (within the towers approximate range)
+	(set-goal gl-temp-state 22) 											;continue on the next rule if possible
+)
+;TOWN-CENTER RETREAT 2 (ANY TOWN-CENTER) (step 3)
+(defrule
+	(goal DODGE-ARROWS yes)													;relist our MUST HAVE conditions
+	(soldier-count <= 45)
+	(players-building-type-count target-player town-center > 1)
+	(up-compare-goal gl-remote-total > 0) 									;we have successfully found and stored at least 1 town-center in the results, so now we can target one of the town-center
+	(goal gl-temp-state 22) 												;continuing only if the previous rule worked
+(or	(up-projectile-detected projectile-town-center < 20000)					;retreat from the town-center IF: any town-center has fired in the last 20 seconds, OR:
+	(up-object-data object-data-garrison-count >= 0))						;just retreat from last fired town-center
+	(up-find-local c: all-units-class c: 1) 								;find 1 of our units that are within 12 tiles of the enemy tower and are not any of the excluded classes listed in the last rule
+=>
+	;if we're here, we found a matching unit
+	(up-remove-objects search-local object-data-class == 913)
+	(generate-random-number 5) 												;get a random number from 1 to 4 (we'll use this to get a random retreat distance)
+	(up-get-fact random-number 0 gl-random) 								;store the random number into gl-random
+	(up-modify-goal gl-random c:+ 2) 										;add 1 to gl-random, so its range is now 2 to 5
+	(up-modify-goal gl-random g:neg gl-random) 								;negate gl-random, so it's now -2 to -5
+	(up-set-target-object search-local c: 0) 								;set my first matching unit as the target-object
+	(up-get-point position-object gl-fort-point2-x) 						;store my unit's position into gl-fort-point2-x
+	(up-cross-tiles gl-fort-point2-x gl-fort-point1-x c: -2)				;don't run away in a straight line
+	(up-lerp-tiles gl-fort-point2-x gl-fort-point1-x g: gl-random) 			;shift gl-fort-point2-x by "gl-random" tiles toward gl-point1 (gl-random is negative, so it moves AWAY) and store the result in gl-fort-point2-x
+	(up-bound-point gl-fort-point2-x gl-fort-point2-x)
+	(up-set-target-point gl-fort-point2-x) 									;set the new position as the target-point
+	(up-target-point 0 action-move -1 stance-no-attack) 					;move my unit to the target-point (the up-target-point command performs the action on everyone in the local search results list, which is only the 1 unit) stand-ground helps to prevent retaliation
+	;prepare to check the next unit
+	(up-set-target-point gl-fort-point1-x) 										;set the target-point back to the enemy tower for our next units to use
+	;(up-full-reset-search)
+	(up-reset-search 0 1 0 0) 												;remove our current unit from the local search results, but leave everything else as-is to resume searching after it
+	(up-jump-rule -1) 														;-1 means it will repeat this same rule, going back to (goal gl-temp-state 1)
+) ;end jump
+
+	;reset military units to attack-stance
+(defrule
+	(game-time > 60) ;safety
+	(goal sheep-micro no) ;safety
+	(timer-triggered temp-timer)	;prevent possible lag ;changes based on (goal ATTACK no) & (goal ATTACK yes)
+	(military-population >= 1) ;ignore if no military
+=>
+	(up-full-reset-search)
+	(up-filter-include cmdid-military -1 -1 -1)
+	(up-filter-exclude -1 actionid-explore -1 -1)
+	(up-find-local c: all-units-class c: 240)
+	(up-remove-objects search-local object-data-order == orderid-explore);
+	(up-target-objects 0 action-default -1 stance-aggressive)
+)
+
+	;temp fix for weird bug on first emergency attack (hopefully only needed 1 time) (anti-luring micro affects this)
+(defrule
+	(goal EMERGENCY-ATTACK yes)
+	(population >= max-pop)
+	(goal ATTACK yes)
+=>
+	(up-full-reset-search)
+	(up-filter-include cmdid-military -1 -1 -1)
+	(up-filter-exclude -1 actionid-explore -1 -1)
+	(up-find-local c: all-units-class c: 240)
+	(up-remove-objects search-local object-data-order == orderid-explore)
+	(up-target-point 0 action-stop -1 -1)
+	(disable-self)
+)
+
+(defrule
+	(timer-triggered temp-timer)		;on a timer to prevent possible lag
+(or	(up-enemy-units-in-town > 0)		;enemy units other than villagers
+(or	(up-enemy-villagers-in-town > 0)	;enemy villagers
+	(up-enemy-buildings-in-town > 0)))	;enemy buildings
+=>
+	(up-update-targets)
+)
+	;low timer
+(defrule
+	(goal ATTACK no)
+	(strategic-number sn-maximum-town-size < 18) ;lower time needed to retreat
+	(timer-triggered temp-timer)
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 14)
+)
+	;medium timer
+(defrule
+	(goal ATTACK no)
+	(strategic-number sn-maximum-town-size >= 18) ;medium time needed to retreat
+	(strategic-number sn-maximum-town-size <= 26)
+	(timer-triggered temp-timer)
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 20)
+)
+	;high timer
+(defrule
+	(goal ATTACK no)
+	(strategic-number sn-maximum-town-size > 26) ;high time needed to retreat
+	(timer-triggered temp-timer)
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 25)
+)
+
+	;low timer (when we are attacking to prevent too long of stance-no-attack)
+(defrule
+	(goal ATTACK yes)
+	(timer-triggered temp-timer)
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 8)
+)
+
+	;SAFETY FIX FOR TEMP-TIMER (without this sometimes units stay in no-attack-stance)
+(defrule
+	(military-population > 1)
+	(building-type-count town-center > 0)
+	(up-timer-status temp-timer < timer-running) ;timer disabled or not running
+=>
+	(disable-timer temp-timer)
+	(enable-timer temp-timer 10)
+)
+

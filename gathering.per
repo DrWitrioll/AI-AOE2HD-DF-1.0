@@ -1,0 +1,4423 @@
+
+	;Gathering for Jester.per
+
+	;enable reactive-gathering (NEEDS FIXING)
+;(defrule
+;	(game-time > 15)
+;	(up-compare-goal REACTIVE-GATHERING != yes)
+;	(strategic-number max-vill-pop <= 75)
+;=>
+;	(set-goal REACTIVE-GATHERING yes)
+;	(disable-self)
+;)
+
+	;Temporary rule until reactive gathering is fully implemented
+(defrule
+	(up-compare-goal REACTIVE-GATHERING != no)
+=>
+	(set-goal REACTIVE-GATHERING no)
+	(disable-self)
+)
+
+;(defrule
+;	(goal REACTIVE-GATHERING yes)
+;	(game-time > 10)
+;=>
+;	(chat-local-to-self "REACTIVE GATHERING ENABLED.")
+;	(disable-self)
+;)
+
+	;dark-age
+
+;GATHERING
+
+(defrule
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+	(unit-type-count villager > 0)
+=>
+	(chat-local-to-self "Water-map gathering strategy.")
+	(disable-self)
+)
+
+(defrule
+	(goal WATER-MAP no)
+	(unit-type-count villager > 0)
+=>
+	(chat-local-to-self "Land-map gathering strategy.")
+	(disable-self)
+)
+
+;WATER STRATEGY
+;  normal start
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+	(wood-amount >= 30) ;normal
+(unit-type-count villager <= 6)
+=>
+   (set-strategic-number sn-food-gatherer-percentage 100);these set the percentage of what resources that villagers will gather.
+   (set-strategic-number sn-wood-gatherer-percentage 0)
+   (set-strategic-number sn-gold-gatherer-percentage 0)
+   (set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;  low wood start
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+	(wood-amount < 30) ;not enough for a house
+	(housing-headroom <= 1) ;need house
+	(up-pending-objects c: house == 0)
+(unit-type-count villager <= 6)
+=>
+   (set-strategic-number sn-food-gatherer-percentage 30) ;temporary
+   (set-strategic-number sn-wood-gatherer-percentage 70)
+   (set-strategic-number sn-gold-gatherer-percentage 0)
+   (set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 2
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 7)
+=>
+(set-strategic-number sn-food-gatherer-percentage 100); 86
+(set-strategic-number sn-wood-gatherer-percentage 0); 14
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 3
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 8)
+=>
+(set-strategic-number sn-food-gatherer-percentage 75)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 4
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 9)
+=>
+(set-strategic-number sn-food-gatherer-percentage 67)
+(set-strategic-number sn-wood-gatherer-percentage 33)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 5. (4 on wood, 6 on food.)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 10)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 6
+(defrule 
+	(goal REACTIVE-GATHERING no)
+; 4 wood, 7 food.
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 11)
+=>
+(set-strategic-number sn-food-gatherer-percentage 64)
+(set-strategic-number sn-wood-gatherer-percentage 36)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 7 
+(defrule
+ ;5 wood 7 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 12)
+=>
+(set-strategic-number sn-food-gatherer-percentage 58);67 test
+(set-strategic-number sn-wood-gatherer-percentage 42);33
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 8
+(defrule
+ ;6 wood 7 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 13)
+=>
+(set-strategic-number sn-food-gatherer-percentage 54)
+(set-strategic-number sn-wood-gatherer-percentage 46)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 9
+(defrule
+ ;7 wood 7 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 14)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 10
+(defrule
+ ;7 wood 8 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 15)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53)
+(set-strategic-number sn-wood-gatherer-percentage 47)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 11
+(defrule
+ ;7 wood 9 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 16)
+=>
+(set-strategic-number sn-food-gatherer-percentage 56)
+(set-strategic-number sn-wood-gatherer-percentage 44)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 12
+(defrule
+ ;7 wood 10 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 17)
+=>
+(set-strategic-number sn-food-gatherer-percentage 59)
+(set-strategic-number sn-wood-gatherer-percentage 41)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 13
+(defrule
+ ;7 wood 11 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 18)
+=>
+(set-strategic-number sn-food-gatherer-percentage 61)
+(set-strategic-number sn-wood-gatherer-percentage 39)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 14
+(defrule
+ ;7 wood 12 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 19)
+=>
+(set-strategic-number sn-food-gatherer-percentage 63)
+(set-strategic-number sn-wood-gatherer-percentage 37)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 15
+(defrule
+ ;8 wood 12 food
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 20) ;max 20 vils
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+	;EXTENDED WATER-MAP GATHERING (current-age == dark-age)
+
+;GATHERING (WATER) (gold yes)
+(defrule
+ ;gold prep
+	(current-age == dark-age)
+	(goal feudal-pending no) ;before clicking-up
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+	(goal being-drushed no)
+	(goal DRUSH no)
+(or	(goal ARCHER yes) ;archers
+(or	(goal SWORDMAN yes); m@a
+	(goal EAGLE-WARRIOR yes))); eagles
+	(unit-type-count villager > 20)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 55)
+	(set-strategic-number sn-wood-gatherer-percentage 45) ;focus on wood
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;no gold too soon on water maps
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;GATHERING (WATER) (gold no)
+(defrule
+ ;gold prep
+	(current-age == dark-age)
+	(goal feudal-pending no) ;before clicking-up
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+	(goal being-drushed no)
+	(goal DRUSH no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes) ;scouts
+(or	(goal FEUDAL-SKIRMISHER yes)
+	(goal FAST-CASTLE yes)))
+	(unit-type-count villager > 20)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 55)
+	(set-strategic-number sn-wood-gatherer-percentage 45); focus on wood
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;END OF WATER GATHERING
+
+;LAND STRATEGY
+;normal start
+(defrule
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+	(wood-amount >= 30); only for start
+(unit-type-count villager <= 6)
+=>
+   (set-strategic-number sn-food-gatherer-percentage 100);these set the percentage of what resources that villagers will gather.
+   (set-strategic-number sn-wood-gatherer-percentage 0)
+   (set-strategic-number sn-gold-gatherer-percentage 0)
+   (set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;low wood start
+(defrule
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+	(wood-amount < 30) ;not enough for a house
+	(housing-headroom <= 1) ;need house
+	(up-pending-objects c: house == 0)
+(unit-type-count villager <= 6)
+=>
+   (set-strategic-number sn-food-gatherer-percentage 30);these set the percentage of what resources that villagers will gather.
+   (set-strategic-number sn-wood-gatherer-percentage 70)
+   (set-strategic-number sn-gold-gatherer-percentage 0)
+   (set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 2
+(defrule
+;all 7 food (because of buildings)
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 7)
+=>
+(set-strategic-number sn-food-gatherer-percentage 100); 86
+(set-strategic-number sn-wood-gatherer-percentage 0); 14
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 3
+(defrule
+;1 wood 7 food (because of buildings)
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 8)
+=>
+(set-strategic-number sn-food-gatherer-percentage 88)
+(set-strategic-number sn-wood-gatherer-percentage 12)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 4
+(defrule
+;2 wood 7 food (because of buildings)
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 9)
+=>
+(set-strategic-number sn-food-gatherer-percentage 78)
+(set-strategic-number sn-wood-gatherer-percentage 22)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 5
+(defrule
+;3 wood 7 food (because of buildings)
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 10)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 6
+(defrule 
+; 4 wood, 7 food.
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 11)
+=>
+(set-strategic-number sn-food-gatherer-percentage 64)
+(set-strategic-number sn-wood-gatherer-percentage 36)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 7 
+(defrule
+ ;4 wood 8 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 12)
+=>
+(set-strategic-number sn-food-gatherer-percentage 66);67 test
+(set-strategic-number sn-wood-gatherer-percentage 34);33
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 8
+(defrule
+ ;4 wood 9 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 13)
+=>
+(set-strategic-number sn-food-gatherer-percentage 69)
+(set-strategic-number sn-wood-gatherer-percentage 31)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 9
+(defrule
+ ;4 wood 10 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 14)
+=>
+(set-strategic-number sn-food-gatherer-percentage 71)
+(set-strategic-number sn-wood-gatherer-percentage 29)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 10
+(defrule
+ ;4 wood 11 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 15)
+=>
+(set-strategic-number sn-food-gatherer-percentage 73)
+(set-strategic-number sn-wood-gatherer-percentage 27)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 11
+(defrule
+ ;4 wood 12 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 16)
+=>
+(set-strategic-number sn-food-gatherer-percentage 75)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 12
+(defrule
+ ;4 wood 13 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 17)
+=>
+(set-strategic-number sn-food-gatherer-percentage 76)
+(set-strategic-number sn-wood-gatherer-percentage 24)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 13
+(defrule
+ ;4 wood 14 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 18)
+=>
+(set-strategic-number sn-food-gatherer-percentage 78) ;72 ;switching from 13 food to 14 food
+(set-strategic-number sn-wood-gatherer-percentage 22) ;28
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 14
+(defrule
+ ;5 wood 14 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 19)
+=>
+(set-strategic-number sn-food-gatherer-percentage 74) ;68
+(set-strategic-number sn-wood-gatherer-percentage 26) ;32
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GATHERING 15
+(defrule
+ ;6 wood 14 food
+	(goal REACTIVE-GATHERING no)
+(goal WATER-MAP no)
+(goal being-drushed no)
+(goal DRUSH no)
+(goal feudal-pending no)
+(unit-type-count villager == 20)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70) ;65
+(set-strategic-number sn-wood-gatherer-percentage 30) ;35
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+	;EXTENDED LAND-MAP GATHERING (current-age == dark-age)
+
+;GATHERING (LAND) (gold yes)
+(defrule
+ ;gold prep
+	(current-age == dark-age)
+	(goal feudal-pending no) ;before clicking-up
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal being-drushed no)
+	(goal DRUSH no)
+(or	(goal ARCHER yes) ;archers
+(or	(goal SWORDMAN yes); m@a
+(or	(goal EAGLE-WARRIOR yes); eagles
+	(goal FAST-CASTLE yes))))
+	(unit-type-count villager > 20)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 60)
+	(set-strategic-number sn-wood-gatherer-percentage 36)
+	(set-strategic-number sn-gold-gatherer-percentage 4) ;prep gold
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;GATHERING (LAND) (gold no)
+(defrule
+ ;no gold prep
+	(current-age == dark-age)
+	(goal feudal-pending no) ;before clicking-up
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal being-drushed no)
+	(goal DRUSH no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes) ;scouts
+	(goal FEUDAL-SKIRMISHER yes))
+	(unit-type-count villager > 20)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 65) ;try to maintain 13 or 14 on food
+	(set-strategic-number sn-wood-gatherer-percentage 35)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;END OF LAND GATHERING (for low-pop and dark-age)
+
+;	GATHERING IF being-drushed IS YES (any map-type)
+
+;no barracks
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager <= 6)
+	(building-type-count-total barracks < 1)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 100)
+	(set-strategic-number sn-wood-gatherer-percentage 0)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 6)
+	(unit-type-count villager <= 10)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 75)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 10)
+	(unit-type-count villager <= 15)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 18)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 18)
+	(unit-type-count villager <= 22)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 22)
+	(unit-type-count villager <= 25)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 25)
+	(building-type-count-total barracks < 1)
+=>
+(set-strategic-number sn-food-gatherer-percentage 75)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;with barracks
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager <= 7)
+	(building-type-count-total barracks > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 100)
+	(set-strategic-number sn-wood-gatherer-percentage 0)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 7)
+	(unit-type-count villager <= 10)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 75)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 10)
+	(unit-type-count villager <= 15)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 10)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 18)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70)
+(set-strategic-number sn-wood-gatherer-percentage 22)
+(set-strategic-number sn-gold-gatherer-percentage 8)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 18)
+	(unit-type-count villager <= 22)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 74)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 6)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 22)
+	(unit-type-count villager <= 25)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 35)
+(set-strategic-number sn-gold-gatherer-percentage 5)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(current-age == dark-age)
+	(goal REACTIVE-GATHERING no)
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(unit-type-count villager > 25)
+	(building-type-count-total barracks > 0)
+=>
+(set-strategic-number sn-food-gatherer-percentage 55) ;54
+(set-strategic-number sn-wood-gatherer-percentage 35) ;34
+(set-strategic-number sn-gold-gatherer-percentage 10) ;12
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+
+
+;====================RESEARCHING FEUDAL-AGE (feudal-pending) strategies====================
+	;specialized gathering
+
+;FAST CASTLE yes (water-map)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected) ;like coastal
+	(goal WATER-MAP separated)) ;like islands
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;FAST CASTLE yes (water-map)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected) ;like coastal
+	(goal WATER-MAP separated)) ;like islands
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 35) ;most likely have some fishing ships
+	(set-strategic-number sn-wood-gatherer-percentage 58)
+	(set-strategic-number sn-gold-gatherer-percentage 7)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;FAST CASTLE yes (water-map) (low gold)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected) ;like coastal
+	(goal WATER-MAP separated)) ;like islands
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 25)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 34)
+	(set-strategic-number sn-wood-gatherer-percentage 58)
+	(set-strategic-number sn-gold-gatherer-percentage 8) ;10
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;FAST CASTLE yes (water-map) (high gold)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected) ;like coastal
+	(goal WATER-MAP separated)) ;like islands
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 25)
+	(gold-amount >= 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 36)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 4) ;8 ;will likely need gold for war ships
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;TRUSH YES (water-map)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated))
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;TRUSH YES (water-map)
+(defrule
+	(goal REACTIVE-GATHERING no)
+(or	(goal WATER-MAP connected)
+	(goal WATER-MAP separated)) ;be careful about trushing on full water-maps
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager > 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 35)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+
+;FAST CASTLE yes (land-map)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no) ;land map strategy
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 60)
+	(set-strategic-number sn-wood-gatherer-percentage 40) ;35
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;5
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 55) ;65
+	(set-strategic-number sn-wood-gatherer-percentage 45) ;30
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;no gold if we are under 27 vil fc
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;MOST LIKELY FC (27 VIL FC) (LOW GOLD)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 25)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 53) ;52
+	(set-strategic-number sn-wood-gatherer-percentage 43) ;39
+	(set-strategic-number sn-gold-gatherer-percentage 4) ;8
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;MOST LIKELY FC (27 VIL FC) (HIGH GOLD)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(unit-type-count villager > 25)
+	(gold-amount >= 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 57) ;53
+	(set-strategic-number sn-wood-gatherer-percentage 43) ;36
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;11
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;TRUSH yes (fast-castle should be yes already as well, no need to mention it in these TRUSH rules)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40) ;30
+	(set-strategic-number sn-wood-gatherer-percentage 45) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;0
+	(set-strategic-number sn-stone-gatherer-percentage 15) ;15
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal WATER-MAP no)
+	(goal feudal-pending yes)
+	(goal TRUSH yes)
+	(unit-type-count villager > 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 45)
+	(set-strategic-number sn-gold-gatherer-percentage 5)
+	(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+;M@a, archers, or eagles (gold needed)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+(or	(goal SWORDMAN yes)
+(or	(goal ARCHER yes)
+	(goal EAGLE-WARRIOR yes)))
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50) ;40
+	(set-strategic-number sn-wood-gatherer-percentage 50) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 0) ;5
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+(or	(goal SWORDMAN yes)
+(or	(goal ARCHER yes)
+	(goal EAGLE-WARRIOR yes)))
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30) ;35
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;50
+	(set-strategic-number sn-gold-gatherer-percentage 10) ;15
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+(or	(goal SWORDMAN yes)
+(or	(goal ARCHER yes)
+	(goal EAGLE-WARRIOR yes)))
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30) ;38
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;50
+	(set-strategic-number sn-gold-gatherer-percentage 10) ;12
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+(or	(goal SWORDMAN yes)
+(or	(goal ARCHER yes)
+	(goal EAGLE-WARRIOR yes)))
+	(unit-type-count villager > 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30) ;35
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;63
+	(set-strategic-number sn-gold-gatherer-percentage 10) ;12
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;scouts or scouts into anything (2nd part triggers later, so this is only scouts open)
+;gurjara-civ yes or no
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal FEUDAL-SCOUT-CAVALRY yes)	;NOTE: the 2nd part of the flush only triggers after the first 4 or so units are made (see civ_strategy.per)
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GURJARA CAMEL SCOUTS => NO
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40) ;45
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40) ;52
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;48
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45) ;54
+	(set-strategic-number sn-wood-gatherer-percentage 55) ;46
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;----------scouts into skirms or skirms only----------
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+(or	(goal FEUDAL-SKIRMISHER yes); for scouts or skirm open
+	(goal FEUDAL-SCOUT-CAVALRY yes))
+	(unit-type-count villager <= 15)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;GURJARA CAMEL SCOUTS OPENING => NO
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+(or	(goal FEUDAL-SKIRMISHER yes)
+	(goal FEUDAL-SCOUT-CAVALRY yes))
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40) ;45
+	(set-strategic-number sn-wood-gatherer-percentage 60) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+(or	(goal FEUDAL-SKIRMISHER yes)
+	(goal FEUDAL-SCOUT-CAVALRY yes))
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ no)
+(or	(goal FEUDAL-SKIRMISHER yes)
+	(goal FEUDAL-SCOUT-CAVALRY yes))
+	(unit-type-count villager > 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45) ;54
+	(set-strategic-number sn-wood-gatherer-percentage 55) ;46
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;GURJARA CAMEL SCOUTS OPENING => YES
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ yes) ;camel scouts
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 15)
+	(unit-type-count villager <= 21)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 38) ;45
+	(set-strategic-number sn-wood-gatherer-percentage 55) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 7) ;0
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ yes) ;camel scouts
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 21)
+	(unit-type-count villager <= 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 38) ;45
+	(set-strategic-number sn-wood-gatherer-percentage 55) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 7) ;0
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+(defrule
+	(goal REACTIVE-GATHERING no)
+	(goal feudal-pending yes)
+	(goal gurjara-civ yes)
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(unit-type-count villager > 25)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 38) ;45
+	(set-strategic-number sn-wood-gatherer-percentage 55) ;55
+	(set-strategic-number sn-gold-gatherer-percentage 7) ;0
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age farming
+
+;FARM (dark-age)
+(defrule
+	(current-age == dark-age)
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+	(goal feudal-pending no)
+(or	(and	(goal DRUSH yes)
+			(building-type-count-total barracks > 0))
+(or	(unit-type-count villager-forager >= 7) ;4
+(or	(sheep-and-forage-too-far)
+	(current-age-time > 550))))
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 7))
+   (building-type-count-total mill > 0)
+   (building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0)) ;NEW
+   (building-type-count-total farm < 20) ;max
+   (up-pending-objects c: farm < 1);1 ; only build 1 farm at a time max
+   (idle-farm-count <= 1) ;have 0 idle farm on standby
+   (can-build farm)
+=>
+	(build farm)
+)
+
+;FARM (dark-age) (EMERGENCY)
+(defrule
+	(current-age == dark-age)
+	(current-age-time > 60) ;safety
+	(wood-amount > 700) ;high wood
+   (building-type-count-total mill > 0)
+   (building-type-count town-center > 0)
+   (building-type-count-total farm < 20) ;max 20
+   (up-pending-objects c: farm < 3) ;build up to 3 farms at a time
+   (idle-farm-count <= 1) ;have 1 idle farm on standby
+   (can-build farm)
+=>
+	(build farm)
+)
+
+;FARM (feudal pending) (fc no) (barracks no)
+(defrule
+	(current-age == dark-age)
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+   (goal FAST-CASTLE no) ;aggressive strategy
+   (goal feudal-pending yes)
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 8))
+   (up-pending-objects c: farm < 1);2 ; only build 1 farm at a time max
+   (building-type-count-total mill > 0)
+   (building-type-count-total town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+   (building-type-count-total barracks <= 0)
+   (building-type-count-total farm < 10)
+   (can-build farm)
+   (idle-farm-count <= 1)
+=>
+	(build farm)
+)
+
+;FARM (feudal pending) (fc no) (barracks yes)
+(defrule
+	(current-age == dark-age)
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+   (goal FAST-CASTLE no)
+   (goal feudal-pending yes)
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 8))
+   (up-pending-objects c: farm < 1);2 ; only build max 1 farm at a time
+   (building-type-count-total town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+   (building-type-count-total barracks > 0)
+   (building-type-count-total farm < 12)
+   (can-build farm)
+   (idle-farm-count <= 1)
+=>
+	(build farm)
+)
+
+;FARM (feudal pending) (fc yes)
+(defrule
+	(current-age == dark-age)
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+	(goal FAST-CASTLE yes)
+	(goal feudal-pending yes)
+(or	(wood-amount >= 250)
+	(dropsite-min-distance wood <= 7))
+   (up-pending-objects c: farm < 1);2 ; only build 1 farm at a time max
+   (building-type-count-total town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+   (building-type-count-total farm < 12)
+   (idle-farm-count <= 0)
+    (can-build farm)
+=>
+	(build farm)
+)
+
+	;feudal-age farming
+
+;MINIMUM FEUDAL FARM
+(defrule
+	(current-age == feudal-age)
+	(current-age-time > 15) ;allow buildings first
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+(or	(wood-amount >= 200) ;safe wood for farms
+	(dropsite-min-distance wood <= 7)) ;or we have reliable wood source
+	(building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+	(building-type-count-total farm < 8) ;10
+	(idle-farm-count <= 1)
+	(up-pending-objects c: farm < 1);3 ; only build 1 farm at a time
+	(can-build farm)
+=>
+	(build farm)
+)
+
+;NORMAL FEUDAL FARM
+(defrule
+	(current-age == feudal-age)
+	(current-age-time > 60) ;allow buildings first
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+;	(goal castle-pending no) ;not needed
+(not	(town-under-attack)) ;avoid sending vils to their deaths while under attack
+(or	(wood-amount >= 300)
+	(dropsite-min-distance wood <= 7))
+	(building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+	(idle-farm-count <= 1)
+	(up-pending-objects c: farm < 3) ; only build 3 farms at time max
+	(can-build farm)
+=>
+	(build farm)
+)
+
+;EMERGENCY FEUDAL FARM
+(defrule
+	(current-age == feudal-age)
+	(current-age-time > 120) ;safety
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+;	(goal castle-pending no) ;not needed
+	(wood-amount >= 700) ;high wood
+	(building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+	(idle-farm-count <= 2)
+	(up-pending-objects c: farm < 4) ; only build 4 farms at time max
+	(can-build farm)
+=>
+	(build farm)
+)
+
+;FARM (early dark-age) to help not use up all food too fast
+;(defrule
+;	(goal feudal-pending no)
+;	(goal DRUSH no)
+;	(goal WATER-MAP no); indicates land map (should build a dock first if water-map)
+;	(current-age == dark-age)
+;	(current-age-time < 550)
+;(or	(wood-amount > 200)
+;	(dropsite-min-distance wood <= 12))
+;	(unit-type-count-total villager > 10)
+;	(building-type-count town-center > 0)
+;	(building-type-count lumber-camp > 0)
+;	(building-type-count-total farm < 2)
+;	(can-build farm)
+;=>
+;	(build farm)
+;)
+
+;EMERGENCY FARM RULE FOR ANY AGE
+;(defrule
+;	(current-age-time > 300)
+;(or	(not	(town-under-attack))
+;	(goal is-town-under-attack no))
+;	(idle-farm-count >= 4)
+;	(building-type-count farm >= 4)
+;	(dropsite-min-distance food > 15)
+;	(strategic-number sn-maximum-food-drop-distance < 100)
+;=>
+;	(chat-to-player my-player-number "Enabling emergency food gathering.")
+;	(set-strategic-number sn-maximum-food-drop-distance 100)
+;	(disable-self)
+;)
+
+	;castle-age and imperial-age farming
+;FARM
+(defrule
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+	(current-age >= castle-age)
+	(current-age-time >= 10) ;allow buildings first
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+	(building-type-count town-center > 0)
+(or		(building-type-count-total lumber-camp > 0)
+		(building-type-count-total mule-cart > 0))
+	(idle-farm-count <= 1) ;1 extra farm
+	(up-pending-objects c: farm < 3) ; only build 3 farms at a time max
+	(can-build farm)
+=>
+	(build farm)
+)
+
+	;EMERGENCY CASTLE AND IMPERIAL FARMS
+(defrule
+	(up-compare-goal WATER-MAP != separated) ;not a full water map
+	(current-age >= castle-age)
+	(current-age-time >= 120) ;safety
+	(unit-type-count-total villager > min-vills) ;avg 25 min vills
+(or	(wood-amount >= 500) ;stable wood
+	(and	(wood-amount >= 300)
+			(dropsite-min-distance wood <= 7)))
+	(building-type-count town-center > 0)
+	(building-type-count-total farm < 14) ;10
+	(can-build farm)
+=>
+	(build farm)
+)
+
+	;FARMS for full water maps
+;dark-age
+(defrule
+	(goal WATER-MAP separated) ;full water map
+	(current-age <= dark-age)
+	(sheep-and-forage-too-far)
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+(or	(unit-type-count-total fishing-ship < 4)
+(or	(building-type-count dock < 1)
+	(unit-type-count villager-food < 10)))
+	(building-type-count town-center > 0)
+	(building-type-count-total farm < 3)
+	(up-pending-objects c: farm < 1)
+	(idle-farm-count <= 1)
+	(can-build farm)
+=>
+	(build farm))
+
+;feudal-age
+(defrule
+	(goal WATER-MAP separated) ;full water map
+	(current-age == feudal-age)
+	(sheep-and-forage-too-far)
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+(or	(unit-type-count-total fishing-ship < 9)
+	(building-type-count dock < 1))
+	(building-type-count town-center > 0)
+	(building-type-count-total farm < 6) ;max
+	(up-pending-objects c: farm < 2)
+	(idle-farm-count <= 1)
+	(can-build farm)
+=>
+	(build farm))
+
+;castle and imperial age
+;minimal
+(defrule
+	(goal WATER-MAP separated) ;full water map
+	(current-age >= castle-age)
+	(sheep-and-forage-too-far)
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+	(unit-type-count-total fishing-ship < 11)
+	(building-type-count town-center > 0)
+	(building-type-count-total farm < 20) ;minimal
+	(up-pending-objects c: farm < 2); max 2
+	(idle-farm-count <= 1)
+	(can-build farm)
+=>
+	(build farm))
+
+;maximum (normal amount in a land map game)
+(defrule
+	(goal WATER-MAP separated) ;full water map
+	(current-age >= castle-age)
+	(sheep-and-forage-too-far)
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+	(building-type-count town-center > 0)
+(or	(unit-type-count-total fishing-ship < 4) ;really need more food
+	(building-type-count dock < 1)) ;no drop-off
+	(up-pending-objects c: farm < 2)
+	(idle-farm-count <= 1)
+	(can-build farm)
+=>
+	(build farm))
+
+(defrule
+	(goal WATER-MAP separated) ;full water map
+	(game-time > 1800) ;30 mins
+	(current-age >= castle-age)
+	(sheep-and-forage-too-far)
+(or	(wood-amount >= 300) ;stable wood
+	(dropsite-min-distance wood <= 7))
+	(building-type-count town-center > 2) ;established
+	(civilian-population >= max-vill-pop) ;go max farms at this point
+	(up-pending-objects c: farm < 2)
+	(idle-farm-count <= 1)
+	(can-build farm)
+=>
+	(build farm))
+
+	;FEUDAL-AGE GATHERING
+
+;NORMAL FEUDAL-AGE GATHERING (usually fast-castle) (LOW GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20) ;min vil-pop is under 20 ;(19)
+(gold-amount < 200)
+(current-age == feudal-age)
+(current-age-time < 120) ;first 2 minutes of age-up
+=>
+(set-strategic-number sn-food-gatherer-percentage 53)	;52 ;avg 14 vils	;this is the best formula for fast-castle for humans, ai arent perfect so prefer a little more wood
+(set-strategic-number sn-wood-gatherer-percentage 40)	;38 ;avg 10 vils
+(set-strategic-number sn-gold-gatherer-percentage 7)	;10 ;avg 3 vils
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;HIGH FOOD AND WOOD (LOW GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 39) ;40
+(set-strategic-number sn-wood-gatherer-percentage 28) ;30
+(set-strategic-number sn-gold-gatherer-percentage 33)
+(set-strategic-number sn-stone-gatherer-percentage 0) ;0
+)
+;LOW FOOD AND WOOD (LOW GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53) ;focus on food & wood first, then gold (market can supplement if needed)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (LOW GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 63)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (LOW GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30) ;25
+(set-strategic-number sn-wood-gatherer-percentage 63) ;65
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;==================HIGH GOLD=================================
+;NORMAL FEUDAL-AGE GATHERING (usually fast-castle) (HIGH GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(gold-amount >= 200)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 120) ;first 2 minutes of age-up
+=>
+(set-strategic-number sn-food-gatherer-percentage 50) ;60
+(set-strategic-number sn-wood-gatherer-percentage 50) ;40
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD AND WOOD (HIGH GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53) ;55
+(set-strategic-number sn-wood-gatherer-percentage 47) ;45
+(set-strategic-number sn-gold-gatherer-percentage 0) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0) ;5
+)
+;LOW FOOD AND WOOD (HIGH GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 57) ;55
+(set-strategic-number sn-wood-gatherer-percentage 43)
+(set-strategic-number sn-gold-gatherer-percentage 0) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (HIGH GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70) ;65
+(set-strategic-number sn-wood-gatherer-percentage 30) ;30
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (HIGH GOLD)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 33) ;25
+(set-strategic-number sn-wood-gatherer-percentage 67) ;70
+(set-strategic-number sn-gold-gatherer-percentage 0) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;need castle
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 120) ;ONLY FIRST 2 MINUTES, NEED OTHER RES BEFORE STONE
+=>
+(set-strategic-number sn-food-gatherer-percentage 53) ;50
+(set-strategic-number sn-wood-gatherer-percentage 40) ;40
+(set-strategic-number sn-gold-gatherer-percentage 7) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0) ;5
+)
+;HIGH FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 28)
+(set-strategic-number sn-gold-gatherer-percentage 28)
+(set-strategic-number sn-stone-gatherer-percentage 14)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 36)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD HIGH WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 55)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;HIGH FOOD LOW WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal FLUSH no)
+(goal TRUSH no)
+(goal need-castle yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 27) ;20 ;always have minimum 8 on food to prevent re-tasking villagers too often
+(set-strategic-number sn-wood-gatherer-percentage 53) ;60
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+;================================================================================
+
+		;GATHERING IF ONLY FLUSH (low-gold)
+
+;====================FEUDAL SCOUTS OR SKIRMS (high food, high wood, low gold) ;STARTING LOW OR HIGH GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal gurjara-civ no) ;only food needed then
+(or	(goal FEUDAL-SCOUT-CAVALRY yes) ;NEW specific flushing rules as of V 1.6
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 5 MINUTES OF GATHERING
+;(gold-amount < 200) ;doesn't matter
+=>
+(set-strategic-number sn-food-gatherer-percentage 52) ;55
+(set-strategic-number sn-wood-gatherer-percentage 48) ;45
+(set-strategic-number sn-gold-gatherer-percentage 0) ;no gold
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;special gurjara camel scout rule
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal gurjara-civ yes) ;we need food and gold
+(or	(goal FEUDAL-SCOUT-CAVALRY yes) ;NEW specific flushing rules as of V 1.6
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 5 MINUTES OF GATHERING
+;(gold-amount < 200) ;doesn't matter
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 42) ;need buildings first
+(set-strategic-number sn-gold-gatherer-percentage 18) ;meduim gold for camel scouts
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+	;scouts or skirms gathering
+
+;HIGH FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 5 MINUTES
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 28)
+(set-strategic-number sn-gold-gatherer-percentage 42) ;REALLY need gold
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 52) ;50
+(set-strategic-number sn-wood-gatherer-percentage 38) ;43
+(set-strategic-number sn-gold-gatherer-percentage 10) ;7
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 10)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 60)
+(set-strategic-number sn-gold-gatherer-percentage 10)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;====================SCOUTS OR SKIRMS (HIGH GOLD)
+
+;first rule (under low gold) takes care of under 5 minutes
+
+;HIGH FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 5 MINUTES
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 35)
+(set-strategic-number sn-wood-gatherer-percentage 44)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 14)
+)
+;LOW FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 57)
+(set-strategic-number sn-wood-gatherer-percentage 43)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 70)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal FEUDAL-SKIRMISHER yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 70)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;====================ARCHERS (low food, high wood, high gold)
+
+	;first 5 minutes
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 300 SECONDS OF GATHERING
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25) ;26
+(set-strategic-number sn-wood-gatherer-percentage 45) ;53
+(set-strategic-number sn-gold-gatherer-percentage 30) ;21
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;NOTE: After initial archer rush it is common we will need more food & wood for skirms after enemy retaliation, so lower gold after 5 minutes
+;HIGH FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 300 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount < 200) ;flush needs more gold
+=>
+(set-strategic-number sn-food-gatherer-percentage 27)
+(set-strategic-number sn-wood-gatherer-percentage 26)
+(set-strategic-number sn-gold-gatherer-percentage 40)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 36) ;30	perfect for only archers, consider food & wood for skirm or scout backup
+(set-strategic-number sn-wood-gatherer-percentage 44) ;45
+(set-strategic-number sn-gold-gatherer-percentage 20) ;25
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53)
+(set-strategic-number sn-wood-gatherer-percentage 27)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 26)
+(set-strategic-number sn-wood-gatherer-percentage 54)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;====================================
+
+		; ARCHERS (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 300 SECONDS OF GATHERING
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 60)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 300 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 33)
+(set-strategic-number sn-wood-gatherer-percentage 39)
+(set-strategic-number sn-gold-gatherer-percentage 21)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 45) ;36
+(set-strategic-number sn-wood-gatherer-percentage 53) ;54
+(set-strategic-number sn-gold-gatherer-percentage 2) ;10
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 68)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 2)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(goal ARCHER yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 28) ;we can age up maybe just missing a building
+(set-strategic-number sn-wood-gatherer-percentage 70)
+(set-strategic-number sn-gold-gatherer-percentage 2)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+
+	;DEFAULT FLUSH GATHERING
+	;MEN-AT-ARMS OR EAGLES (high food, low wood, high gold)
+
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(goal FEUDAL-SCOUT-CAVALRY no)
+(goal ARCHER no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 300 SECONDS OF GATHERING
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 45) ;30
+(set-strategic-number sn-wood-gatherer-percentage 35) ;50 ; feudal-pending yes rules now prefer lots of wood, so we can focus on unit training in early feudal rather than wood for buildings
+(set-strategic-number sn-gold-gatherer-percentage 20) ;20
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 300 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount < 200) ;flush needs more gold
+=>
+(set-strategic-number sn-food-gatherer-percentage 27)
+(set-strategic-number sn-wood-gatherer-percentage 31)
+(set-strategic-number sn-gold-gatherer-percentage 42)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD AND WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 48) ;45
+(set-strategic-number sn-wood-gatherer-percentage 30) ;35
+(set-strategic-number sn-gold-gatherer-percentage 22) ;20
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 55) ;52
+(set-strategic-number sn-wood-gatherer-percentage 23) ;28
+(set-strategic-number sn-gold-gatherer-percentage 22) ;21
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (low-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 28) ;25?
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 22)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+		;DEFAULT GATHERING FLUSH (men at arms or eagles) (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(goal FEUDAL-SCOUT-CAVALRY no)
+(goal ARCHER no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 300);FIRST 120 SECONDS OF GATHERING
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 55) ;40
+(set-strategic-number sn-wood-gatherer-percentage 45) ;60
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300);AFTER 120 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount >= 200) ;flush needs more gold
+=>
+(set-strategic-number sn-food-gatherer-percentage 32)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 14)
+)
+;LOW FOOD AND WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 57) ;40
+(set-strategic-number sn-wood-gatherer-percentage 40) ;55
+(set-strategic-number sn-gold-gatherer-percentage 3) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;LOW FOOD HIGH WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 67) ;60
+(set-strategic-number sn-wood-gatherer-percentage 30) ;35
+(set-strategic-number sn-gold-gatherer-percentage 3) ;5
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+;HIGH FOOD LOW WOOD (high-gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH no)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(or	(goal SWORDMAN yes)
+	(goal EAGLE-WARRIOR yes))
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 300)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 67)
+(set-strategic-number sn-gold-gatherer-percentage 3)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;====================================
+
+		;GATHERING IF ONLY TRUSH
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 120);FIRST 120 SECONDS OF GATHERING
+=>
+(set-strategic-number sn-food-gatherer-percentage 35) ;30
+(set-strategic-number sn-wood-gatherer-percentage 55) ;60
+(set-strategic-number sn-gold-gatherer-percentage 0) ;0
+(set-strategic-number sn-stone-gatherer-percentage 10) ;10
+)
+;HIGH FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120);AFTER 120 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 35)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 20)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 39) ;38
+(set-strategic-number sn-wood-gatherer-percentage 40) ;45
+(set-strategic-number sn-gold-gatherer-percentage 10) ;7
+(set-strategic-number sn-stone-gatherer-percentage 11) ;10
+)
+;LOW FOOD HIGH WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 26) ;25
+(set-strategic-number sn-gold-gatherer-percentage 10)
+(set-strategic-number sn-stone-gatherer-percentage 11) ;15
+)
+;HIGH FOOD LOW WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH no)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 20) ;15
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 10) ;15
+(set-strategic-number sn-stone-gatherer-percentage 20) ;20
+)
+
+		;GATHERING IF BOTH FLUSH AND TRUSH
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time < 120);FIRST 120 SECONDS OF GATHERING
+=>
+(set-strategic-number sn-food-gatherer-percentage 37) ;30
+(set-strategic-number sn-wood-gatherer-percentage 38) ;60
+(set-strategic-number sn-gold-gatherer-percentage 15) ;5
+(set-strategic-number sn-stone-gatherer-percentage 10) ;5
+)
+;HIGH FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120);AFTER 120 SECONDS OF GATHERING
+(food-amount > 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 20)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 38) ;40
+(set-strategic-number sn-gold-gatherer-percentage 12) ;10
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW FOOD HIGH WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 15)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;HIGH FOOD LOW WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal TRUSH yes)
+(goal FLUSH yes)
+(goal defend-feudal no)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+=>
+(set-strategic-number sn-food-gatherer-percentage 20)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+;----------GATHERING IF DEFEND-FEUDAL IS YES (low gold)---------- ;NOTE: defend-feudal needs to be below all flushing rules to prevent potential bugs (flush yes & defend-feudal yes causes gathering bugs)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(gold-amount < 200)
+(current-age == feudal-age)
+(current-age-time < 120); first 120 seconds of gathering
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 55) ;60
+(set-strategic-number sn-gold-gatherer-percentage 5) ;0
+(set-strategic-number sn-stone-gatherer-percentage 0) ; for towers (none in the first 2 minutes so we can focus on food and wood first)
+)
+;HIGH FOOD AND WOOD (low gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120); after 120 seconds of gathering
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 27)
+(set-strategic-number sn-wood-gatherer-percentage 31)
+(set-strategic-number sn-gold-gatherer-percentage 35) ;extra gold for defensive units compared to other strategies (because we are defending) ;min 14%
+(set-strategic-number sn-stone-gatherer-percentage 7) ;7 for every resource level to prevent excessive retasking villagers and so we can get defensive towers ;min 7%
+)
+;LOW FOOD AND WOOD (low gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 39)
+(set-strategic-number sn-gold-gatherer-percentage 14) ;min 14% for defensive units and techs
+(set-strategic-number sn-stone-gatherer-percentage 7) ;min 7% for defensive towers
+)
+;LOW FOOD HIGH WOOD (low gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 54)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;HIGH FOOD LOW WOOD (low gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 27) ;min 8 vils on food always
+(set-strategic-number sn-wood-gatherer-percentage 52)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+;----------GATHERING IF DEFEND-FEUDAL IS YES (high gold)----------
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(gold-amount >= 200)
+(current-age == feudal-age)
+(current-age-time < 120); first 120 seconds of gathering
+=>
+(set-strategic-number sn-food-gatherer-percentage 45)
+(set-strategic-number sn-wood-gatherer-percentage 55) ;need buildings & farms first
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 0) ; for towers (none in the first 2 minutes so we can focus on food and wood first)
+)
+;HIGH FOOD AND WOOD (high gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120); after 120 seconds of gathering
+(food-amount > 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 35)
+(set-strategic-number sn-wood-gatherer-percentage 41)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 10) ;we will be low on stone before clicking up from likely building towers
+)
+;LOW FOOD AND WOOD (high gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD HIGH WOOD (high gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount < 800)
+(wood-amount > 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 63)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;HIGH FOOD LOW WOOD (high gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal castle-pending no)
+(goal defend-feudal yes)
+(unit-type-count-total villager > 20)
+(current-age == feudal-age)
+(current-age-time > 120)
+(food-amount > 800)
+(wood-amount < 400)
+(gold-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 63)
+(set-strategic-number sn-gold-gatherer-percentage 0)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+;(GOAL CASTLE-PENDING YES) GATHERING
+
+;general rules
+
+;aggressive-castle gathering
+;(defrule
+;(goal REACTIVE-GATHERING no)
+;(goal BOOM no);indicates aggressive behaviour
+;(goal castle-pending yes)
+;(goal need-castle no)
+;=>
+;(set-strategic-number sn-food-gatherer-percentage 30) ;30
+;(set-strategic-number sn-wood-gatherer-percentage 50) ;50
+;(set-strategic-number sn-gold-gatherer-percentage 20) ;20
+;(set-strategic-number sn-stone-gatherer-percentage 0)
+;)
+
+;==========(GOAL CASTLE-PENDING YES)========== ;we are currently researching castle-age
+
+;----------defensive-castle gathering----------
+;LOW WOOD LOW STONE
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM yes);indicates booming behaviour
+(goal castle-pending yes)
+(goal need-castle no)
+(wood-amount < 1000) ;lots of wood for multiple tc's and farms
+(stone-amount < 200) ;stone for at least 2 tc's
+=>
+(set-strategic-number sn-food-gatherer-percentage 23)
+(set-strategic-number sn-wood-gatherer-percentage 60)
+(set-strategic-number sn-gold-gatherer-percentage 2) ;gold not needed
+(set-strategic-number sn-stone-gatherer-percentage 15) ;make sure we have enough stone for new TC's
+)
+
+;HIGH WOOD LOW STONE
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM yes)
+(goal castle-pending yes)
+(goal need-castle no)
+(wood-amount >= 1100) ;buffer
+(stone-amount < 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 23)
+(set-strategic-number sn-gold-gatherer-percentage 2)
+(set-strategic-number sn-stone-gatherer-percentage 15)
+)
+
+;LOW WOOD HIGH STONE
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM yes)
+(goal castle-pending yes)
+(goal need-castle no)
+(wood-amount < 1000)
+(stone-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 38)
+(set-strategic-number sn-wood-gatherer-percentage 60)
+(set-strategic-number sn-gold-gatherer-percentage 2)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;HIGH WOOD HIGH STONE
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM yes)
+(goal castle-pending yes)
+(goal need-castle no)
+(wood-amount >= 1100) ;buffer
+(stone-amount >= 200)
+=>
+(set-strategic-number sn-food-gatherer-percentage 60)
+(set-strategic-number sn-wood-gatherer-percentage 38)
+(set-strategic-number sn-gold-gatherer-percentage 2)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;----------aggressive-castle gathering (high food + gold)----------
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM no);indicates aggressive behaviour
+(goal castle-pending yes)
+(goal need-castle no)
+(or	(goal SWORDMAN yes);infantry
+(or	(goal EAGLE-WARRIOR yes)
+(or (goal KNIGHT yes)
+(or (goal BATTLE-ELEPHANT yes)
+(or (goal STEPPE-LANCER yes)
+(or (goal CAMEL main)
+	(goal SCOUT-CAVALRY main)))))))
+=>
+(set-strategic-number sn-food-gatherer-percentage 40) ;45
+(set-strategic-number sn-wood-gatherer-percentage 32) ;25
+(set-strategic-number sn-gold-gatherer-percentage 28)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;aggressive-castle gathering (high wood + gold)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM no);indicates aggressive behaviour
+(goal castle-pending yes)
+(goal need-castle no)
+(or	(goal ARCHER yes)
+(or	(goal CAV-ARCHER yes)
+	(goal SIEGE-RUSH yes)))
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 45)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;aggressive-castle gathering (backup)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM no);indicates aggressive behaviour
+(goal castle-pending yes)
+(goal need-castle no)
+(goal SWORDMAN no);infantry
+(goal EAGLE-WARRIOR no)
+(goal KNIGHT no)
+(goal BATTLE-ELEPHANT no)
+(goal STEPPE-LANCER no)
+(goal CAMEL no)
+(goal SCOUT-CAVALRY no)
+(goal ARCHER no)
+(goal CAV-ARCHER no)
+(goal SIEGE-RUSH no)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;special rules
+
+;NEED CASTLE GATHERING (low stone)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM no)
+(goal castle-pending yes)
+(goal need-castle yes)
+(stone-amount < 750) ;1 TC + 1 Castle
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 33)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 35)
+)
+
+;NEED CASTLE GATHERING (high stone)
+(defrule
+(goal REACTIVE-GATHERING no)
+(goal BOOM no)
+(goal castle-pending yes)
+(goal need-castle yes)
+(stone-amount >= 750)
+=>
+(set-strategic-number sn-food-gatherer-percentage 33) ;30
+(set-strategic-number sn-wood-gatherer-percentage 40) ;45
+(set-strategic-number sn-gold-gatherer-percentage 20) ;20
+(set-strategic-number sn-stone-gatherer-percentage 7) ;5
+)
+
+	;castle-age gathering
+
+	;AGGRESSIVE GATHERING (BOOM == no)
+;==========WHEN ALL RESOURCES ARE UNDER 1500==========
+;(goal need-castle no) = default castle gathering
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age) ;castle age villager strategy
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW GATHERING STRATEGY
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount > 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 53) ;55
+(set-strategic-number sn-wood-gatherer-percentage 28) ;30
+(set-strategic-number sn-gold-gatherer-percentage 14) ;10
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW WOOD 
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount < 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 29) ;30
+(set-strategic-number sn-wood-gatherer-percentage 52) ;55
+(set-strategic-number sn-gold-gatherer-percentage 14) ;10
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount > 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 35) ;30
+(set-strategic-number sn-wood-gatherer-percentage 25) ;30
+(set-strategic-number sn-gold-gatherer-percentage 35) ;35
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount < 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 44) ;45
+(set-strategic-number sn-wood-gatherer-percentage 37) ;45
+(set-strategic-number sn-gold-gatherer-percentage 14) ;5
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount > 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 44) ;45
+(set-strategic-number sn-wood-gatherer-percentage 21) ;25
+(set-strategic-number sn-gold-gatherer-percentage 30) ;27
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD AND GOLD (most likely archer training)
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount < 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25) ;20
+(set-strategic-number sn-wood-gatherer-percentage 40) ;45
+(set-strategic-number sn-gold-gatherer-percentage 30) ;32
+(set-strategic-number sn-stone-gatherer-percentage 5) ;3
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount > 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 42)
+(set-strategic-number sn-wood-gatherer-percentage 33)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW EVERYTHING
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle no)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount < 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 43) ;37
+(set-strategic-number sn-wood-gatherer-percentage 38) ;43
+(set-strategic-number sn-gold-gatherer-percentage 14) ;17
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;----------BOOKMARK----------
+;(goal need-castle yes) = special castle gathering (extra stone until 1 castle built)
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age) ;castle age villager strategy
+(goal BOOM no)
+(goal need-castle yes) ;only happens 1 time for the first castle ;turns off once 1 castle is built
+(food-amount < 1500) ;LOW GATHERING STRATEGY
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount > 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 26)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW WOOD 
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount < 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 26)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 14)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount > 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 35)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount < 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 44)
+(set-strategic-number sn-wood-gatherer-percentage 36)
+(set-strategic-number sn-gold-gatherer-percentage 10)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount > 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 44)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 26)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW WOOD AND GOLD (most likely archer training)
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount < 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 23)
+(set-strategic-number sn-wood-gatherer-percentage 38)
+(set-strategic-number sn-gold-gatherer-percentage 29)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount > 500)
+(wood-amount > 500)
+(gold-amount > 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 37)
+(set-strategic-number sn-wood-gatherer-percentage 23)
+(set-strategic-number sn-gold-gatherer-percentage 15)
+(set-strategic-number sn-stone-gatherer-percentage 25) ;NEED CASTLE ASAP
+)
+;LOW EVERYTHING
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(goal need-castle yes)
+(food-amount < 1500) ;LOW
+(wood-amount < 1500) ;LOW
+(gold-amount < 1500) ;LOW
+(food-amount < 500)
+(wood-amount < 500)
+(gold-amount < 500)
+=>
+(set-strategic-number sn-food-gatherer-percentage 35)
+(set-strategic-number sn-wood-gatherer-percentage 38)
+(set-strategic-number sn-gold-gatherer-percentage 7)
+(set-strategic-number sn-stone-gatherer-percentage 20) ;default at beginning of castle-age ;NEED CASTLE ASAP
+)
+;=============================================================
+	;WHEN ANY RESOURCES ARE OVER 1500
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age) ;castle age villager strategy
+(goal BOOM no)
+(food-amount < 1500) ;HIGH GATHERING STRATEGY
+(wood-amount > 1500) ;HIGH
+(gold-amount > 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 53) ;55
+(set-strategic-number sn-wood-gatherer-percentage 28) ;30
+(set-strategic-number sn-gold-gatherer-percentage 14) ;10
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount > 1500) ;HIGH
+(wood-amount < 1500) ;HIGH
+(gold-amount > 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 29) ;30
+(set-strategic-number sn-wood-gatherer-percentage 52) ;55
+(set-strategic-number sn-gold-gatherer-percentage 14) ;10
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount > 1500) ;HIGH
+(wood-amount > 1500) ;HIGH
+(gold-amount < 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 35) ;30
+(set-strategic-number sn-wood-gatherer-percentage 25) ;30
+(set-strategic-number sn-gold-gatherer-percentage 35) ;35
+(set-strategic-number sn-stone-gatherer-percentage 5) ;5
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount < 1500) ;HIGH
+(wood-amount < 1500) ;HIGH
+(gold-amount > 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 44) ;45
+(set-strategic-number sn-wood-gatherer-percentage 37) ;45
+(set-strategic-number sn-gold-gatherer-percentage 14) ;5
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount < 1500) ;HIGH
+(wood-amount > 1500) ;HIGH
+(gold-amount < 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 44) ;45
+(set-strategic-number sn-wood-gatherer-percentage 21) ;25
+(set-strategic-number sn-gold-gatherer-percentage 30) ;27
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD AND GOLD (most likely archer training)
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount > 1500) ;HIGH
+(wood-amount < 1500) ;HIGH
+(gold-amount < 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 25) ;20
+(set-strategic-number sn-wood-gatherer-percentage 40) ;45
+(set-strategic-number sn-gold-gatherer-percentage 30) ;32
+(set-strategic-number sn-stone-gatherer-percentage 5) ;3
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM no)
+(food-amount > 1500) ;HIGH
+(wood-amount > 1500) ;HIGH
+(gold-amount > 1500) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 42)
+(set-strategic-number sn-wood-gatherer-percentage 33)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW EVERYTHING ;REDUNDANT
+;(defrule
+;(goal REACTIVE-GATHERING no)
+;(unit-type-count villager > 20)
+;(current-age == castle-age)
+;(goal BOOM no)
+;(food-amount < 1000) ;LOW
+;(wood-amount < 1000) ;LOW
+;(gold-amount < 1000) ;LOW
+;(food-amount < 500)
+;(wood-amount < 500)
+;(gold-amount < 500)
+;=>
+;(set-strategic-number sn-food-gatherer-percentage 43) ;37
+;(set-strategic-number sn-wood-gatherer-percentage 38) ;43
+;(set-strategic-number sn-gold-gatherer-percentage 14) ;17
+;(set-strategic-number sn-stone-gatherer-percentage 5)
+;)
+
+;DEFENSIVE GATHERING (BOOM == yes)
+
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age) ;castle age villager strategy
+(goal BOOM yes)
+(food-amount < 1000)
+(wood-amount > 500)
+(gold-amount > 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 58) ;?
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 5)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW WOOD 
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount > 1000)
+(wood-amount < 500)
+(gold-amount > 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 28)
+(set-strategic-number sn-wood-gatherer-percentage 60) ;57
+(set-strategic-number sn-gold-gatherer-percentage 5)
+(set-strategic-number sn-stone-gatherer-percentage 7) ;3
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount > 1000)
+(wood-amount > 500)
+(gold-amount < 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 40)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount < 1000)
+(wood-amount < 500)
+(gold-amount > 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 38)
+(set-strategic-number sn-gold-gatherer-percentage 5)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount < 1000)
+(wood-amount > 500)
+(gold-amount < 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 48)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 25)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW WOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount > 1000)
+(wood-amount < 500)
+(gold-amount < 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 38)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount > 1000)
+(wood-amount > 500)
+(gold-amount > 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 38)
+(set-strategic-number sn-wood-gatherer-percentage 35)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+;LOW EVERYTHING
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age == castle-age)
+(goal BOOM yes)
+(food-amount < 1000)
+(wood-amount < 500)
+(gold-amount < 800)
+=>
+(set-strategic-number sn-food-gatherer-percentage 48) ;47
+(set-strategic-number sn-wood-gatherer-percentage 42) ;45
+(set-strategic-number sn-gold-gatherer-percentage 7) ;6
+(set-strategic-number sn-stone-gatherer-percentage 3) ;2
+)
+
+	;Imperial gathering rules
+	;ALL RESOURCES LESS THAN 3000 RESOURCES
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age) ;imperial-age villager strategy
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount < 1000)
+(wood-amount > 1000)
+(gold-amount > 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD 
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount > 1000)
+(wood-amount < 1000)
+(gold-amount > 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount > 1000)
+(wood-amount > 1000)
+(gold-amount < 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 50)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount < 1000)
+(wood-amount < 1000)
+(gold-amount > 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 35)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount < 1000)
+(wood-amount > 1000)
+(gold-amount < 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 35)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD AND GOLD (most likely archer training)
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount > 1000)
+(wood-amount < 1000)
+(gold-amount < 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 20)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 35)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount > 1000)
+(wood-amount > 1000)
+(gold-amount > 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW EVERYTHING
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;LOW
+(wood-amount < 3000) ;LOW
+(gold-amount < 3000) ;LOW
+(food-amount < 1000)
+(wood-amount < 1000)
+(gold-amount < 1000)
+=>
+(set-strategic-number sn-food-gatherer-percentage 41)
+(set-strategic-number sn-wood-gatherer-percentage 32)
+(set-strategic-number sn-gold-gatherer-percentage 22)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;=====================================================
+	;ANY RESOURCES OVER 3000
+;LOW FOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age) ;imperial-age villager strategy
+(food-amount < 3000) ;HIGH
+(wood-amount > 3000) ;HIGH
+(gold-amount > 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 50)
+(set-strategic-number sn-wood-gatherer-percentage 25)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD 
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount > 3000) ;HIGH
+(wood-amount < 3000) ;HIGH
+(gold-amount > 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 50)
+(set-strategic-number sn-gold-gatherer-percentage 20)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount > 3000) ;HIGH
+(wood-amount > 3000) ;HIGH
+(gold-amount < 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 25)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 50)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND WOOD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;HIGH
+(wood-amount < 3000) ;HIGH
+(gold-amount > 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 15)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW FOOD AND GOLD
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount < 3000) ;HIGH
+(wood-amount > 3000) ;HIGH
+(gold-amount < 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 40)
+(set-strategic-number sn-wood-gatherer-percentage 20)
+(set-strategic-number sn-gold-gatherer-percentage 35)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;LOW WOOD AND GOLD (most likely archer training)
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount > 3000) ;HIGH
+(wood-amount < 3000) ;HIGH
+(gold-amount < 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 20)
+(set-strategic-number sn-wood-gatherer-percentage 40)
+(set-strategic-number sn-gold-gatherer-percentage 35)
+(set-strategic-number sn-stone-gatherer-percentage 5)
+)
+;RESOURCES BALANCED
+(defrule
+(goal REACTIVE-GATHERING no)
+(unit-type-count villager > 20)
+(current-age >= imperial-age)
+(food-amount > 3000) ;HIGH
+(wood-amount > 3000) ;HIGH
+(gold-amount > 3000) ;HIGH
+=>
+(set-strategic-number sn-food-gatherer-percentage 30)
+(set-strategic-number sn-wood-gatherer-percentage 30)
+(set-strategic-number sn-gold-gatherer-percentage 30)
+(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+;LOW EVERYTHING ;REDUNDANT
+;(defrule
+;(goal REACTIVE-GATHERING no)
+;(unit-type-count villager > 20)
+;(current-age >= imperial-age)
+;(food-amount > 3000) ;HIGH
+;(wood-amount > 3000) ;HIGH
+;(gold-amount > 3000) ;HIGH
+;(food-amount < 1000)
+;(wood-amount < 1000)
+;(gold-amount < 1000)
+;=>
+;(set-strategic-number sn-food-gatherer-percentage 41)
+;(set-strategic-number sn-wood-gatherer-percentage 32)
+;(set-strategic-number sn-gold-gatherer-percentage 22)
+;(set-strategic-number sn-stone-gatherer-percentage 5)
+;)
+
+;===========================REACTIVE GATHERING RULES (just a gathering strategy)==========================
+
+;=========CONDITION 1a: NEED A TOWN CENTER=========
+
+	;any-age
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(building-type-count-total town-center < 1); no tc
+	(wood-amount < 275); need tc wood
+=>
+	(set-strategic-number sn-food-gatherer-percentage 0)
+	(set-strategic-number sn-wood-gatherer-percentage 100)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(building-type-count-total town-center < 1); no tc
+	(wood-amount >= 275); good on wood
+	(stone-amount < 100) ;need tc stone
+=>
+	(set-strategic-number sn-food-gatherer-percentage 0)
+	(set-strategic-number sn-wood-gatherer-percentage 0)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 100)
+)
+
+
+;=========CONDITION 1b: LAND GATHERING=========
+
+	;dark-age (land) (normal) 1
+(defrule
+	(goal REACTIVE-GATHERING yes);SPECIAL GATHERING STRATEGIES
+	(goal WATER-MAP no)
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(wood-amount > 30);good on wood
+	(unit-type-count villager <= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 100)
+	(set-strategic-number sn-wood-gatherer-percentage 0)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (land) (low-wood) 1
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal WATER-MAP no)
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(wood-amount < 30);low wood
+	(unit-type-count villager <= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 25)
+	(set-strategic-number sn-wood-gatherer-percentage 75)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (land) (normal) 2
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal WATER-MAP no)
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(strategic-number sn-food-gatherer-percentage != 75)
+	(strategic-number sn-wood-gatherer-percentage != 25)
+	(current-age == dark-age)
+	(unit-type-count villager >= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 75)
+	(set-strategic-number sn-wood-gatherer-percentage 25)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;=========CONDITION 2: WATER-GATHERING=========
+	;dark-age (water) (normal) 1
+(defrule
+	(goal REACTIVE-GATHERING yes)
+(or	(goal WATER-MAP separated)
+	(goal WATER-MAP connected))
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(strategic-number sn-food-gatherer-percentage != 100);testing
+	(unit-type-count villager <= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 100)
+	(set-strategic-number sn-wood-gatherer-percentage 0)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (water) (low-wood) 1
+(defrule
+	(goal REACTIVE-GATHERING yes)
+(or	(goal WATER-MAP separated)
+	(goal WATER-MAP connected))
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(wood-amount < 30);low wood
+	(unit-type-count villager <= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 25)
+	(set-strategic-number sn-wood-gatherer-percentage 75)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (water) (normal) 2
+(defrule
+	(goal REACTIVE-GATHERING yes)
+(or	(goal WATER-MAP separated)
+	(goal WATER-MAP connected))
+	(goal being-drushed no)
+	(goal DRUSH no)
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(strategic-number sn-food-gatherer-percentage != 100);testing
+	(unit-type-count villager > 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 65)
+	(set-strategic-number sn-wood-gatherer-percentage 35)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;=========CONDITION 3: DRUSH=========
+	;dark-age (drush or being drushed)
+
+	;dark-age (land) (drush) 1
+(defrule
+	(goal REACTIVE-GATHERING yes)
+;	(goal WATER-MAP no) ;map-type doesnt matter
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(unit-type-count villager <= 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 80)
+	(set-strategic-number sn-wood-gatherer-percentage 20)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (land) (drush) (need baracks) 
+(defrule
+	(goal REACTIVE-GATHERING yes)
+;	(goal WATER-MAP no) ;map-type doesnt matter
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(building-type-count barracks < 1)
+	(unit-type-count villager > 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 60)
+	(set-strategic-number sn-wood-gatherer-percentage 40)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;dark-age (land) (drush) (have baracks) 
+(defrule
+	(goal REACTIVE-GATHERING yes)
+;	(goal WATER-MAP no) ;map-type doesnt matter
+(or	(goal being-drushed yes)
+	(goal DRUSH yes))
+	(goal feudal-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == dark-age)
+	(building-type-count barracks > 0)
+	(unit-type-count villager > 6)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 65)
+	(set-strategic-number sn-wood-gatherer-percentage 32)
+	(set-strategic-number sn-gold-gatherer-percentage 3)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;=========CONDITION 4: ADVANCE TO FEUDAL-AGE=========
+
+	;FAST-CASTLE
+
+	;advancing to feudal-age (flush no) (low gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(goal need-castle no);no stone needed
+	(building-type-count-total town-center > 0)
+	(gold-amount < 200);need gold still
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 45)
+	(set-strategic-number sn-gold-gatherer-percentage 5)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;advancing to feudal-age (flush no) (high gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal feudal-pending yes)
+	(goal FLUSH no);indicates fast-castle
+	(goal TRUSH no)
+	(goal need-castle no)
+	(building-type-count-total town-center > 0)
+	(gold-amount > 200) ;lots of gold
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;SCOUTS (no gold needed)
+
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+	(goal FEUDAL-SCOUT-CAVALRY yes)
+	(goal TRUSH no)
+	(goal need-castle no);no stone needed
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;GENERIC FLUSH (need gold)
+
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE no)
+	(goal FLUSH yes)
+	(goal FEUDAL-SCOUT-CAVALRY no)
+	(goal need-castle no);no stone needed
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 10)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;NEED STONE
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal feudal-pending yes)
+	(goal FAST-CASTLE yes)
+(or	(goal TRUSH yes)
+	(goal need-castle yes));need stone 
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 5)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+;=========CONDITION 5: FEUDAL-AGE=========
+
+	;FAST-CASTLE (need gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(goal need-castle no)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 43)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 7)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;FAST-CASTLE (high gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE yes)
+	(goal TRUSH no)
+	(goal need-castle no)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount > 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;FAST-CASTLE (generic flush) (low gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE no)
+	(goal FLUSH yes)
+	(goal TRUSH no)
+	(goal need-castle no)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 47)
+	(set-strategic-number sn-gold-gatherer-percentage 13)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;FAST-CASTLE (generic flush) (high gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE no)
+	(goal FLUSH yes)
+	(goal TRUSH no)
+	(goal need-castle no)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount > 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 50)
+	(set-strategic-number sn-wood-gatherer-percentage 50)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;FAST-CASTLE (FAST-CASTLE need stone) (low gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE yes)
+(or	(goal TRUSH yes)
+	(goal need-castle yes))
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 40)
+	(set-strategic-number sn-gold-gatherer-percentage 13)
+	(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+	;FAST-CASTLE (FAST-CASTLE need stone) (high gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal no)
+	(goal FAST-CASTLE yes)
+(or	(goal TRUSH yes)
+	(goal need-castle yes))
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount > 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45)
+	(set-strategic-number sn-wood-gatherer-percentage 45)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+	;defend-feudal (feudal defence strategy) (low gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal yes)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount < 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 40)
+	(set-strategic-number sn-wood-gatherer-percentage 40)
+	(set-strategic-number sn-gold-gatherer-percentage 10)
+	(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+	;defend-feudal (feudal defence strategy) (high gold)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal defend-feudal yes)
+	(goal castle-pending no)
+	(building-type-count-total town-center > 0)
+	(current-age == feudal-age)
+	(gold-amount > 200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45)
+	(set-strategic-number sn-wood-gatherer-percentage 45)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 10)
+)
+
+;=========CONDITION 6: ADVANCE TO CASTLE-AGE=========
+
+	;defensive castle-age
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal castle-pending yes)
+	(goal BOOM yes)
+	(goal need-castle no)
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30);probably have enough vils by this point
+	(set-strategic-number sn-wood-gatherer-percentage 70)
+	(set-strategic-number sn-gold-gatherer-percentage 0)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;offensive castle-age
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal castle-pending yes)
+	(goal BOOM no)
+	(goal need-castle no)
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30)
+	(set-strategic-number sn-wood-gatherer-percentage 60)
+	(set-strategic-number sn-gold-gatherer-percentage 10)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+	;need-castle castle-age
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal castle-pending yes)
+	(goal BOOM no)
+	(goal need-castle yes)
+	(building-type-count-total town-center > 0)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30)
+	(set-strategic-number sn-wood-gatherer-percentage 38)
+	(set-strategic-number sn-gold-gatherer-percentage 7)
+	(set-strategic-number sn-stone-gatherer-percentage 25)
+)
+
+;=========CONDITION 7: CASTLE-AGE=========
+
+;defensive castle-age (low-food)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal BOOM yes)
+	(building-type-count-total town-center > 0)
+	(current-age == castle-age)
+	(food-amount < 1200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 45)
+	(set-strategic-number sn-wood-gatherer-percentage 41)
+	(set-strategic-number sn-gold-gatherer-percentage 7)
+	(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+;defensive castle-age (high-food)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal BOOM yes)
+	(building-type-count-total town-center > 0)
+	(current-age == castle-age)
+	(food-amount > 1200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 15)
+	(set-strategic-number sn-wood-gatherer-percentage 40)
+	(set-strategic-number sn-gold-gatherer-percentage 33)
+	(set-strategic-number sn-stone-gatherer-percentage 12)
+)
+
+;offensive castle-age (low-food)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal BOOM no)
+	(building-type-count-total town-center > 0)
+	(current-age == castle-age)
+	(food-amount < 1200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 35)
+	(set-strategic-number sn-wood-gatherer-percentage 38)
+	(set-strategic-number sn-gold-gatherer-percentage 20)
+	(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+
+;offensive castle-age (high-food)
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(goal BOOM no)
+	(building-type-count-total town-center > 0)
+	(current-age == castle-age)
+	(food-amount > 1200)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 15)
+	(set-strategic-number sn-wood-gatherer-percentage 40)
+	(set-strategic-number sn-gold-gatherer-percentage 33)
+	(set-strategic-number sn-stone-gatherer-percentage 12)
+)
+
+;=========CONDITION 8: IMPERIAL-AGE=========
+
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(building-type-count-total town-center > 0)
+	(current-age >= imperial-age)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 48)
+	(set-strategic-number sn-wood-gatherer-percentage 45)
+	(set-strategic-number sn-gold-gatherer-percentage 7)
+	(set-strategic-number sn-stone-gatherer-percentage 0)
+)
+
+(defrule
+	(goal REACTIVE-GATHERING yes)
+	(building-type-count-total town-center > 0)
+	(current-age >= imperial-age)
+	(unit-type-count villager >= max-vill-pop)
+=>
+	(set-strategic-number sn-food-gatherer-percentage 30)
+	(set-strategic-number sn-wood-gatherer-percentage 33)
+	(set-strategic-number sn-gold-gatherer-percentage 30)
+	(set-strategic-number sn-stone-gatherer-percentage 7)
+)
+

@@ -1,0 +1,2255 @@
+
+	;Constants for Jester.per
+
+;CONSTANTS
+
+	;new ai updates from game updates (January)
+
+; sn-gate-type-for-wall ( 1 = palisade gate , 0 = stone or fortified gates)
+;flares can be found using players-unit-type-count and up-find-flare
+; up-find-flare now finds flare objects
+; (strategic-number sn-disable-villager-garrison 3) now stops boar-lurers from garrisoning
+; sn-minimum-number-hunters now properly assigns villagers to huntable objects.
+;sn-object-repair-level now takes scorpion and trebuchet units into consideration
+; new defconsts for the Last Khans Civs
+; maximum amount of strategic numbers from 303 -> 511.
+; up-can-build no longer returns false when using wall objects.
+; up-garrison now accepts unit lines, and now works on distant targets.
+; up-gather-inside now works on watch towers.
+; up-path-distance and up-get-path-distance updated.
+; find-random with up-find player now returns correct player ID's.
+; additional bug fixes.
+
+	;August 2021
+;Wall objects are now being detected when using position-target, position-focus or position-enemy.
+;Fixed an issue with up-chat-data-to-player and up-chat-data-to-player-using-id where they did not always output chat to the intended player.
+
+;CIVILIZATION UPGRADES (work-in-progress)
+;ARMENIANS
+(defconst ri-cicilian-fleet 922)
+(defconst ri-fereters 921)
+;AZTECS
+(defconst ri-atlatl 460)
+(defconst ri-garland-wars 24)
+;BERBERS
+(defconst ri-kasbah 578); expeditions
+(defconst ri-maghrabi-camels 579); camel-corps
+;BOHEMIANS
+(defconst ri-wagenburg-tactics 784)
+(defconst ri-hussite-reforms 785)
+;BRITONS
+(defconst ri-yeomen 3)
+(defconst ri-war-wolf 461)
+;BULGARIANS
+(defconst ri-stirrups 685)
+(defconst ri-bagains 686)
+;BURGUNDIANS
+(defconst ri-burgundian-vineyards 754)
+(defconst ri-flemish-revolution 755)
+;BURMESE
+(defconst ri-howdah 626)
+(defconst ri-manipur-cavalry 627)
+;BYZANTINES
+(defconst ri-greek-fire 464)
+(defconst ri-logistica 61)
+;CELTS
+(defconst ri-stronghold 482)
+(defconst ri-furor-celtica 5)
+;CHINESE
+(defconst ri-great-wall 462)
+(defconst ri-rocketry 52)
+;CUMANS
+(defconst ri-steppe-husbandry 689)
+(defconst ri-cuman-mercenaries 690)
+;ETHIOPIANS
+(defconst ri-royal-heirs 574)
+(defconst ri-torsion-engines 575)
+;FRANKS
+(defconst ri-bearded-axe 83)
+(defconst ri-chivalry 493)
+;GEORGIANS
+(defconst ri-svan-towers 923)
+;GOTHS
+(defconst ri-anarchy 16)
+(defconst ri-perfusion 457)
+;HUNS
+(defconst ri-marauders 483)
+;missing ri-atheism?
+;INCAS
+(defconst ri-andean-sling 516)
+;(defconst ri-fabric-shields ???)
+;INDIANS
+(defconst ri-sultans 506)
+(defconst ri-shatagni 507)
+;ITALIANS
+(defconst ri-pavise 494)
+(defconst ri-silk-road 499)
+;JAPANESE
+(defconst ri-yasama 484)
+(defconst ri-kataparuto 59)
+;KHMER
+(defconst ri-tusk-swords 622)
+(defconst ri-double-crossbow 623)
+;KOREANS
+;(defconst ri-eupseong ???)
+(defconst ri-shinkichon 445)
+;LITHUANIANS
+(defconst ri-hill-forts 691)
+(defconst ri-tower-shields 692)
+;MAGYARS
+;(defconst ri-corvinian-army ???)
+(defconst ri-recurve-bow 515)
+;MALAY
+;MALIANS
+;MAYANS
+(defconst ri-obsidian-arrows 485) ;replaces ri-hul'che-javelineers?
+;ri-el-dorado not working ;use my-unique-research
+;MONGOLS
+;PERSIANS
+;POLES
+(defconst ri-szlachta-privileges 782)
+(defconst ri-lechitic-legacy 783)
+;PORTUGUESE
+;SARACENS
+(defconst ri-bimaristan 28) ;saracen unique tech
+;ri-counterweights works without defconst?
+;SICILIANS
+(defconst ri-first-crusade 756)
+(defconst ri-scutage 757) ;is now ri-hauberk?
+;SLAVS
+;ri-detinets works without defconst?
+(defconst ri-druzhina 513) ;slav unique tech
+;SPANISH
+(defconst ri-supremacy 440)
+;TATARS
+;TEUTONS
+;TURKS
+;VIETNAMESE
+;VIKINGS
+
+
+
+	;NEXT AVAILABLE DEFCONST: 209 then 214? (some under this value available)
+
+	;NUMBER OF CHAT SLOTS AVAILABLE: ~ ?
+
+;---GENERAL---
+;TOWN UNDER ATTACK
+(defconst is-town-under-attack 11) ;goal id 11 is common "town under attack" goal
+(defconst no 0)
+(defconst yes 1)
+(defconst maybe 2)
+(defconst defence 3)
+(defconst temp-timer 4) ;for sheep micro and other menial tasks
+(defconst eco-timer 7) ;for asking allies for resources or tributing
+(defconst town-size-timer 1) ;increasing or decreasing dynamic town size
+(defconst camp-size-timer 6) ;for placing extra mining, lumber-camps or mule-carts
+(defconst town-size-goal 165) ;dynamic town-size rules
+(defconst town-size-ready 166) ;dynamic town-size rules
+
+(defconst main 5);for camel and scout-cavalry strategy (indians) temp fix
+
+(defconst SKIRM-TYPE 189) ;prioritize genitours if available, otherwise pursue regular skirmishers
+(defconst SKIRM 0)
+(defconst GENITOUR 1)
+
+;CHAT STRING MESSAGES ;using this method saves you chat strings for other purposes
+(defconst specific-player-chat-yes "Focusing on that target player!")
+(defconst specific-player-chat-no "I'm unable to target that player right now.")
+(defconst CURRENT-VERSION-CHAT "JESTER AI V 2.3 Created by ScreamingKoos.")
+(defconst pause-archers "Pausing archer training.")
+(defconst resume-archers "Resuming archer training.")
+
+;GENERIC CIV-IDENTIFIER
+(defconst my-civ-type 400)
+(defconst non-meso 401)
+(defconst meso 402)
+
+;HUNTING
+(defconst boar-hunt 129)
+(defconst lure 1)
+(defconst capture 2)
+(defconst dead 3)
+(defconst rehunt 4)
+(defconst none 5)
+(defconst deer-hunt 6)
+(defconst nomad-hunt 7)
+(defconst boar-timer 8)
+
+;deer-luring
+(defconst deer-luring 64)
+
+;build orders
+;(defconst dark-build-order 138) (implemented in the future)
+;(defconst feudal-build-order 139)
+
+;ATTACKING
+(defconst standby 3)
+(defconst offence 4)
+(defconst reset-attack 5)
+(defconst attack-goal 58)
+(defconst tua-timer 2)
+(defconst tua-check-interval 20)
+(defconst need-assistance-chat 38)
+(defconst wait 39)
+
+;POSITION-GOAL
+(defconst flank 1)
+(defconst pocket 2)
+
+;ALLY IN GAME
+(defconst ALLY-IN-GAME 70)
+
+;RESOURCES
+;(defconst gold-mine 66) ;defined below V
+(defconst GOLD-REMAINING 60)
+(defconst STONE-REMAINING 148)
+(defconst WOOD-REMAINING 149)
+(defconst gold-mine-distance 127)
+(defconst stone-mine-distance 128)
+
+;ECONOMY
+(defconst amount-villagers-max 71)
+(defconst amount-villagers-dark 35)
+(defconst amount-villagers-fc 35);35
+(defconst amount-villagers-flush 70)
+(defconst amount-villagers-castle 120)
+(defconst amount-villagers-imperial 110)
+(defconst amount-traders 25)
+(defconst amount-sea-traders 5)
+
+;MILITARY (custom consts)
+(defconst unique-infantry-class 19)
+(defconst unique-archer-class 20)
+(defconst unique-cavalry-class 21)
+(defconst unique-cav-archer-class 22)
+(defconst unique-eagle-class 23)
+(defconst unique-siege-class 24);organ gun
+(defconst unique-hand-cannoneer-class 25);jannisary
+
+;ENEMY CIV UNIQUE UNITS
+(defconst UNIQUE-ENEMY-INFANTRY 40)
+(defconst UNIQUE-ENEMY-ARCHER 41)
+(defconst UNIQUE-ENEMY-CAVALRY 42)
+(defconst UNIQUE-ENEMY-CAV-ARCHER 43)
+(defconst UNIQUE-ENEMY-SIEGE 44); organ guns
+(defconst UNIQUE-ENEMY-HAND-CANNONEER 45); turks
+
+;----------COUNT ENEMY TARGET-PLAYER UNITS----------
+(defconst infantry-threat-level 210)		;40 ;all melee infantry units 
+(defconst archer-threat-level 46)			;41 ;all foot archers 
+;(defconst cav-archer-threat-level )		;42 ;all cavalry archers 
+(defconst cavalry-threat-level 212)			;43 ;all melee cavalry
+(defconst siege-threat-level 213)			;44 ;all siege (battering-ram, mangonel, scorpion, and unique units like hussite-wagon & war-wagon etc)
+(defconst unique-siege-threat-level 214)	;45
+(defconst hand-cannoneer-threat-level 215)	;46 ;hand-cannoneers & janissaries
+(defconst navy-threat-level 216) 			;210 ;all warboats
+
+
+;ENEMY STRATEGIES: testing (alpha)
+(defconst enemy-dark-strategy 201)
+(defconst enemy-feudal-strategy 202)
+(defconst enemy-castle-strategy 203)
+(defconst enemy-imperial-strategy 204)
+(defconst booming 0)
+(defconst offensive 1)
+(defconst militia 2)
+(defconst m@a 3)
+(defconst eagles 4)
+(defconst archers 5)
+(defconst skirmishers 6)
+(defconst arch/skirm 7)
+(defconst scouts 8)
+
+;population
+(defconst my-pop 168)
+(defconst my-civ-pop 169)
+(defconst my-mil-pop 132) ;FIXED as of Version 1.8
+(defconst enemy-mil-pop 170)
+(defconst my-mil-count 171) ;used for sn-military-level calculation
+(defconst enemy-mil-count 172) ;used for sn-military-level calculation
+(defconst my-navy-count 207) ;my warboat-count
+(defconst enemy-navy-count 208) ;enemy warboat-count
+
+;MILITARY
+
+;all of these include their respective "unit-lines"
+
+;these are used for STRATEGIES, not upgrades
+
+;economic
+(defconst VILLAGER 109)
+(defconst TRADE-CART 110)
+(defconst TRADE-COG 111)
+(defconst FISHING-SHIP 99)
+
+;land units
+(defconst SWORDMAN 27)
+(defconst SPEARMAN 28)
+(defconst SERJEANT-DONJON 135)
+(defconst EAGLE-WARRIOR 29)
+(defconst CONDOTTIERO 94)
+(defconst ARCHER 30)
+(defconst SKIRMISHER 31)
+(defconst FEUDAL-SKIRMISHER 75)
+(defconst SLINGER 95)
+(defconst CAV-ARCHER 32)
+(defconst GENITOUR 96)
+(defconst HAND-CANNONEER 47)
+(defconst SCOUT-CAVALRY 33)
+(defconst FEUDAL-SCOUT-CAVALRY 147)
+(defconst KNIGHT 34)
+(defconst CAMEL 35)
+(defconst BATTLE-ELEPHANT 36)
+(defconst STEPPE-LANCER 37)
+(defconst MONK 83)
+(defconst MISSIONARY 97);not enabled yet
+(defconst MY-UNIQUE-UNIT 85)
+(defconst HUSSAR 142)
+
+;unit group identifiers
+(defconst counter-units 114);like spears, camels, skirms etc.
+(defconst CAVALRY-UNITS 115);knight-line, steppe-lancer-line, battle-elephant-line
+
+;siege
+;(defconst BATTERING-RAM 88);not enabled yet (meaning just uses general rules for now)
+;(defconst MANGONEL 89);not enabled yet
+(defconst SCORPION 90);not enabled yet
+(defconst BOMBARD-CANNON 91);not enabled yet
+(defconst TREBUCHET 92);not enabled yet
+(defconst PETARD 93);not enabled yet
+(defconst SIEGE-TOWER 98);not enabled yet
+
+;water
+(defconst TRANSPORT-SHIP 154);not enabled
+(defconst WAR-GALLEY 155);not enabled
+(defconst FIRE-SHIP 156);not enabled
+(defconst DEMOLITION-SHIP 157);not enabled
+(defconst CANNON-GALLEON 158);not enabled
+(defconst TURTLE-SHIP 112);not enabled
+(defconst LONGBOAT 113);not enabled
+
+;missing units:
+;all done
+
+;ATTACKING
+(defconst attack-timer 3)
+;(defconst CIV-CHECK-TIMER 46) ;for dynamically changing the civ for target-enemy (when Jester changes target-player so we update the current target civilization)
+(defconst THIRTY-SEC-TIMER 30) ;generic 30 sec timer. Currently used for sheep-micro
+(defconst INTERVAL-TIME 30); was 80 ;used for attacking rules with grouping numbers
+;(defconst military-timer 50) ;currently not in use, military rules use the up-get-fact command for immediate military-level updates
+(defconst sn-military-level 190) ;for determining our military strength compared to the target-player
+(defconst EMERGENCY-ATTACK 125) ;if we are pop-capped, then we automatically attack no matter what. Also disables all arrow-dodging micro.
+(defconst stop-attacking 124) ;currently only used by taunts
+(defconst focus-player-timer 5)
+(defconst ally-help-timer 9) ;in testing, supposed to send military to allies aid when under attack goal is at 11 and turned on.
+
+;GOALS (order in when they are made)
+(defconst RESIGN-TIMER 10)
+(defconst GIVE-UP 16)	;makes Jester immediately resign
+(defconst defend-feudal 6)
+(defconst ATTACK 56)
+(defconst BUILD-THE-WONDER 89)
+(defconst IS-WONDER-ALIVE 49)
+(defconst WONDER-MODE 8)
+(defconst WATER-MAP 9)
+(defconst connected 88); related to water-map ;ex: coastal, baltic, golden-swamp
+(defconst separated 72); related to water-map ;ex: islands
+(defconst being-drushed 73)
+(defconst DRUSH 74)
+(defconst FLUSH 12)
+;(defconst BOOM 13) ;see position-point (its 13 as well?)
+(defconst NOMAD 14)
+;(defconst MORE-VILLAGERS 15)
+(defconst TARGET-ENEMY 200)
+(defconst BUILD-THE-WALL 17)
+(defconst TRUSH 18)
+(defconst ENEMY-LOCATED 57)
+(defconst TRASH-UNITS 48)
+(defconst RETREAT 54)
+(defconst feudal-pending 55)
+(defconst castle-pending 78)
+(defconst imperial-pending 79)
+
+(defconst SIEGE-FOR-CASTLE 61)
+(defconst CAN-RESIGN 62)	;allows Jester to resign or never resign
+(defconst EMERGENCY-WALL 63)
+(defconst FAST-CASTLE 65)
+;(defconst FAST-IMPERIAL 86)
+(defconst BOOM 86)
+;(defconst POCKET 67) ;RENAMED TO "position-goal" to be compatible with other ai's ;problem with 67??
+(defconst ts-save 68);town-size save (not in use)
+(defconst can-flush 69)
+(defconst feudal-strategy-selected 76)
+(defconst castle-strategy-selected 84)
+(defconst imperial-strategy-selected 143)
+(defconst need-siege-workshop 77)
+(defconst need-castle 82)
+(defconst high-res-vils 80)
+(defconst allow-walls 81)
+(defconst RESET-STRATEGY 87)
+(defconst REACTIVE-NAVY 116); (means only to match enemy navy on land maps eventually) (not in use)
+(defconst GARRISON 117)
+(defconst sheep-micro 118)
+(defconst DEFAULT-STRATEGY 126);used in relation to taunts and what works best with specific civ
+(defconst REACTIVE-GATHERING 130); currently used for low-pop strategies or for special case scenarios (like no TC and no resources to build one)
+(defconst DODGE-ARROWS 131); dodging tc, tower, castle arrow fire etc...
+(defconst WALL-PERIMETER 167) ;Jester does not build walls for now
+(defconst SIEGE-RUSH 193) ;re-added back in for more variety ;)
+(defconst gl-ally-in-need 184) ;for automatic resource slinging
+(defconst DEFAULT-ESCROW 185) ;yes or no, basic escrow backup goals (not in use)
+(defconst VILLAGER-PRIORITY 186) ;yes means prioritize villagers over military, no means prioritize military over villagers
+(defconst MILITARY-TRAINING 187) ;yes means allow military training, no means stop all military production
+(defconst position-goal 181) ;flank or pocket player?
+(defconst closest-ally-goal 188)
+(defconst nearest-ally 191) ;closest ally to a pocket Jester player
+(defconst defend-castle 192) ;like defend-feudal, but for castle (turns on when under attack while booming)
+
+(defconst TRASH-SCOUTS 178)
+(defconst TRASH-SPEARS 179)
+(defconst TRASH-SKIRMS 180)
+
+	;will set this up in a future update:
+;(defconst ESCROW-GOAL ?)
+;(defconst ESCROW ?)
+;(defconst gl-eco-upgrades 0)
+;(defconst gl-blacksmith-upgrades 1)
+;(defconst gl-university-upgrades 2)
+;(defconst gl-unit-upgrades 3)
+;(defconst gl-castle-upgrades 4)
+
+;resource current distances
+(defconst current-mining-distance 205)
+(defconst current-lumber-distance 206)
+(defconst sn-safe-border-distance 500) ;adds to sn-maximum-town size for building placement and defence units ;used as strategic-number ;custom sn's can range from 303 -> 511 (skip 510)
+
+
+
+;==================NEW important userpatch constants======================
+
+;UNIT IDENTIFIERS
+
+;Unit IDs
+(defconst male-hunter 122)
+(defconst female-hunter 216)
+(defconst male-forager 120)
+(defconst female-forager 354)
+(defconst male-shepherd 592)
+(defconst female-shepherd 590)
+(defconst male-farmer 214)
+(defconst female-farmer 259)
+(defconst female-gold-miner 579)
+(defconst male-gold-miner 581)
+(defconst hunter 976)
+(defconst food-gatherer 978)
+(defconst siege-tower 885) ;unit ID, not a goal lol
+
+;--------------------------------------
+; Define DropsiteMinDistance Constants
+;--------------------------------------
+(defconst hunting 4)
+(defconst boar-hunting 5)
+(defconst deer-hunting 6)
+(defconst live-boar 7)
+
+;gaia
+(defconst tree-class 915)
+(defconst gold-mine 66)
+(defconst stone-mine 102)
+(defconst relic 285)
+(defconst stone-mine-class 908)
+(defconst deer-class 909)
+(defconst boar-class 910)
+(defconst gold-mine-class 932)
+(defconst forage-bush 59)
+(defconst deer 65)
+(defconst wild-boar 48)
+(defconst javelina 822)
+(defconst rhinoceros 1139)
+(defconst ostrich 1026)
+(defconst zebra 1019)
+
+(defconst forage-food 907)
+(defconst sheep-food 958)
+;(defconst boar-food 910)
+(defconst deer-food 909)
+(defconst farm-food 949)
+(defconst fish-food 933)
+
+
+
+;special units (where unit-line doesn't seem to work?)
+
+;DE genitour
+;(defconst genitour 1010)
+;(defconst elite-genitour 1012)
+;(defconst genitour-placeholder 1079)
+;(defconst genitour-line -253)
+;(defconst ri-elite-genitour 599)
+(defconst genitour 223)
+(defconst elite-genitour 230)
+(defconst genitour-placeholder 732)
+;(defconst condottiero 184) ;stopped condottiero's from working? ;DO NOT DEFINE THIS
+(defconst condottiero-placeholder 882)
+(defconst barracks-huskarl 759)
+(defconst elite-barracks-huskarl 761)
+(defconst stable-tarkan 886) 
+(defconst elite-stable-tarkan 887)
+(defconst ratha-train 1759)
+(defconst elite-ratha-train 1761)
+(defconst ratha-set 990);another placeholder
+(defconst chakram-thrower 1741)
+(defconst elite-chakram-thrower 1743)
+(defconst flemish-militia 1699) ;fixed now ;========================NEW be sure to add "flemish-militia-set" later for counting all 3 variants
+(defconst thirisadai 1750) ;dravidian warship
+(defconst caravanserai 1754);this isn't the actual ID but a placeholder ;persian or hindustani eco building for trade carts
+
+#load-if-defined PERSIAN-CIV ;for some reason lol i need savars!
+(defconst ri-paladin 526)
+#end-if
+
+;(defconst coustillier 1655)
+;(defconst elite-coustillier 1657)
+;(defconst flemish-pikeman 1663)
+;(defconst serjeant 1658)
+;(defconst elite-serjeant 1659)
+;(defconst donjon-serjeant 1660)
+;(defconst elite-donjon-serjeant 1661)
+
+;(defconst ri-elite-coustillier 751)
+;(defconst ri-elite-serjeant 753)
+
+;(defconst folwark 1734) ;FOUND IN SCENARIO EDITOR ID SECTION
+(defconst folwark 1711) 
+(defconst ri-winged-hussar 786)
+(defconst ri-houfnice 787)
+(defconst coustillier-line -240)
+(defconst serjeant-line -239)
+(defconst donjon-serjeant-line -238)
+(defconst donjon-spearman-line -227) ;March PUP makes this no longer defined by the game engine
+(defconst serjeant-set 988)
+(defconst donjon 1665)
+
+;RESIGN CHATS
+(defconst RESIGN-CHAT 119) ;uses random numbers to generate a random resign message
+(defconst BANTER-CHAT 151) ;uses random numbers to generate a random message during the game
+(defconst FIRST-ATTACK-CHAT 209) ;uses random numbers to generate a random first attack message
+(defconst UNDER-ATTACK-CHAT 211) ;uses random numbers to generate a first under attack message
+(defconst MEME-STRATEGY 121) ;mmm what's this?
+
+;BYPASSES ON DE CIVS
+(defconst bulgarian-civ 26)
+(defconst cuman-civ 51)
+(defconst lithuanian-civ 52)
+(defconst tatar-civ 53)
+(defconst burgundian-civ 133)
+(defconst sicilian-civ 134)
+(defconst pole-civ 173)
+(defconst bohemian-civ 174)
+(defconst armenian-civ 194)
+(defconst georgian-civ 195)
+(defconst bengali-civ 196)
+(defconst dravidian-civ 197)
+(defconst gurjara-civ 198)
+(defconst roman-civ 199)
+
+;USER-PATCH DEFCONSTS
+(defconst gl-random 501)
+(defconst gl-feudal-strategy 502)
+(defconst gl-castle-strategy 503)
+(defconst gl-pocket-strategy 504)
+
+(defconst explored-no 0)
+(defconst explored-yes 128)
+(defconst explored-active 15)
+
+(defconst cmdid-flag 0)
+(defconst cmdid-livestock-gaia 1)
+(defconst cmdid-civilian-building 2)
+(defconst cmdid-villager 3)
+(defconst cmdid-military 4)
+(defconst cmdid-trade 5)
+(defconst cmdid-monk 6)
+(defconst cmdid-transport 7)
+(defconst cmdid-relic 8)	;includes monk-with-relic
+(defconst cmdid-unknown 9)
+(defconst cmdid-military-building 10)
+;--------------------------------------
+; Define ActionId Constants
+;--------------------------------------
+(defconst actionid-attack 600)
+(defconst actionid-defend 601)
+(defconst actionid-build 602)
+(defconst actionid-heal 603)
+(defconst actionid-convert 604)
+(defconst actionid-explore 605)
+(defconst actionid-stop 606)
+(defconst actionid-runaway 607)
+(defconst actionid-retreat 608)
+(defconst actionid-gather 609)
+(defconst actionid-move 610)
+(defconst actionid-patrol 611)
+(defconst actionid-follow 612)
+(defconst actionid-hunt 613)
+(defconst actionid-transport 614)
+(defconst actionid-trade 615)
+(defconst actionid-evade 616)
+(defconst actionid-enter 617)
+(defconst actionid-garrison 617)
+(defconst actionid-repair 618)
+(defconst actionid-train 619)
+(defconst actionid-research 620)
+(defconst actionid-unload 621)
+(defconst actionid-relic 631)
+
+;DE only
+(defconst action-attack-move 19)
+;--------------------------------------
+; Define OrderId Constants
+;--------------------------------------
+(defconst orderid-attack 700)
+(defconst orderid-defend 701)
+(defconst orderid-build 702)
+(defconst orderid-heal 703)
+(defconst orderid-convert 704)
+(defconst orderid-explore 705)
+(defconst orderid-stop 706)
+(defconst orderid-runaway 707)
+(defconst orderid-retreat 708)
+(defconst orderid-gather 709)
+(defconst orderid-move 710)
+(defconst orderid-patrol 711)
+(defconst orderid-follow 712)
+(defconst orderid-hunt 713)
+(defconst orderid-transport 714)
+(defconst orderid-trade 715)
+(defconst orderid-evade 716)
+(defconst orderid-enter 717)
+(defconst orderid-repair 718)
+(defconst orderid-train 719)
+(defconst orderid-research 720)
+(defconst orderid-unload 721)
+(defconst orderid-relic 731)
+
+(defconst gl-local-total 100) ;gl-state-1
+(defconst gl-local-last 101) ;gl-state-2
+(defconst gl-remote-total 102) ;gl-state-3
+(defconst gl-remote-last 103) ;gl-state-4
+
+(defconst gl-point1-x 104); gl-point MUST be a consecutive goal pair (meaning if point-x is 100, then point y MUST be greater than 100)
+(defconst gl-point1-y 105)
+(defconst gl-point2-x 152) ;102
+(defconst gl-point2-y 153) ;103
+(defconst gl-fort-point1-x 182)	;fortification points for arrow dodging (pair 1)
+(defconst gl-fort-point1-y 183)
+(defconst gl-fort-point2-x 184)	;(pair 2)
+(defconst gl-fort-point2-y 185)
+(defconst closest-ally-point-x 266)
+(defconst closest-ally-point-y 267)
+(defconst gl-position-self-x 175)
+(defconst gl-position-self-y 176)
+(defconst gl-position-center-x 315)
+(defconst gl-position-center-y 316)
+(defconst building-point-x 486)
+(defconst building-point-y 487)
+(defconst gl-position-corner-x 488)
+(defconst gl-position-corner-y 489)
+
+(defconst gl-temp-state 106) ;use this as a split rule goal to prevent DUC leaks
+(defconst temporary-goal 107) ;temp goal 1
+(defconst temporary-goal-2 108) ;temp goal 2
+(defconst temporary-goal-3 177) ;temp goal 3
+
+(defconst local-total 161)
+(defconst local-last 162)
+(defconst remote-total 163)
+(defconst remote-last 164)
+
+;--------------------------------------
+; Define ObjectId Constants
+;--------------------------------------
+(defconst flare 274)
+(defconst villager-class 904)
+(defconst building-class 903)
+(defconst ocean-fish-class 905)
+(defconst shore-fish-class 933)
+(defconst farm-class 949)
+(defconst tower-class 952)
+(defconst wall-class 927)
+(defconst gate-class 939)
+(defconst king-class 959)
+(defconst livestock-class 958)
+(defconst infantry-class 906)
+(defconst archery-class 900)
+(defconst archery-cannon-class 944)
+(defconst cavalry-class 912)
+(defconst cavalry-archer-class 936)
+(defconst cavalry-cannon-class 923)
+(defconst monastery-class 918)
+(defconst siege-weapon-class 913)
+(defconst scorpion-class 955)
+(defconst packed-trebuchet-class 951)
+(defconst unpacked-trebuchet-class 954)
+(defconst petard-class 935)
+(defconst warship-class 922)
+(defconst all-units-class -1)
+
+(defconst unpacked-trebuchet 42)
+(defconst packed-trebuchet 331)
+
+(defconst scout-cavalry-class 947)
+(defconst dangerous-animal-class 910)
+(defconst transport-ship-class 920)
+(defconst forage-bush-class 907)
+(defconst fishing-ship-class 921)
+
+;custom gates and walls		;used by Forthwind
+(defconst PALISADE 0)	;value
+(defconst STONE 1)	;value
+(defconst WALL-TYPE 137) ;goal
+
+;FOUNDATION ID's
+(defconst town-center-foundation 621)
+(defconst palisade-gate1 793)
+(defconst palisade-gate2 789)
+(defconst palisade-gate3 797)
+(defconst palisade-gate4 801)
+(defconst palisade-gate-foundation1 796)
+(defconst palisade-gate-foundation2 792)
+(defconst palisade-gate-foundation3 800)
+(defconst palisade-gate-foundation4 804)
+
+;--------------------------------------
+; Define PositionType Constants
+;--------------------------------------
+(defconst position-center 0)
+(defconst position-opposite 1)
+(defconst position-corner 2)
+(defconst position-enemy 3)
+(defconst position-border 4)
+(defconst position-mirror 5)
+(defconst position-flank 6)
+(defconst position-zero 7)
+(defconst position-map-size 8)
+(defconst position-self 9)
+(defconst position-target 10)
+(defconst position-focus 11)
+(defconst position-object 12)
+(defconst position-point 13)
+
+;--------------------------------------
+; Define SearchSource Constants
+;--------------------------------------
+(defconst search-local 1)
+(defconst search-remote 2)
+
+;--------------------------------------
+; Define ObjectList Constants
+;--------------------------------------
+(defconst list-active 0)
+(defconst list-inactive 1)
+
+
+;--------------------------------------
+; Define ObjectStatus Constants
+;--------------------------------------
+(defconst status-pending 0)
+(defconst status-ready 2)
+(defconst status-resource 3)
+(defconst status-down 4)
+(defconst status-gather 5)
+
+;--------------------------------------
+; Define IdleType Constants
+;--------------------------------------
+(defconst idle-type-villager 0)
+(defconst idle-type-trade-cart 1)
+(defconst idle-type-fishing-ship 2)
+(defconst idle-type-trade-cog 3)
+
+;--------------------------------------
+; Define AttackStance Constants
+;--------------------------------------
+(defconst stance-aggressive 0)
+(defconst stance-defensive 1)
+(defconst stance-stand-ground 2)
+(defconst stance-no-attack 3)
+
+;--------------------------------------
+; Define ScoutMethod Constants
+;--------------------------------------
+(defconst scout-center 0)
+(defconst scout-opposite 1)
+(defconst scout-corner 2)
+(defconst scout-enemy 3)
+(defconst scout-border 4)
+(defconst scout-mirror 5)
+(defconst scout-flank 6)
+
+;Define Other UP Defconst
+;(defconst object-data-garrison-count 18)
+(defconst search-order-none 0)
+(defconst search-order-asc 1)
+(defconst search-order-desc 2)
+(defconst object-data-index -1)
+(defconst object-data-target 7)
+(defconst object-data-attack-stance 21)
+(defconst object-data-gather-type 71)		;food, wood, gold, stone, or -1 for none
+(defconst object-data-distance 44) 			;based on target-point
+
+;UNIT PRODUCTION
+
+(defconst low 1) ;used by gl-trade-units
+;(defconst medium-low )
+;(defconst medium )
+;(defconst medium-high )
+(defconst high 2) ;gl-trade-units
+;(defconst max )
+
+;spearman
+(defconst spear-low 3) ;2
+(defconst spear-medium-low 8)
+(defconst spear-medium 16)
+(defconst spear-medium-high 30)
+(defconst spear-high 45)
+(defconst spear-max 60)
+
+;skirmisher
+(defconst skirm-low 3)
+(defconst skirm-medium-low 7)
+(defconst skirm-medium 15)
+(defconst skirm-medium-high 30)
+(defconst skirm-high 45)
+(defconst skirm-max 60)
+
+;camel
+(defconst camel-low 5)
+(defconst camel-medium 10)
+(defconst camel-high 20)
+(defconst camel-max 40)
+
+;trade
+(defconst gl-trade-units 159)
+(defconst gl-current-trade-pop 160) ;this has been so annoying
+
+;max trade pop
+;low trade pop (both are in defconsts by population below)
+
+;siege (not implemented yet)
+(defconst siege-low 1)
+(defconst siege-medium-low 2)
+(defconst siege-medium 4)
+(defconst siege-medium-high 6)
+(defconst siege-high 8)
+(defconst siege-max 10)
+
+;CHEATS (Jester does not cheat)  ;this is used for a chat
+;(defconst cobra-car 748)
+
+;game defined logic
+;WATER-MAP no
+
+;(defrule
+;	(goal WATER-MAP no)
+;	(game-time > 10)
+;=>
+;	(chat-local-to-self "Land-map detected.")
+;	(disable-self))
+
+;WATER-MAP (connected by land)
+;(defrule
+;	(goal WATER-MAP connected)
+;	(game-time > 10)
+;=>
+;	(chat-local-to-self "Water-map with connected land detected.")
+;	(disable-self))
+
+;WATER-MAP (separate by water)
+;(defrule
+;	(goal WATER-MAP separated)
+;	(game-time > 10)
+;=>
+;	(chat-local-to-self "Island-type water map detected.")
+;	(disable-self))
+
+;UNKNOWN MAP-TYPE
+(defrule
+	(goal WATER-MAP maybe);default (Cause im too lazy to make it better)
+	(game-time > 15)
+=>
+;	(chat-to-player my-player-number "Unknown map detected, assuming land-style map.")
+	(set-goal WATER-MAP no)
+	(disable-self)
+)
+
+;ALL MAP TYPES (one by one)
+
+;STANDARD MAPS
+
+#load-if-defined ACCLIVITY-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ACROPOLIS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no);just means land-map
+	(disable-self))
+#end-if
+
+#load-if-defined AFRICAN-CLEARING-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined AFTERMATH-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ALPINE-LAKES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined AMAZON-TUNNEL-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ARABIA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ARCHIPELAGO-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated);like islands
+	(disable-self))
+#end-if
+
+#load-if-defined ARENA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ATACAMA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined BALTIC-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected);like baltic
+	(disable-self))
+#end-if
+
+#load-if-defined BLACK-FOREST-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined BOG-ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined BOGLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined BUDAPEST-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined CENOTES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined CITY-OF-LAKES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined COASTAL-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined COASTAL-FOREST-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no);not worried about water strats here
+	(disable-self))
+#end-if
+
+#load-if-defined CONTINENTAL-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined CRATER-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined CRATER-LAKE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined CROSSROADS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ENCLOSED-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined ERUPTION-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined FORTRESS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined FOUR-LAKES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined FRIGID-LAKE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined GHOST-LAKE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined GOLD-RUSH-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined GOLDEN-PIT-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined GOLDEN-SWAMP-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected) ;was no before V.1.0.
+	(disable-self))
+#end-if
+
+#load-if-defined GREENLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined HABOOB-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined HAMBURGER-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined HIDEOUT-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined HIGHLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined HILL-FORT-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined KAWASAN-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined KILIMANJARO-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined LAND-MADNESS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined LAND-NOMAD-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined LOMBARDIA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined LOWLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MANGROVE-JUNGLE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined MARKETPLACE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MEADOW-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MEDITERRANEAN-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined MEGA-RANDOM-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MICHI-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MIGRATION-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined MONGOLIA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MOUNTAIN-PASS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MOUNTAIN-RANGE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MOUNTAIN-RIDGE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined NILE-DELTA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined NOMAD-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected);testing
+	(disable-self))
+#end-if
+
+#load-if-defined NORTHERN-ISLES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined OASIS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined PACIFIC-ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined RAVINES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined RING-FORTRESS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined RIVERS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined RUNESTONES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined SACRED-SPRINGS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined SALT-MARSH-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined SANDBANK-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined SCANDINAVIA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined SEIZE-THE-MOUNTAIN-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined SERENGETI-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined SOCOTRA-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined STEPPE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined TEAM-ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined TEAM-MOATS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined VALLEY-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined VOLCANIC-ISLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined WATER-NOMAD-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined WOLF-HILL-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined YUCATAN-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+;========================SPECIAL MAPS
+
+#load-if-defined BORDER-STONES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined CANYONS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined ENEMY-ARCHIPELAGO-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined ENEMY-ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined FAR-OUT-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined FRONT-LINE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined HOLY-LINE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined INNER-CIRCLE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined JOURNEY-SOUTH-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined JUNGLE-ISLANDS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined JUNGLE-LANES-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined MOTHERLAND-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined OPEN-PLAINS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined RING-OF-WATER-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined SNAKE-FOREST-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP no)
+	(disable-self))
+#end-if
+
+#load-if-defined SNAKEPIT-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+#load-if-defined SPRAWLING-STREAMS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined SWIRLING-RIVER-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined THE-EYE-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined TWIN-FORESTS-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+#load-if-defined YIN-YANG-MAP
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP connected)
+	(disable-self))
+#end-if
+
+;REAL WORLD (only doing one. too many rules at this point for now)
+#load-if-defined REAL-WORLD-EARTH-MAP ;wow i had this wrong for so long D:
+(defrule
+	(goal WATER-MAP maybe)
+=>
+	(set-goal WATER-MAP separated)
+	(disable-self))
+#end-if
+
+;MORE LOGIC
+
+	;FOCUS PLAYER
+
+(defconst GL-FOCUS-PLAYER 136)
+;0 is my-player-number
+;1 is closest-enemy
+;2 is attacking-enemy
+;3 is a specific enemy (by taunt)
+;4 is closest ally
+
+;pocket player
+#load-if-defined UP-POCKET-POSITION
+(defrule
+(game-time > 5) ;allow 1 pass for nomad to turn yes
+(goal NOMAD no)
+(up-compare-goal position-goal != pocket)
+=>
+;(chat-to-allies "I'm a pocket player.") ;debug
+(set-goal position-goal pocket))
+#else
+(defrule
+(up-compare-goal position-goal != flank)
+=>
+;(chat-to-allies "I'm a flank player.") ;debug
+(set-goal position-goal flank))
+#end-if
+
+;CANCEL POCKET POSITION IF PLAYING NOMAD GAMES
+(defrule
+	(goal NOMAD yes)
+	(up-compare-goal position-goal != flank)
+=>
+	(set-goal position-goal flank)
+	(set-goal counter-units yes) ;re-enable
+)
+
+;SCOUTING
+
+;scout timer
+(defconst scout-timer 12)
+
+#load-if-defined AZTEC-CIV
+(defconst scout-unit eagle-warrior-line)
+(defrule
+	(true)
+=>
+	(set-goal my-civ-type meso)
+	(disable-self)
+)
+#else
+#load-if-defined MAYAN-CIV
+(defconst scout-unit eagle-warrior-line)
+(defrule
+	(true)
+=>
+	(set-goal my-civ-type meso)
+	(disable-self)
+)
+#else
+#load-if-defined INCAN-CIV
+(defconst scout-unit eagle-warrior-line)
+(defrule
+	(true)
+=>
+	(set-goal my-civ-type meso)
+	(disable-self)
+)
+#else
+#load-if-defined GURJARAS-CIV
+(defconst scout-unit camel-line) ;gurjara camel-scout
+(defrule
+	(true)
+=>
+	(set-goal my-civ-type non-meso)
+	(disable-self)
+)
+#else
+(defconst scout-unit scout-cavalry-line)
+(defrule
+	(true)
+=>
+	(set-goal my-civ-type non-meso)
+	(disable-self)
+)
+#end-if
+#end-if
+#end-if
+#end-if
+
+#load-if-defined UP-POCKET-POSITION
+(defconst scouting-type scout-mirror)
+#else
+#load-if-defined UP-ALLY-IN-GAME
+(defconst scouting-type scout-flank)
+#else
+#load-if-defined UP-MULTIPLE-ENEMIES
+(defconst scouting-type scout-flank)
+#else
+(defconst scouting-type scout-opposite)
+#end-if
+#end-if
+#end-if
+
+	;NEW DE CIVS
+
+#load-if-defined BULGARIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Bulgarian civ.")
+(set-goal bulgarian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal bulgarian-civ no)
+(disable-self))
+#end-if
+#load-if-defined CUMANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Cuman civ.")
+(set-goal cuman-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal cuman-civ no)
+(disable-self))
+#end-if
+#load-if-defined LITHUANIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Lithuanian civ.")
+(set-goal lithuanian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal lithuanian-civ no)
+(disable-self))
+#end-if
+#load-if-defined TATARS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Tatar civ.")
+(set-goal tatar-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal tatar-civ no)
+(disable-self))
+#end-if
+#load-if-defined BURGUNDIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Burgundian civ.")
+(set-goal burgundian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal burgundian-civ no)
+(disable-self))
+#end-if
+#load-if-defined SICILIANS-CIV ;FIXED, was missing the "s" on the end omg
+(defrule
+(true)
+=>
+;(chat-local-to-self "Sicilian civ.")
+(set-goal sicilian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal sicilian-civ no)
+(disable-self))
+#end-if
+#load-if-defined POLES-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Poles civ.")
+(set-goal pole-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal pole-civ no)
+(disable-self))
+#end-if
+#load-if-defined BOHEMIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Bohemian civ.")
+(set-goal bohemian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal bohemian-civ no)
+(disable-self))
+#end-if
+#load-if-defined ARMENIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Armenian civ.")
+(set-goal armenian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal armenian-civ no)
+(disable-self))
+#end-if
+#load-if-defined GEORGIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Georgian civ.")
+(set-goal georgian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal georgian-civ no)
+(disable-self))
+#end-if
+#load-if-defined BENGALIS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Bengali civ.")
+(set-goal bengali-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal bengali-civ no)
+(disable-self))
+#end-if
+#load-if-defined DRAVIDIANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Dravidian civ.")
+(set-goal dravidian-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal dravidian-civ no)
+(disable-self))
+#end-if
+#load-if-defined GURJARAS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Gurjara civ.")
+(set-goal gurjara-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal gurjara-civ no)
+(disable-self))
+#end-if
+#load-if-defined ROMANS-CIV
+(defrule
+(true)
+=>
+;(chat-local-to-self "Roman civ.")
+(set-goal roman-civ yes)
+(disable-self))
+#else
+(defrule
+(true)
+=>
+(set-goal roman-civ no)
+(disable-self))
+#end-if
+
+;MAP-SIZE CONST
+#load-if-defined TINY-MAP
+(defconst map-size 120)
+#end-if
+#load-if-defined SMALL-MAP
+(defconst map-size 144)
+#end-if
+#load-if-defined MEDIUM-MAP
+(defconst map-size 168)
+#end-if
+#load-if-defined NORMAL-MAP
+(defconst map-size 200)
+#end-if
+#load-if-defined LARGE-MAP
+(defconst map-size 220)
+#end-if
+#load-if-defined GIANT-MAP
+(defconst map-size 240)
+#end-if
+#load-if-defined LUDIKRIS-MAP
+(defconst map-size 480)
+#end-if
+
+#load-if-not-defined TINY-MAP
+#load-if-not-defined SMALL-MAP
+#load-if-not-defined MEDIUM-MAP
+#load-if-not-defined NORMAL-MAP
+#load-if-not-defined LARGE-MAP
+#load-if-not-defined GIANT-MAP
+#load-if-not-defined LUDIKRIS-MAP
+(defconst map-size 240) ;assume giant size
+#end-if
+#end-if
+#end-if
+#end-if
+#end-if
+#end-if
+#end-if
+
+;POPULATION CONST
+
+#load-if-defined POPULATION-CAP-25
+(defconst max-pop 25) ;same as pop-cap
+(defconst max-vill-pop 17) ;70% of max-pop
+(defconst high-res-vil-pop 11) ;45% of max-pop
+(defconst min-vills 7) ;min ideal vills
+(defconst max-mil-pop 12) ;50% of max-pop
+(defconst max-siege-pop 1) ;7% of max-pop OR leftover pop after vill + mil calculation
+(defconst min-trade-pop 2) ;lowest ideal trade-pop
+(defconst max-trade-pop 5) ;highest ideal trade-pop
+(defconst min-emergency-attack-pop 17); same as max-vil-pop ;what population to stop emergency attack rule at
+(defconst resign-vill-pop 1) ;default resign vill pop
+;vil + mil pop = 11 + 12 = 24 (1 minimal for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-50
+(defconst max-pop 50)
+(defconst max-vill-pop 35)
+(defconst high-res-vil-pop 22)
+(defconst min-vills 11)
+(defconst max-mil-pop 25)
+(defconst max-siege-pop 3)
+(defconst min-trade-pop 4)
+(defconst max-trade-pop 8)
+(defconst min-emergency-attack-pop 35); what military pop to stop emergency attack rule at
+(defconst resign-vill-pop 1)
+;vil + mil pop = 22 + 25 = 47 (3 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-75
+(defconst max-pop 75)
+(defconst max-vill-pop 52)
+(defconst high-res-vil-pop 33)
+(defconst min-vills 15)
+(defconst max-mil-pop 37)
+(defconst max-siege-pop 5)
+(defconst min-trade-pop 5)
+(defconst max-trade-pop 11)
+(defconst min-emergency-attack-pop 52)
+(defconst resign-vill-pop 1)
+;vil + mil pop = 33 + 37 = 70 (5 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-100
+(defconst max-pop 100)
+(defconst max-vill-pop 70)
+(defconst high-res-vil-pop 45)
+(defconst min-vills 19)
+(defconst max-mil-pop 50)
+(defconst max-siege-pop 7)
+(defconst min-trade-pop 7)
+(defconst max-trade-pop 14)
+(defconst min-emergency-attack-pop 70)
+(defconst resign-vill-pop 1)
+;vil + mil pop = 45 + 50 = 95 (5 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-125
+(defconst max-pop 125)
+(defconst max-vill-pop 87)
+(defconst high-res-vil-pop 56)
+(defconst min-vills 20) ;MAX for minimum-villagers
+(defconst max-mil-pop 62)
+(defconst max-siege-pop 8)
+(defconst min-trade-pop 9)
+(defconst max-trade-pop 17)
+(defconst min-emergency-attack-pop 87)
+(defconst resign-vill-pop 1)
+;vil + mil pop = 56 + 62 = 118 (7 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-150
+(defconst max-pop 150)
+(defconst max-vill-pop 105)
+(defconst high-res-vil-pop 67)
+(defconst min-vills 20)
+(defconst max-mil-pop 75)
+(defconst max-siege-pop 10)
+(defconst min-trade-pop 11)
+(defconst max-trade-pop 20)
+(defconst min-emergency-attack-pop 105)
+(defconst resign-vill-pop 1)
+;vil + mil pop = 67 + 75 = 142 (8 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-175
+(defconst max-pop 175)
+(defconst max-vill-pop 122)
+(defconst high-res-vil-pop 78)
+(defconst min-vills 20)
+(defconst max-mil-pop 87)
+(defconst max-siege-pop 12)
+(defconst min-trade-pop 12)
+(defconst max-trade-pop 23)
+(defconst min-emergency-attack-pop 122)
+(defconst resign-vill-pop 1)
+;vil + mil pop = 78 + 87 = 165 (10 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-200
+(defconst max-pop 200)
+(defconst max-vill-pop 140)
+(defconst high-res-vil-pop 90)
+(defconst min-vills 20)
+(defconst max-mil-pop 100)
+(defconst max-siege-pop 14)
+(defconst min-trade-pop 14)
+(defconst max-trade-pop 26)
+(defconst min-emergency-attack-pop 140)
+(defconst resign-vill-pop 1)
+;min-vil pop + mil pop = 90 + 100 = 190 (10 minimal left for siege or trade)
+#end-if
+#load-if-defined POPULATION-CAP-225
+(defconst max-pop 225)
+(defconst max-vill-pop 150) ;ABSOLUTE MAX
+(defconst high-res-vil-pop 100)
+(defconst min-vills 20)
+(defconst max-mil-pop 125)
+(defconst max-siege-pop 15)
+(defconst min-trade-pop 16)
+(defconst max-trade-pop 30)
+(defconst min-emergency-attack-pop 157)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-250
+(defconst max-pop 250)
+(defconst max-vill-pop 150) ;MAX
+(defconst high-res-vil-pop 103)
+(defconst min-vills 20)
+(defconst max-mil-pop 145)
+(defconst max-siege-pop 17)
+(defconst min-trade-pop 18)
+(defconst max-trade-pop 38)
+(defconst min-emergency-attack-pop 175)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-275
+(defconst max-pop 275)
+(defconst max-vill-pop 150) ;MAX
+(defconst high-res-vil-pop 105)
+(defconst min-vills 20)
+(defconst max-mil-pop 170)
+(defconst max-siege-pop 19)
+(defconst min-trade-pop 22)
+(defconst max-trade-pop 42)
+(defconst min-emergency-attack-pop 192)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-300
+(defconst max-pop 300)
+(defconst max-vill-pop 150) ;MAX
+(defconst high-res-vil-pop 107)
+(defconst min-vills 20)
+(defconst max-mil-pop 193)
+(defconst max-siege-pop 21)
+(defconst min-trade-pop 25)
+(defconst max-trade-pop 47)
+(defconst min-emergency-attack-pop 210)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-400
+(defconst max-pop 400)
+(defconst max-vill-pop 150) ;MAX
+(defconst high-res-vil-pop 110)
+(defconst min-vills 20)
+(defconst max-mil-pop 290)
+(defconst max-siege-pop 28)
+(defconst min-trade-pop 35)
+(defconst max-trade-pop 75)
+(defconst min-emergency-attack-pop 280)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-500
+(defconst max-pop 500)
+(defconst max-vill-pop 150) ;MAX
+(defconst high-res-vil-pop 115)
+(defconst min-vills 20)
+(defconst max-mil-pop 385)
+(defconst max-siege-pop 35)
+(defconst min-trade-pop 40)
+(defconst max-trade-pop 87)
+(defconst min-emergency-attack-pop 350)
+(defconst resign-vill-pop 1)
+
+#end-if
+#load-if-defined POPULATION-CAP-1000
+(defconst max-pop 1000)
+(defconst max-vill-pop 160) ;MAX
+(defconst high-res-vil-pop 130)
+(defconst min-vills 20)
+(defconst max-mil-pop 870)
+(defconst max-siege-pop 70)
+(defconst min-trade-pop 75)
+(defconst max-trade-pop 150)
+(defconst min-emergency-attack-pop 700)
+(defconst resign-vill-pop 1)
+#end-if
+
+
+;ENDING AGES
+;#load-if-defined DARK-AGE-END
+;#load-if-defined FEUDAL-AGE-END
+;#load-if-defined CASTLE-AGE-END
+;#load-if-defined IMPERIAL-AGE-END
+
+
+

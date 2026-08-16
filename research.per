@@ -1,0 +1,3660 @@
+
+	;Research and escrow rules for Jester.per
+
+;==========ESCROW RULES==========
+
+;DEFAULT ESCROW GOAL
+(defrule
+	(true)
+=>
+	(set-goal DEFAULT-ESCROW yes) ;yes or no for now
+	(disable-self)
+)
+
+;----------DEFAULT ESCROW RULES----------
+
+;First escrow release (usually high res games, but you never know in DE!)
+(defrule
+	(game-time > 30)
+(or	(escrow-amount food > 0)
+(or	(escrow-amount wood > 0)
+(or	(escrow-amount gold > 0)
+	(escrow-amount stone > 0))))
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(release-escrow gold)
+	(release-escrow stone)
+	(disable-self))
+
+;Second escrow
+;(defrule
+;	(current-age >= castle-age)
+;(or	(escrow-amount food > 1500)
+;(or	(escrow-amount wood > 1200)
+;	(escrow-amount gold > 1000)))
+;=>
+;	(release-escrow food)
+;	(release-escrow wood)
+;	(release-escrow gold)
+;	(release-escrow stone)
+;	(disable-self))
+
+;Backup escrow release (in case it gets too high)
+(defrule
+	(current-age >= castle-age)
+	(escrow-amount food > 1000)
+=>
+	(release-escrow food))
+
+(defrule
+	(current-age >= castle-age)
+	(escrow-amount wood > 500) ;most buildings aren't more than this
+=>
+	(release-escrow wood))
+
+(defrule
+	(current-age >= castle-age)
+	(escrow-amount gold > 1000)
+=>
+	(release-escrow gold))
+
+(defrule
+	(current-age >= castle-age)
+	(escrow-amount stone > 1); stone escrow should be turned off...
+=>
+	(release-escrow stone))
+
+	;EMERGENCY ESCROW RELEASE IF 0 TOWN-CENTERS
+(defrule
+	(current-age-time > 15) ;safety
+	(unit-type-count villager >= 1) ;at least 1 alive
+	(building-type-count-total town-center < 1) ;none at all built or currently building
+(or	(escrow-amount food > 1)
+(or	(escrow-amount wood > 1)
+(or	(escrow-amount gold > 1)
+	(escrow-amount stone > 1))))
+=>
+	;(chat-to-player my-player-number "Releasing all escrow for a town-center.")
+	(release-escrow food)
+	(release-escrow wood)
+	(release-escrow gold)
+	(release-escrow stone)
+); don't disable
+
+	;EMERGENCY escrow release (when town is under attack)
+(defrule
+	(goal is-town-under-attack yes)
+	(strategic-number sn-military-level <= 0)
+(or	(escrow-amount food >= 10) ;200
+(or	(escrow-amount wood >= 10) ;200
+(or	(escrow-amount gold >= 10) ;200
+	(escrow-amount stone >= 10)))) ;200
+=>
+	;(chat-to-player my-player-number "Releasing all escrow to defend town.")
+	(release-escrow food)
+	(release-escrow wood)
+	(release-escrow gold)
+	(release-escrow stone)
+)
+
+;no escrow for dark-age or feudal-age.
+
+;CASTLE AGE ESCROW 1
+(defrule
+	(goal DEFAULT-ESCROW yes) ; yes = average escrow, no = special escrow
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager <= 45)
+	(unit-type-count villager < max-vill-pop) ;for low pop games
+=>
+	(set-escrow-percentage wood 6) ;5
+	(set-escrow-percentage food 6) ;5
+	(set-escrow-percentage gold 6) ;5
+	(set-escrow-percentage stone 0)
+)
+;CASTLE AGE ESCROW 2
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager > 45)
+	(unit-type-count villager <= 75)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 12)
+	(set-escrow-percentage food 12)
+	(set-escrow-percentage gold 12)
+	(set-escrow-percentage stone 0)
+)
+;CASTLE AGE ESCROW 3
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager > 75)
+	(unit-type-count villager <= 100)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 16)
+	(set-escrow-percentage food 16)
+	(set-escrow-percentage gold 16)
+	(set-escrow-percentage stone 0)
+)
+;CASTLE AGE ESCROW 4
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager > 100)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 18)
+	(set-escrow-percentage food 18)
+	(set-escrow-percentage gold 18)
+	(set-escrow-percentage stone 0)
+)
+
+;CASTLE AGE MAX POP ESCROW (low pop)
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager <= 100)
+	(unit-type-count villager >= max-vill-pop)
+=>
+	(set-escrow-percentage wood 12)
+	(set-escrow-percentage food 12)
+	(set-escrow-percentage gold 12)
+	(set-escrow-percentage stone 0)
+)
+
+;CASTLE AGE MAX POP ESCROW (high pop)
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age == castle-age)
+	(unit-type-count villager > 100)
+	(unit-type-count villager >= max-vill-pop)
+=>
+	(set-escrow-percentage wood 15)
+	(set-escrow-percentage food 15)
+	(set-escrow-percentage gold 15)
+	(set-escrow-percentage stone 0)
+)
+
+;NORMAL IMPERIAL ESCROW
+;none
+
+;IMPERIAL AGE ESCROW 1
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(unit-type-count villager <= 45)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 5)
+	(set-escrow-percentage food 5)
+	(set-escrow-percentage gold 5)
+	(set-escrow-percentage stone 0)
+)
+;IMPERIAL AGE ESCROW 2
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(unit-type-count villager > 45)
+	(unit-type-count villager <= 75)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 10)
+	(set-escrow-percentage food 10)
+	(set-escrow-percentage gold 10)
+	(set-escrow-percentage stone 0)
+)
+;IMPERIAL AGE ESCROW 3
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(unit-type-count villager > 75)
+	(unit-type-count villager <= 100)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 17)
+	(set-escrow-percentage food 17)
+	(set-escrow-percentage gold 17)
+	(set-escrow-percentage stone 0)
+)
+
+;IMPERIAL AGE ESCROW max vill pop (low)
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(current-age-time < 1500) ; 25 minutes
+	(unit-type-count villager <= 100)
+	(unit-type-count villager >= max-vill-pop)
+=>
+	(set-escrow-percentage wood 14)
+	(set-escrow-percentage food 14)
+	(set-escrow-percentage gold 14)
+	(set-escrow-percentage stone 0)
+)
+
+;IMPERIAL AGE ESCROW max vill pop (high)
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(current-age-time < 1500) ; 25 minutes
+	(unit-type-count villager > 100)
+	(unit-type-count villager >= max-vill-pop)
+=>
+	(set-escrow-percentage wood 18)
+	(set-escrow-percentage food 18)
+	(set-escrow-percentage gold 18)
+	(set-escrow-percentage stone 0)
+)
+;IMPERIAL AGE ESCROW under 25 minutes of age time
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(current-age-time < 1500) ; 25 minutes
+	(unit-type-count villager > 100)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 22)
+	(set-escrow-percentage food 22)
+	(set-escrow-percentage gold 22)
+	(set-escrow-percentage stone 0)
+)
+; IMPERIAL AGE ESCROW after 25 minutes of age time
+(defrule
+	(goal DEFAULT-ESCROW yes)
+	(goal BUILD-THE-WONDER no)
+	(goal WONDER-MODE no)
+	(current-age >= imperial-age)
+	(current-age-time > 1500) ; 25 minutes
+	(unit-type-count villager > 100)
+	(unit-type-count villager < max-vill-pop)
+=>
+	(set-escrow-percentage wood 10)
+	(set-escrow-percentage food 10)
+	(set-escrow-percentage gold 10)
+	(set-escrow-percentage stone 0)
+)
+
+;GO IMPERIAL WHEN ENEMY IS IMPERIAL (Currently does nothing)
+(defrule
+(goal WONDER-MODE no)
+(current-age == castle-age)
+(players-current-age target-player == imperial-age)
+=>
+(do-nothing) ;this is here until we add a goal to this
+;(chat-to-player my-player-number "Enemy is in the Imperial age first.")
+(disable-self)
+)
+
+;BUILD-THE-WONDER ESCROW OFF
+(defrule
+	(goal WONDER-MODE yes)
+=>
+	(set-escrow-percentage food 0)
+	(set-escrow-percentage wood 0)
+	(set-escrow-percentage gold 0)
+	(set-escrow-percentage stone 0)
+)
+
+(defrule
+	(game-time > 30); backup rule to make sure no escrow is collected.
+	(goal WONDER-MODE yes)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(release-escrow gold)
+	(release-escrow stone)
+	(disable-self))
+
+;==========RESEARCH RULES
+
+	;DARK-AGE RESEARCH
+
+;LOOM (nomad no)
+(defrule
+	(goal NOMAD no)
+(or	(and	(game-time > 36) ;enough time for building houses
+		(up-pending-objects c: villager < 1))
+(or	(unit-type-count villager >= amount-villagers-dark); get loom when we have enough vils.
+(or	(unit-type-count villager >= max-vill-pop) ;just in case
+(or	(civ-selected chinese)
+(or	(civ-selected mayan)
+	(goal is-town-under-attack yes))))))
+	(can-research ri-loom)
+=>
+	;(chat-to-player my-player-number "Researching loom.")
+	(research ri-loom)
+)
+
+;LOOM (nomad yes)
+(defrule
+	(goal NOMAD yes)
+(or	(and	(up-pending-objects c: villager < 1)
+		(unit-type-count-total villager >= 6)) ;min nomad vills
+(or	(unit-type-count villager >= amount-villagers-dark); get loom when we have enough vils.
+(or	(unit-type-count villager >= max-vill-pop) ;just in case
+(or	(civ-selected chinese)
+(or	(civ-selected mayan)
+	(goal is-town-under-attack yes))))))
+	(can-research ri-loom)
+=>
+	;(chat-to-player my-player-number "Researching loom.")
+	(research ri-loom)
+)
+
+;FEUDAL-AGE (fast-castle yes) (NOT malay)
+(defrule
+	(goal FAST-CASTLE yes)
+(not	(civ-selected malay))
+(or	(unit-type-count-total villager >= 27) ;26 is optimium, but for a stubborn ai 27 is better
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(current-age == dark-age)
+	(can-research feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(research feudal-age))
+
+;FEUDAL-AGE (fast-castle yes) (malay only)
+(defrule
+	(goal FAST-CASTLE yes)
+	(civ-selected malay)
+(or	(unit-type-count-total villager >= 29) ;29 for malay
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(current-age == dark-age)
+	(can-research feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(research feudal-age))
+
+;FEUDAL-AGE (fast-castle no) (NOT malay)
+(defrule
+	(goal FAST-CASTLE no)
+(not	(civ-selected malay))
+(or	(unit-type-count-total villager >= 21) ;minimum allowed
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(current-age == dark-age)
+	(can-research feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(research feudal-age))
+
+;FEUDAL-AGE (fast-castle no) (malay)
+(defrule
+	(goal FAST-CASTLE no)
+	(civ-selected malay)
+(or	(unit-type-count-total villager >= 23) ;minimum allowed for malay
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(current-age == dark-age)
+	(can-research feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(research feudal-age))
+
+;FEUDAL-AGE (escrow - high res start game) (not malay)
+(defrule
+	(current-age == dark-age)
+(not	(civ-selected malay))
+(or	(and	(goal FAST-CASTLE no)
+		(unit-type-count-total villager >= 21))
+(or	(and	(goal FAST-CASTLE yes)
+		(unit-type-count-total villager >= 27))
+	(unit-type-count-total villager >= max-vill-pop)));for low-pop games
+	(can-research-with-escrow feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(release-escrow food)
+	(research feudal-age))
+
+;FEUDAL-AGE (escrow - high res start game) (malay)
+(defrule
+	(current-age == dark-age)
+(not	(civ-selected malay))
+(or	(and	(goal FAST-CASTLE no)
+		(unit-type-count-total villager >= 23))
+(or	(and	(goal FAST-CASTLE yes)
+		(unit-type-count-total villager >= 29))
+	(unit-type-count-total villager >= max-vill-pop)));for low-pop games
+	(can-research-with-escrow feudal-age)
+	;(research-completed ri-loom) testing
+=>
+	(release-escrow food)
+	(research feudal-age))
+
+;EMERGENCY RESEARCH FEUDAL-AGE ;introduced after discovering major bug with malay not researching feudal age if too much food and going for a rushing strategy
+(defrule
+	(current-age == dark-age)
+	(current-age-time >= 600)
+	(food-amount >= 1500) ;alot
+	(building-type-count town-center > 0)
+	(can-research feudal-age)
+=>
+	(research feudal-age)
+)
+
+;ADVANCING TO FEUDAL AGE TEXT
+(defrule
+(up-research-status c: feudal-age == research-pending)
+=>
+(chat-local-to-self "I'm advancing to the Feudal Age.")
+(chat-to-allies "I'm advancing to the Feudal Age.")
+(disable-self))
+
+			;FEUDAL-AGE RESEARCH
+
+;ECONOMY
+;TOWN-CENTER
+
+;WHEEL BARROW (no escrow)
+(defrule
+(or	(current-age >= castle-age)
+	(goal FAST-CASTLE no))
+(or	(unit-type-count-total villager >= 35) ;37
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(can-research ri-wheel-barrow)
+=>
+	(research ri-wheel-barrow)
+)
+;WHEEL BARROW (escrow)
+(defrule
+(or	(current-age >= castle-age)
+	(goal FAST-CASTLE no))
+(or	(unit-type-count-total villager >= 37) ;35
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(can-research-with-escrow ri-wheel-barrow)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-wheel-barrow)
+)
+;TOWN WATCH
+(defrule
+	(current-age-time > 15) ;allow other upgrades first
+	(goal is-town-under-attack no); don't waste if already under attack
+(or	(and	(current-age >= castle-age)
+			(population > 60))
+	(unit-type-count-total villager >= max-vill-pop)) ;backup
+	(can-research-with-escrow ri-town-watch)
+=>
+	(release-escrow food)
+	(research ri-town-watch)
+)
+
+;MILL
+;HORSE COLLAR (part 1) (FAST-CASTLE YES)
+(defrule
+(or	(and	(goal FAST-CASTLE yes)
+			(goal castle-pending yes))
+(or	(and	(current-age >= castle-age)
+			(building-type-count-total farm > 3))
+	(building-type-count-total farm > 11)))
+(or	(unit-type-count-total villager > min-vills)
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(research-completed ri-double-bit-axe) ;MUST COME FIRST
+	(can-research ri-horse-collar)
+=>
+	(research ri-horse-collar)
+)
+
+;HORSE COLLAR (part 2) (FAST-CASTLE no)
+(defrule
+	(goal FAST-CASTLE no)
+(or	(building-type-count archery-range > 0)
+(or	(building-type-count stable > 0)
+(or	(and	(current-age >= castle-age)
+			(building-type-count-total farm > 5))
+	(building-type-count farm >= 12)))); max farms without horse collar allowed
+(or	(unit-type-count-total villager-farmer >= 4); at least 4 farms being used (minimal allowed)
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(research-completed ri-double-bit-axe)
+	(can-research ri-horse-collar)
+=>
+	(research ri-horse-collar)
+)
+
+;HORSE COLLAR (burgundians)
+(defrule
+	(goal burgundian-civ yes)
+;	(current-age >= dark-age) ;any-age
+	(unit-type-count villager >= 10);6 ;min vils
+	(building-type-count-total farm >= 2) ;beginning to make farms
+	(wood-amount > 200) ;wood buffer
+	(dropsite-min-distance wood <= 7) ;stable woodline
+	(research-completed ri-double-bit-axe)
+	(can-research ri-horse-collar)
+=>
+	(research ri-horse-collar)
+)
+
+	;EMERGENCY HORSE-COLLAR
+(defrule
+	;(current-age >= feudal-age) ;any-age
+(or	(unit-type-count-total villager-farmer >= 15) ;too many farmers without horse-collar
+(or	(building-type-count-total farm >= 15) ;17
+	(unit-type-count-total villager >= max-vill-pop)))
+(or	(dropsite-min-distance wood <= 8) ;stable woodline
+	(wood-amount >= 250))
+	(can-research-with-escrow ri-horse-collar)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-horse-collar))
+
+;LUMBER CAMP
+;DOUBLE-BIT-AXE
+(defrule
+	(goal FAST-CASTLE yes)
+(or	(goal castle-pending yes)
+(or	(current-age >= castle-age)
+(or	(and	(current-age == feudal-age)
+		(current-age-time > 240)) ;more than 4 minutes just get it anyway
+	(food-amount > 930))));excess that won't interfere with age-up
+(or	(unit-type-count-total villager-wood >= 10) ;min wood vills for double-bit
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(can-research ri-double-bit-axe)
+=>
+	(research ri-double-bit-axe)
+)
+
+;DOUBLE-BIT-AXE (fast-castle no)
+(defrule
+	(goal FAST-CASTLE no)
+(or	(building-type-count archery-range > 0)
+(or	(building-type-count stable > 0)
+(or	(building-type-count castle > 0)
+(or	(building-type-count town-center > 1)
+	(building-type-count farm >= 10)))))
+(or	(unit-type-count villager-wood >= 10) ;min wood vills
+(or	(unit-type-count-total villager > min-vills)
+	(unit-type-count-total villager >= max-vill-pop)));for low-pop games
+	(can-research ri-double-bit-axe)
+=>
+	(research ri-double-bit-axe)
+)
+
+	;EMERGENCY DOUBLE-BIT AXE (escrow)
+(defrule
+(or	(unit-type-count-total villager-wood >= 20) ;too many wood cutters
+(or	(unit-type-count-total villager-farmer >= 16) ;need to support many farms
+	(unit-type-count-total villager >= max-vill-pop))) ;low pop maxed out
+	(can-research-with-escrow ri-double-bit-axe)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-double-bit-axe))
+
+;DOUBLE-BIT-AXE (burgundians)
+(defrule
+	(goal burgundian-civ yes)
+(or	(goal FAST-CASTLE yes) ;will work in dark or feudal-age
+(or	(goal feudal-pending yes) ;get it early anyway
+(or	(current-age >= castle-age)
+	(unit-type-count-total villager >= max-vill-pop)))) ;backup
+	(unit-type-count villager-wood >= 6) ;min wood cutters required
+	(can-research ri-double-bit-axe)
+=>
+	(research ri-double-bit-axe))
+
+;MINING CAMP
+;GOLD MINING
+(defrule
+	(goal FAST-CASTLE no) ;never when fast-castle == yes
+	(goal is-town-under-attack no)
+	(current-age-time > 15) ;allow other upgrades first
+	(unit-type-count villager > min-vills);required
+	(unit-type-count villager-gold >= 7);new minimum required
+(or	(unit-type-count villager >= max-vill-pop) ;backup
+	(and	(current-age >= castle-age)
+			(unit-type-count villager-gold >= 8))) ;prioritize other upgrades
+	(research-completed ri-double-bit-axe)
+	(research-completed ri-horse-collar)
+	(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+	(can-research ri-gold-mining)
+=>
+	(research ri-gold-mining)
+)
+
+;STONE MINING
+(defrule
+	(current-age-time > 15) ;allow other upgrades first
+	(goal FAST-CASTLE no) ;never when fast-castle == yes
+(or	(current-age >= castle-age)
+	(and	(goal need-castle yes)
+			(unit-type-count villager > min-vills)))
+	(unit-type-count villager-stone >= 7) ;new minimum required
+(or	(unit-type-count-total villager > min-vills)
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(building-type-count-total town-center > 2)
+(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+	(can-research ri-stone-mining)
+=>
+	(research ri-stone-mining)
+)
+
+;BLACKSMITH
+
+;FLETCHING
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (goal is-town-under-attack yes)
+(or (unit-type-count-total cavalry-archer-line > 2)
+(or (unit-type-count-total archer-line > 2)
+(or (building-type-count-total watch-tower-line > 1)
+(or (building-type-count-total krepost > 0)
+(or (building-type-count-total donjon > 1)
+(building-type-count-total castle > 0)))))))))
+(can-research ri-fletching)
+=>
+(research ri-fletching)
+)
+
+;FLETCHING (extra rule)
+(defrule
+(or	(unit-type-count-total skirmisher-line > 2)
+(or	(unit-type-count-total genitour-line > 2)
+(or	(unit-type-count-total slinger > 2)
+(or	(unit-type-count-total galley-line > 1)
+(or	(unit-type-count-total caravel-line > 0)
+(or	(unit-type-count-total longboat-line > 0)
+(or	(unit-type-count-total skirmisher-line > 3)
+(or	(unit-type-count-total elephant-archer-line > 2)
+(or	(unit-type-count-total thirisadai > 0)
+	(unit-type-count-total turtle-ship-line > 0))))))))))
+	(can-research ri-fletching)
+=>
+	(research ri-fletching)
+)
+
+;FLETCHING (escrow)
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (goal is-town-under-attack yes)
+(or (unit-type-count-total cavalry-archer-line > 2)
+(or (unit-type-count-total archer-line > 2)
+(or (building-type-count-total watch-tower-line > 1)
+(or (building-type-count-total krepost > 0)
+(or (building-type-count-total donjon > 1)
+(building-type-count-total castle > 0)))))))))
+(can-research-with-escrow ri-fletching)
+=>
+(release-escrow gold)
+(release-escrow food)
+(research ri-fletching)
+)
+
+;FLETCHING  (escrow) (extra rule)
+(defrule
+(or	(unit-type-count-total skirmisher-line > 2)
+(or	(unit-type-count-total genitour-line > 2)
+(or	(unit-type-count-total slinger > 2)
+(or	(unit-type-count-total galley-line > 1)
+(or	(unit-type-count-total caravel-line > 0)
+(or	(unit-type-count-total longboat-line > 0)
+(or	(unit-type-count-total elephant-archer-line > 2)
+(or	(unit-type-count-total thirisadai > 0)
+	(unit-type-count-total turtle-ship-line > 0)))))))))
+	(can-research-with-escrow ri-fletching)
+=>
+	(release-escrow gold)
+	(release-escrow food)
+	(research ri-fletching)
+)
+
+;SCALE MAIL
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+			(unit-type-count my-unique-unit-line > 2))
+(or (unit-type-count-total serjeant-set > 3)
+(or (unit-type-count-total condottiero > 3)
+(or (unit-type-count-total eagle-warrior-line > 3)
+(or (unit-type-count-total spearman-line > 3)
+(or (unit-type-count-total flemish-pikeman > 3)
+(or	(unit-type-count-total warrior-priest > 3)
+(or	(unit-type-count-total foot-konnik-line > 3) ;these are ONLY dismounted konnik-line units (when a mounted konnik dies)
+(or	(unit-type-count-total donjon-spearman-line > 3) ;spearman, pikeman, and halbedier created from donjons
+(or	(unit-type-count-total huskarl-set > 3)
+(unit-type-count-total militiaman-line > 3)))))))))))
+(can-research ri-scale-mail)
+=>
+(research ri-scale-mail)
+)
+
+;SCALE MAIL (escrow)
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 2))
+(or (unit-type-count-total serjeant-set > 3)
+(or (unit-type-count-total condottiero > 3)
+(or (unit-type-count-total eagle-warrior-line > 3)
+(or (unit-type-count-total spearman-line > 3)
+(or (unit-type-count-total flemish-pikeman > 3)
+(or	(unit-type-count-total warrior-priest > 3)
+(or	(unit-type-count-total foot-konnik-line > 3)
+(or	(unit-type-count-total donjon-spearman-line > 3)
+(or	(unit-type-count-total huskarl-set > 3)
+(unit-type-count-total militiaman-line > 3)))))))))))
+(can-research-with-escrow ri-scale-mail)
+=>
+(release-escrow food)
+(research ri-scale-mail)
+)
+
+;FORGING (feudal)
+(defrule
+	(current-age <= feudal-age) ;make it more difficult to research in feudal-age cause its expensive!
+(or	(and	(or	(goal unique-infantry-class yes)
+				(goal unique-cavalry-class yes))
+			(unit-type-count my-unique-unit-line > 3))
+(or (unit-type-count-total scout-cavalry-line > 5)
+(or (unit-type-count-total knight-line > 5)
+(or (unit-type-count-total camel-line > 5)
+(or (unit-type-count-total eagle-warrior-line > 5)
+(or (unit-type-count-total spearman-line > 5)
+(or (unit-type-count-total flemish-pikeman > 5)
+(or	(unit-type-count-total warrior-priest > 5)
+(or	(unit-type-count-total foot-konnik-line > 5)
+(or	(unit-type-count-total donjon-spearman-line > 5)
+(or	(unit-type-count-total huskarl-set > 5)
+	(unit-type-count-total militiaman-line > 6))))))))))))
+(can-research ri-forging)
+=>
+(research ri-forging)
+)
+
+;FORGING (castle and imp)
+(defrule
+	(current-age >= castle-age) ;take note
+(or	(and	(or	(goal unique-infantry-class yes)
+				(goal unique-cavalry-class yes))
+			(unit-type-count my-unique-unit-line > 3))
+(or (unit-type-count-total scout-cavalry-line > 3)
+(or (unit-type-count-total knight-line > 3)
+(or (unit-type-count-total camel-line > 3)
+(or (unit-type-count-total eagle-warrior-line > 3)
+(or (unit-type-count-total spearman-line > 3)
+(or (unit-type-count-total flemish-pikeman > 3)
+(or	(unit-type-count-total warrior-priest > 3)
+(or	(unit-type-count-total foot-konnik-line > 3)
+(or	(unit-type-count-total donjon-spearman-line > 3)
+(or	(unit-type-count-total huskarl-set > 3)
+(unit-type-count-total militiaman-line > 3))))))))))))
+(can-research ri-forging)
+=>
+(research ri-forging)
+)
+
+;FORGING (extra rule)
+(defrule
+	;(current-age >= castle-age) ;custom game?
+(or	(unit-type-count-total warrior-priest > 3)
+(or	(unit-type-count-total serjeant-set > 3)
+(or	(unit-type-count-total condottiero > 3)
+(or	(unit-type-count-total konnik-set > 3)
+(or	(unit-type-count-total steppe-lancer-line > 2)
+(or	(unit-type-count-total shrivamsha-rider-line > 3)
+	(unit-type-count-total battle-elephant-line > 2)))))))
+	(can-research ri-forging)
+=>
+	(research ri-forging)
+)
+
+;FORGING (escrow)
+(defrule
+	(current-age >= castle-age)
+(or	(and	(or	(goal unique-infantry-class yes)
+				(goal unique-cavalry-class yes))
+			(unit-type-count my-unique-unit-line > 3))
+(or (unit-type-count-total scout-cavalry-line > 3)
+(or (unit-type-count-total knight-line > 3)
+(or (unit-type-count-total camel-line > 3)
+(or (unit-type-count-total eagle-warrior-line > 3)
+(or (unit-type-count-total spearman-line > 3)
+(unit-type-count-total militiaman-line > 3)))))))
+(can-research-with-escrow ri-forging)
+=>
+(release-escrow food)
+(research ri-forging)
+)
+
+;FORGING (escrow) (extra rule)
+(defrule
+	(current-age >= castle-age)
+(or	(unit-type-count-total warrior-priest > 3)
+(or	(unit-type-count-total serjeant-set > 3)
+(or	(unit-type-count-total condottiero > 3)
+(or	(unit-type-count-total konnik-set > 2)
+(or	(unit-type-count-total steppe-lancer-line > 3)
+(or	(unit-type-count-total shrivamsha-rider-line > 3)
+	(unit-type-count-total battle-elephant-line > 2)))))))
+	(can-research-with-escrow ri-forging)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-forging))
+
+
+;SCALE BARDING
+(defrule
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (unit-type-count-total krepost-konnik-line > 5)
+(or (unit-type-count-total konnik-set > 5)
+(or (unit-type-count-total steppe-lancer-line > 2)
+(or (unit-type-count-total battle-elephant-line > 1)
+(or (unit-type-count-total scout-cavalry-line > 2)
+(or (unit-type-count-total knight-line > 2)
+(or	(unit-type-count-total shrivamsha-rider-line > 2)
+(unit-type-count-total camel-line > 2)))))))))
+(can-research ri-scale-barding)
+=>
+(research ri-scale-barding)
+)
+
+;SCALE BARDING (escrow)
+(defrule
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (unit-type-count-total krepost-konnik-line > 5)
+(or (unit-type-count-total konnik-set > 5)
+(or (unit-type-count-total steppe-lancer-line > 2)
+(or (unit-type-count-total battle-elephant-line > 1)
+(or (unit-type-count-total scout-cavalry-line > 2)
+(or (unit-type-count-total knight-line > 2)
+(or	(unit-type-count-total shrivamsha-rider-line > 2)
+(unit-type-count-total camel-line > 2)))))))))
+(can-research-with-escrow ri-scale-barding)
+=>
+(release-escrow food)
+(research ri-scale-barding)
+)
+
+;PADDED ARCHER ARMOR
+(defrule
+	(research-completed ri-fletching) ;NEW
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (unit-type-count-total cavalry-archer-line > 2)
+(or (unit-type-count-total archer-line > 2)
+(or (unit-type-count-total slinger > 3)
+(or (unit-type-count-total genitour-line > 2)
+(or (unit-type-count-total janissary-line > 3)
+(or	(unit-type-count-total skirmisher-line > 3)
+	(unit-type-count-total elephant-archer-line > 2)))))))))
+(can-research ri-padded-archer-armor)
+=>
+(research ri-padded-archer-armor)
+)
+
+;PADDED ARCHER ARMOR (escrow)
+(defrule
+	(research-completed ri-fletching) ;NEW
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 0))
+(or (unit-type-count-total cavalry-archer-line > 2)
+(or (unit-type-count-total archer-line > 2)
+(or (unit-type-count-total slinger > 2)
+(or (unit-type-count-total genitour-line > 2)
+(or (unit-type-count-total janissary-line > 3)
+(or	(unit-type-count-total skirmisher-line > 3)
+	(unit-type-count-total elephant-archer-line > 2)))))))))
+(can-research-with-escrow ri-padded-archer-armor)
+=>
+(release-escrow food)
+(research ri-padded-archer-armor)
+)
+
+;EXTRA PADDED ARCHER ARMOR
+(defrule
+	(research-completed ri-fletching) ;NEW
+	(unit-type-count-total mercenary-kipchak >= 10)
+	(can-research ri-padded-archer-armor)
+=>
+	(research ri-padded-archer-armor)
+)
+
+;BARRACKS
+;MAN-AT ARMS (ESCROW)
+(defrule
+(unit-type-count-total militiaman-line >= 3) ;4
+(can-research-with-escrow ri-man-at-arms)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-man-at-arms))
+
+;MAN-AT ARMS
+(defrule
+(unit-type-count-total militiaman-line >= 3) ;4 (was bugged)
+(can-research ri-man-at-arms)
+=>
+(research ri-man-at-arms))
+
+;TRACKING (this is from the AOE HD days lol)
+;(defrule
+;(or	(and	(goal unique-infantry-class yes)
+;		(unit-type-count my-unique-unit-line > 5))
+;(or (unit-type-count-total condottiero > 3)
+;(or (unit-type-count-total militiaman-line > 5)
+;(or (unit-type-count-total spearman-line > 5)
+;(unit-type-count-total eagle-warrior-line > 5)))))
+;(can-research-with-escrow ri-tracking)
+;=>
+;(release-escrow food)
+;(research ri-tracking))
+
+;SUPPLIES
+(defrule
+(or	(and	(goal SWORDMAN yes) ;currently going it OR:
+			(unit-type-count-total militiaman-line > 4)) ;don't research supplies in standard 4 men-at-arms flush
+	(unit-type-count-total militiaman-line >= 6)) ;we're making counter militiaman-line
+	(up-research-status c: ri-man-at-arms >= research-pending) ; MUST HAVE THIS researching or completed first
+	(can-research ri-supplies)
+=>
+	(research ri-supplies))
+
+;GAMBESONS
+(defrule
+	(unit-type-count-total militiaman-line > 5)
+	(up-research-status c: ri-chain-mail >= research-pending)
+	(up-research-status c: ri-man-at-arms >= research-pending)
+	(can-research ri-gambesons)
+=>
+	(research ri-gambesons)
+)
+
+;ARSON
+(defrule
+	(current-age-time > 15) ;allow other upgrades first
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 7))
+(or	(unit-type-count-total warrior-priest > 6)
+(or (unit-type-count-total serjeant-set > 7)
+(or (unit-type-count-total condottiero > 8)
+(or (unit-type-count-total militiaman-line > 7)
+(or (unit-type-count-total spearman-line > 20) ;waste
+(or (unit-type-count-total flemish-pikeman > 6)
+(or (unit-type-count-total huskarl-set > 6)
+	(unit-type-count-total eagle-warrior-line > 7)))))))))
+(can-research ri-arson)
+=>
+(research ri-arson))
+
+;STABLE
+;BLOODLINES
+(defrule
+(or	(and	(or	(goal unique-cavalry-class yes)
+				(goal unique-cav-archer-class yes))
+		(unit-type-count my-unique-unit-line > 3))
+(or (unit-type-count-total konnik-set > 4)
+(or (unit-type-count-total steppe-lancer-line > 4)
+(or (unit-type-count-total battle-elephant-line > 2)
+(or (unit-type-count-total scout-cavalry-line > 4)
+(or (unit-type-count-total knight-line > 4)
+(or (unit-type-count-total camel-line > 4)
+(or (unit-type-count-total genitour-line > 5)
+(or	(unit-type-count-total elephant-archer-line > 4)
+(or	(unit-type-count-total shrivamsha-rider-line > 4)
+(or	(unit-type-count-total stable-tarkan > 4)
+(or	(unit-type-count-total elite-stable-tarkan > 4)
+(unit-type-count-total cavalry-archer-line > 4)))))))))))))
+(can-research ri-bloodlines)
+=>
+(research ri-bloodlines)
+)
+
+;ADVANCE TO CASTLE AGE ;no escrow before castle age
+(defrule
+(or	(unit-type-count villager >= min-vills) ;minimal acceptable vills
+	(unit-type-count-total villager >= max-vill-pop)) ;max-vills (backup)
+	(can-research castle-age)
+=>
+	(research castle-age)
+)
+
+;ADVANCING TO CASTLE AGE TEXT
+(defrule
+	(up-research-status c: castle-age == research-pending)
+=>
+	(chat-local-to-self "I'm advancing to the Castle Age.")
+	(chat-to-allies "I'm advancing to the Castle Age.")
+	(disable-self))
+
+;MARKET
+;COINAGE
+(defrule
+(research-available ri-coinage)
+(building-type-count town-center > 0)
+(players-building-type-count any-ally town-center > 0)
+(players-building-type-count any-ally market > 0)
+(or	(military-population > 30)
+	(civilian-population >= high-res-vil-pop)) ;backup
+(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+(can-research ri-coinage)
+=>
+(research ri-coinage)
+)
+
+			;CASTLE-AGE RESEARCH
+
+;ECONOMY
+;TOWN CENTER
+;HANDCART
+(defrule
+(or	(unit-type-count-total villager >= 45) ;35
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(can-research ri-hand-cart)
+=>
+	(research ri-hand-cart)
+)
+
+;HANDCART (ESCROW)
+(defrule
+(or	(unit-type-count-total villager >= 45) ;35
+	(unit-type-count-total villager >= max-vill-pop));for low-pop games
+	(can-research-with-escrow ri-hand-cart)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-hand-cart)
+)
+
+;TOWN PATROL
+(defrule
+(or	(building-type-count-total town-center > 2)
+	(unit-type-count-total villager >= max-vill-pop))
+(or	(strategic-number sn-military-level <= -2)
+(or	(goal imperial-pending yes)
+	(current-age >= imperial-age)))
+(up-research-status c: ri-hand-cart >= research-pending) ;NEW
+(can-research-with-escrow ri-town-patrol)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-town-patrol)
+)
+
+; NEW BOW SAW (includes burgundians)
+(defrule
+	(current-age-time > 15) ;buffer
+(or	(unit-type-count-total villager >= max-vill-pop)
+(or	(unit-type-count-total villager-wood >= 20) ;buffer
+	(and	(escrow-amount food > 250) ;excess resources
+			(escrow-amount wood > 200))))
+	(can-research-with-escrow ri-bow-saw)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-bow-saw)
+)
+
+	;NEW HEAVY PLOW (includes burgundians)
+(defrule
+	;(current-age >= feudal-age) ;any-age
+	(current-age-time > 15) ;buffer
+(or	(unit-type-count-total villager-farmer >= 20) ;enough farmers present
+(or	(building-type-count-total farm >= 20) ;many farms
+(or	(and	(escrow-amount food > 250) ;excess resources
+			(escrow-amount wood > 250))
+	(unit-type-count-total villager >= max-vill-pop)))) ;backup
+(or	(dropsite-min-distance wood <= 7) ;stable woodline
+	(wood-amount >= 300))
+	(can-research-with-escrow ri-heavy-plow)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-heavy-plow))
+
+;GOLD SHAFT MINING
+(defrule
+(or	(unit-type-count villager-gold > 14) ;buffer
+(or	(unit-type-count villager >= max-vill-pop)
+	(and	(escrow-amount food > 300)
+			(escrow-amount wood > 300)))) ;excess resources
+(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+(can-research-with-escrow ri-gold-shaft-mining)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-gold-shaft-mining)
+)
+
+;STONE SHAFT MINING
+(defrule
+(or	(goal need-castle yes)
+	(building-type-count-total town-center > 2))
+	(unit-type-count villager-stone > 7)
+	(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+	(can-research-with-escrow ri-stone-shaft-mining)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-stone-shaft-mining))
+
+;MARKET
+;CARAVAN
+(defrule
+	(can-research ri-caravan)
+	(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+(or	(unit-type-count-total trade-cart > 4)
+	(unit-type-count-total trade-cog > 4))
+=>
+	(research ri-caravan)
+)
+;CARAVAN-WITH-ESCROW
+(defrule
+	(up-research-status c: ri-wheel-barrow >= research-pending) ;NEW
+(or	(unit-type-count-total trade-cart > min-trade-pop)
+	(unit-type-count-total trade-cog > min-trade-pop))
+	(can-research-with-escrow ri-caravan)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-caravan)
+)
+;CARTOGRAPHY (remember from HD?! Nostalgia :)
+(defrule
+	(current-age >= castle-age)
+	(can-research-with-escrow ri-cartography)
+	(players-building-type-count any-ally town-center > 0)
+	(up-research-status c: ri-wheel-barrow >= research-pending)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-cartography)
+)
+;BANKING
+(defrule
+(research-available ri-banking)
+(up-research-status c: ri-hand-cart >= research-pending) ;NEW
+(players-building-type-count any-ally town-center > 0)
+(players-building-type-count any-ally market > 0)
+(can-research ri-banking)
+=>
+(research ri-banking)
+)
+
+;ADVANCE TO IMPERIAL (normal)
+(defrule
+(unit-type-count villager > min-vills)
+(can-research imperial-age)
+=>
+(research imperial-age)
+(chat-to-allies "Now advancing to the Imperial Age.")
+(chat-to-player my-player-number "Imperial no escrow.")
+)
+;ADVANCE TO IMPERIAL AGE (escrow)
+(defrule
+(unit-type-count villager > min-vills)
+(can-research-with-escrow imperial-age)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research imperial-age)
+(chat-to-allies "Now advancing to the Imperial Age.")
+(chat-to-player my-player-number "Imperial with escrow.")
+)
+
+			;MILITARY
+
+;DOCK-RESEARCH
+;CAREENING
+(defrule
+(current-age >= castle-age)
+(or	(warboat-count > 3)
+	(unit-type-count-total transport-ship > 1))
+(can-research-with-escrow ri-careening)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-careening)
+)
+;WAR GALLEY
+(defrule
+(can-research-with-escrow ri-war-galley)
+(or	(unit-type-count galley-line > 1)
+(or	(unit-type-count fire-ship-line > 1)
+	(unit-type-count demolition-ship-line > 1)))
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-war-galley)
+)
+
+;BARRACKS
+;LONG SWORDSMAN
+(defrule
+(or	(and	(goal SWORDMAN yes)	;must be pursuing this strategy now
+			(unit-type-count-total militiaman-line > 5))
+	(unit-type-count-total militiaman-line > 9))
+(can-research-with-escrow ri-long-swordsman)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-long-swordsman)
+)
+
+;EAGLE WARRIOR
+(defrule
+(or	(and	(goal EAGLE-WARRIOR yes)
+			(unit-type-count-total eagle-warrior-line > 4))
+	(unit-type-count-total eagle-warrior-line > 8))
+(can-research-with-escrow ri-eagle-warrior)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-eagle-warrior)
+)
+
+;ELITE EAGLE-WARRIOR
+(defrule
+(or	(and	(goal EAGLE-WARRIOR yes)
+			(unit-type-count-total eagle-warrior-line > 4))
+	(unit-type-count-total eagle-warrior-line > 8))
+(can-research-with-escrow ri-elite-eagle-warrior)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-elite-eagle-warrior))
+
+;SQUIRES
+(defrule
+	(current-age-time > 15) ;allow other upgrades first
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 5))
+(or	(unit-type-count-total warrior-priest > 5)
+(or (unit-type-count-total serjeant-set > 5)
+(or (unit-type-count-total condottiero > 5)
+(or (unit-type-count-total militiaman-line > 5)
+(or (unit-type-count-total spearman-line > 5)
+(or (unit-type-count-total flemish-pikeman > 5)
+(or (unit-type-count-total huskarl-set > 5)
+(unit-type-count-total eagle-warrior-line > 5)))))))))
+(can-research-with-escrow ri-squires)
+=>
+(release-escrow food)
+(research ri-squires)
+)
+
+;PIKEMAN (ESCROW)
+(defrule
+(unit-type-count-total spearman-line >= 6)
+(can-research-with-escrow ri-pikeman)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-pikeman)
+)
+
+;PIKEMAN (NO ESCROW)
+(defrule
+(unit-type-count-total spearman-line >= 5)
+(can-research ri-pikeman)
+=>
+(research ri-pikeman)
+)
+
+;ARCHERY RANGE
+;CROSSBOWMAN
+(defrule
+(or	(goal ARCHER yes)
+	(unit-type-count archer-line > 4))
+(can-research-with-escrow ri-crossbow)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-crossbow)
+)
+
+;ELITE SKIRMISHER
+(defrule
+(current-age-time > 15)	;allow other upgrades first
+(unit-type-count skirmisher-line > 5)
+(can-research-with-escrow ri-elite-skirmisher)
+=>
+(release-escrow wood)
+(release-escrow gold)
+(research ri-elite-skirmisher)
+)
+
+;THUMB RING
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 7))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 7))
+(or (unit-type-count-total cavalry-archer-line > 7)
+(or	(unit-type-count-total archer-line > 7)
+(or	(unit-type-count-total elephant-archer-line > 6)
+	(unit-type-count-total mercenary-kipchak > 8))))))
+(can-research-with-escrow ri-thumb-ring)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-thumb-ring)
+)
+
+;STABLE
+;LIGHT CAVALRY
+(defrule
+(unit-type-count-total scout-cavalry-line > 1)
+(can-research-with-escrow ri-light-cavalry)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-light-cavalry)
+)
+;LIGHT CAVALRY 2
+(defrule
+(unit-type-count-total scout-cavalry-line > 2)
+(can-research ri-light-cavalry)
+=>
+(research ri-light-cavalry)
+)
+;HUSBANDRY
+(defrule
+(or	(and	(or	(goal unique-cavalry-class yes)
+				(goal unique-cav-archer-class yes))
+				(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total konnik-set > 4) ;krepost-konnik-line?
+(or (unit-type-count-total steppe-lancer-line > 4)
+(or (unit-type-count-total battle-elephant-line > 3)
+(or (unit-type-count-total cavalry-archer-line > 4)
+(or (unit-type-count-total camel-line > 4)
+(or (unit-type-count-total knight-line > 4)
+(or	(unit-type-count-total elephant-archer-line > 4)
+(or	(unit-type-count-total shrivamsha-rider-line > 4)
+(or (unit-type-count-total genitour-line > 5)
+(or	(unit-type-count-total stable-tarkan > 4)
+(or	(unit-type-count-total elite-stable-tarkan > 4)
+(unit-type-count-total scout-cavalry-line > 4)))))))))))))
+(can-research ri-husbandry)
+=>
+(research ri-husbandry)
+)
+
+;BLACKSMITH
+;CHAIN MAIL (Castle age tech)
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(unit-type-count-total huskarl-set > 3)
+(or	(unit-type-count-total warrior-priest > 4)
+(or (unit-type-count-total serjeant-set > 3)
+(or (unit-type-count-total condottiero > 3)
+(or (unit-type-count-total eagle-warrior-line > 5)
+(or (unit-type-count-total militiaman-line > 5)
+(or (unit-type-count-total flemish-pikeman > 6)
+(unit-type-count-total spearman-line > 5)))))))))
+(can-research-with-escrow ri-chain-mail)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-chain-mail)
+)
+
+;CHAIN BARDING
+(defrule
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 3))
+(or (unit-type-count-total krepost-konnik-line > 3)
+(or (unit-type-count-total konnik-set > 3)
+(or (unit-type-count-total battle-elephant-line > 3)
+(or (unit-type-count-total steppe-lancer-line > 3)
+(or (unit-type-count-total knight-line > 3)
+(or (unit-type-count-total scout-cavalry-line > 4)
+(or	(unit-type-count-total shrivamsha-rider-line > 3)
+(unit-type-count-total camel-line > 3)))))))))
+(can-research-with-escrow ri-chain-barding)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-chain-barding)
+)
+
+;IRON CASTING
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 5))
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 5))
+(or (unit-type-count-total krepost-konnik-line > 5)
+(or (unit-type-count-total eagle-warrior-line > 6)
+(or (unit-type-count-total militiaman-line > 6)
+(or (unit-type-count-total spearman-line > 6)
+(or (unit-type-count-total camel-line > 6)
+(or (unit-type-count-total knight-line > 6)
+(or (unit-type-count-total flemish-pikeman > 6)
+(or	(unit-type-count-total shrivamsha-rider-line > 2)
+(unit-type-count-total scout-cavalry-line > 6)))))))))))
+(can-research-with-escrow ri-iron-casting)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-iron-casting)
+)
+;IRON CASTING EXTRA UNITS
+(defrule
+(or	(unit-type-count-total huskarl-set > 5)
+(or	(unit-type-count-total warrior-priest > 5)
+(or (unit-type-count-total konnik-set > 5)
+(or (unit-type-count-total steppe-lancer-line > 5)
+(or (unit-type-count-total condottiero > 5)
+(or (unit-type-count-total serjeant-set > 5)
+(unit-type-count-total battle-elephant-line > 5)))))))
+(can-research-with-escrow ri-iron-casting)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-iron-casting)
+)
+
+;BODKIN ARROW
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total archer-line > 5)
+(or (unit-type-count-total skirmisher-line > 5)
+(or (unit-type-count-total cavalry-archer-line > 4)
+(or (building-type-count castle > 0)
+(or (unit-type-count-total slinger > 4)
+(or (building-type-count-total donjon > 2)
+(or (goal is-town-under-attack yes)
+(building-type-count watch-tower-line > 2))))))))))
+(can-research-with-escrow ri-bodkin-arrow)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-bodkin-arrow)
+)
+
+;BODKIN ARROW (extra rule)
+(defrule
+(or	(unit-type-count-total genitour-line > 5)
+(or	(unit-type-count-total slinger > 5)
+(or	(unit-type-count-total galley-line > 2)
+(or	(unit-type-count-total caravel-line > 1)
+(or	(unit-type-count-total longboat-line > 1)
+(or	(unit-type-count-total elephant-archer-line > 4)
+	(unit-type-count-total turtle-ship-line > 1)))))))
+	(can-research-with-escrow ri-bodkin-arrow)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-bodkin-arrow)
+)
+
+;LEATHER ARCHER ARMOR
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total hand-cannoneer > 5)
+(or (unit-type-count-total cavalry-archer-line > 5)
+(or (unit-type-count-total skirmisher-line > 5)
+(or (unit-type-count-total slinger > 5)
+(or (unit-type-count-total janissary-line > 4)
+(unit-type-count-total archer-line > 5))))))))
+(can-research-with-escrow ri-leather-archer-armor)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-leather-archer-armor)
+)
+
+;LEATHER ARCHER ARMOUR (extra rule)
+(defrule
+(or	(unit-type-count-total elephant-archer-line > 4)
+	(unit-type-count-total genitour-line > 5))
+	(can-research-with-escrow ri-leather-archer-armor)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-leather-archer-armor)
+)
+
+;MONASTERY
+;FERVOR
+(defrule
+(can-research-with-escrow ri-fervor)
+(or	(unit-type-count-total monk-set > 1)
+	(unit-type-count-total warrior-priest > 1))
+=>
+(release-escrow gold)
+(research ri-fervor)
+)
+
+;SANCTITY
+(defrule
+(can-research-with-escrow ri-sanctity)
+(or	(unit-type-count-total monk-set > 1)
+	(unit-type-count-total warrior-priest > 1))
+=>
+(release-escrow gold)
+(research ri-sanctity)
+)
+
+;ILLUMINATION
+(defrule
+(or	(goal MONK yes);dont waste gold
+(or	(unit-type-count monk-set > 2)
+	(gold-amount > 1000))) ;excess resources
+(can-research-with-escrow ri-illumination)
+=>
+(release-escrow gold)
+(research ri-illumination)
+)
+
+;BLOCK PRINTING
+(defrule
+(or	(goal MONK yes);dont waste gold
+(or	(unit-type-count monk-set > 2)
+	(gold-amount > 1000)))
+(can-research-with-escrow ri-block-printing)
+(unit-type-count-total monk-set > 1)
+=>
+(release-escrow gold)
+(research ri-block-printing)
+)
+
+;ATONEMENT
+(defrule
+(or	(unit-type-count-total monk-set > 2)
+(or	(players-unit-type-count target-player monk >= 5)
+	(players-unit-type-count target-player missionary >= 5)))
+	(can-research-with-escrow ri-atonement)
+=>
+(release-escrow gold)
+(research ri-atonement)
+)
+
+;REDEMPTION
+(defrule
+(or	(unit-type-count-total monk-set > 1)
+	(unit-type-count missionary > 1))
+	(gold-amount > 1100) ;don't waste gold
+	(can-research-with-escrow ri-redemption)
+=>
+	(release-escrow gold)
+	(research ri-redemption)
+)
+
+;THEOCRACY
+(defrule
+(or	(goal MONK yes)
+	(unit-type-count monk-set >= 3))
+	(gold-amount > 1000)	;dont waste gold
+(can-research-with-escrow ri-theocracy)
+(unit-type-count-total monk-set > 1)
+=>
+(release-escrow gold)
+(research ri-theocracy)
+)
+
+;FAITH
+(defrule
+(or	(players-unit-type-count target-player monk-set >= 5) ;it's more logical now!
+	(players-unit-type-count any-enemy monk-set >= 6))
+(can-research-with-escrow ri-faith) ;no escrow
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-faith))
+
+;DEVOTION
+(defrule
+(or	(players-unit-type-count target-player monk-set >= 2)
+	(players-unit-type-count any-enemy monk-set >= 3))
+	(can-research ri-devotion)
+=>
+	(research ri-devotion)
+)
+
+;UNIVERSITY
+;MURDER HOLES
+(defrule
+(or (building-type-count-total watch-tower-line > 1)
+(or (building-type-count-total donjon > 1) ;2
+(or (building-type-count-total castle > 0)
+(building-type-count-total krepost > 0))))
+(can-research ri-murder-holes) ;no escrow for stone
+=>
+(research ri-murder-holes)
+)
+
+;FORTIFIED WALL
+(defrule
+;(goal BUILD-THE-WALL yes) ;Jester doesnt build walls
+(strategic-number sn-military-level <= 0) ;not winning
+(building-type-count-total gate >= 1)
+(building-type-count-total stone-wall-line >= 10)
+(can-research-with-escrow ri-fortified-wall)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-fortified-wall)
+)
+
+;MASONRY
+(defrule
+(or	(and	(food-amount > 500)
+		(stone-amount > 250))
+		(strategic-number sn-military-level <= -1))
+(can-research ri-masonry)
+=>
+(research ri-masonry)
+)
+
+;BALLISTICS
+(defrule
+(or	(and	(or	(goal unique-archer-class yes)
+				(goal unique-cav-archer-class yes))
+				(unit-type-count-total my-unique-unit-line > 7))
+(or	(unit-type-count-total archer-line > 9)
+(or	(unit-type-count-total genitour-line > 8)
+(or	(unit-type-count-total cavalry-archer-line > 9)
+(or	(unit-type-count-total elephant-archer-line > 5)
+(or	(unit-type-count-total warboat-count > 6)
+(or	(building-type-count-total watch-tower-line > 2)
+(or	(building-type-count-total donjon > 2)
+(or	(building-type-count-total castle > 0)
+(or	(building-type-count-total krepost > 1)
+	(building-type-count-total bombard-tower > 1)))))))))))
+	(can-research-with-escrow ri-ballistics)
+=>
+(release-escrow wood)
+(release-escrow gold)
+(research ri-ballistics))
+
+;BALLISTICS EXTRA
+(defrule
+(or	(unit-type-count-total skirmisher-line >= 15)
+	(and	(current-age >= imperial-age)
+	(and	(wood-amount > 500)
+			(gold-amount > 500)))) ;excess resources
+	(can-research-with-escrow ri-ballistics)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-ballistics))
+
+;GUARD TOWER
+(defrule
+(building-type-count-total watch-tower-line >= 2)
+(building-type-count-total university > 0)
+(can-research-with-escrow ri-guard-tower)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-guard-tower))
+
+;HEATED SHOT
+(defrule
+(or (building-type-count-total watch-tower-line > 1)
+(or (building-type-count-total donjon > 1)
+(or (building-type-count-total krepost > 0)
+	(building-type-count-total castle > 0))))
+(or (players-unit-type-count any-enemy galley-line > 3)
+(or (players-unit-type-count any-enemy fire-ship-line > 3)
+(or (players-unit-type-count any-enemy longboat-line > 3)
+(or (players-unit-type-count any-enemy turtle-ship-line > 3)
+(or (players-unit-type-count any-enemy caravel-line > 3)
+(or (players-unit-type-count any-enemy cannon-galleon-line > 3)
+(players-unit-type-count any-enemy demolition-ship-line > 3)))))))
+(can-research-with-escrow ri-heated-shot)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-heated-shot)
+)
+
+;CASTLE
+;HOARDINGS
+(defrule
+(or	(and	(goal is-town-under-attack yes)
+		(strategic-number sn-military-level <= 0))
+(or	(players-unit-type-count target-player trebuchet-set > 0)
+(or	(players-unit-type-count target-player battering-ram-line > 1)
+(or	(players-unit-type-count target-player armored-elephant-line > 1)
+(or	(players-unit-type-count target-player bombard-cannon > 0)
+(or	(players-unit-type-count target-player cannon-galleon-line > 0)
+(or	(players-unit-type-count target-player dromon > 0)
+(or	(players-unit-type-count target-player petard > 4)
+	(and	(food-amount > 1400)
+			(wood-amount > 800)))))))))) ;excess resources
+(or	(building-type-count castle >= 1)
+	(building-type-count donjon >= 2)) ;this affects donjons too now
+	(can-research-with-escrow ri-hoardings)
+=>
+	(release-escrow wood)
+	(release-escrow food)
+	(research ri-hoardings)
+)
+
+;UNIQUE UNIT UPGRADE (no escrow)
+(defrule
+(or	(and	(goal MY-UNIQUE-UNIT yes)
+			(unit-type-count-total my-unique-unit-line >= 4))
+			(unit-type-count-total my-unique-unit-line >= 20))
+(can-research my-unique-unit-upgrade)
+=>
+(research my-unique-unit-upgrade)
+)
+
+;UNIQUE UNIT UPGRADE (escrow)
+(defrule
+(or	(and	(goal MY-UNIQUE-UNIT yes)
+			(unit-type-count-total my-unique-unit-line >= 5))
+			(unit-type-count-total my-unique-unit-line >= 20))
+(can-research-with-escrow my-unique-unit-upgrade)
+=>
+(release-escrow food)
+(release-escrow wood)
+(release-escrow gold)
+(release-escrow stone)
+(research my-unique-unit-upgrade)
+)
+
+;UNIQUE RESEARCH (THIS IS EXTREMELY WASTEFUL)
+;(defrule
+;(can-research-with-escrow my-unique-research)
+;(or	(military-population > 25)
+;	(unit-type-count military-population >= max-mil-pop))
+;=>
+;(release-escrow food)
+;(release-escrow wood)
+;(release-escrow gold)
+;(release-escrow stone)
+;(research my-unique-research)
+;)
+
+;CONSCRIPTION
+(defrule
+(unit-type-count-total villager > min-vills)
+(can-research-with-escrow ri-conscription)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-conscription)
+)
+
+
+			;IMPERIAL-AGE RESEARCH
+
+			;ECONOMY
+;MILL
+;CROP ROTATION
+(defrule
+(or	(building-type-count farm >= 10) ;must be worthwhile
+	(and	(food-amount >= 1000)
+			(wood-amount >= 800)))
+(unit-type-count-total villager > min-vills)
+(can-research ri-crop-rotation)
+=>
+(research ri-crop-rotation)
+)
+
+;CROP ROTATION (escrow)
+(defrule
+(or	(building-type-count farm >= 10) ;must be worthwhile
+	(and	(food-amount >= 1000)
+			(wood-amount >= 800)))
+(unit-type-count-total villager > min-vills)
+(can-research-with-escrow ri-crop-rotation)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-crop-rotation)
+)
+
+;LUMBERCAMP
+;TWO MAN SAW
+(defrule
+(goal WOOD-REMAINING yes)
+(unit-type-count-total villager > min-vills)
+(can-research ri-two-man-saw)
+=>
+(research ri-two-man-saw)
+)
+
+;MARKET
+;GUILDS
+(defrule
+(research-available ri-guilds)
+(current-age-time > 30) ;buffer for other stuff first
+(unit-type-count-total villager > min-vills)
+(building-type-count market > 0)
+(can-research-with-escrow ri-guilds)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-guilds)
+)
+
+			;MILITARY
+;BARRACKS
+
+;TWO HANDED SWORDSMAN
+(defrule
+(unit-type-count militiaman-line > 6);9
+(can-research-with-escrow ri-two-handed-swordsman)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-two-handed-swordsman))
+
+;CHAMPION
+(defrule
+(unit-type-count militiaman-line > 10);15
+(can-research-with-escrow ri-champion)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-champion))
+
+;LEGIONARY (romans)
+(defrule
+(unit-type-count militiaman-line > 10);15
+(can-research-with-escrow ri-legionary)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-legionary))
+
+;HALBERDIER
+(defrule
+(unit-type-count-total spearman-line > 7)
+(can-research-with-escrow ri-halberdier)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-halberdier)
+)
+
+;ARCHERY RANGE
+
+;ARBALEST
+(defrule
+(unit-type-count-total archer-line > 8)
+(can-research-with-escrow ri-arbalest)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-arbalest)
+)
+
+;HEAVY CAVALRY-ARCHER
+(defrule
+(unit-type-count-total cavalry-archer-line > 7)
+(can-research-with-escrow ri-heavy-cavalry-archer)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-heavy-cavalry-archer)
+)
+
+;PARTHIAN TACTICS
+(defrule
+(or	(and	(goal unique-cav-archer-class yes)
+			(unit-type-count-total my-unique-unit-line >= 5))
+(or	(unit-type-count-total cavalry-archer-line >= 7)
+(or	(unit-type-count-total mercenary-kipchak >= 8)
+	(unit-type-count-total elephant-archer-line >= 5))))
+	(can-research-with-escrow ri-parthian-tactics)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-parthian-tactics)
+)
+
+;IMPERIAL SKIRMISHER
+(defrule
+(or	(unit-type-count-total skirmisher-line > 9)
+	(population >= max-pop))
+(can-research-with-escrow ri-imperial-skirmisher)
+=>
+(release-escrow wood)
+(release-escrow gold)
+(research ri-imperial-skirmisher)
+)
+
+;STABLE
+;CAVALIER
+(defrule
+(or	(goal KNIGHT yes)
+(unit-type-count-total knight-line > 7))
+(can-research-with-escrow ri-cavalier)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-cavalier)
+)
+;ELITE-SHRIVAMSHA-RIDER
+(defrule
+	(unit-type-count-total shrivamsha-rider-line > 5) ;NEW
+	(can-research-with-escrow ri-elite-shrivamsha-rider)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+    (research ri-elite-shrivamsha-rider)
+)
+;ELITE-ELEPHANT-ARCHER
+(defrule
+	(unit-type-count-total elephant-archer-line > 5) ;NEW
+	(can-research-with-escrow ri-elite-elephant-archer)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+    (research ri-elite-elephant-archer)
+)
+;PALADIN
+(defrule
+(or	(goal KNIGHT yes)
+(unit-type-count-total knight-line >= 7))
+(can-research-with-escrow ri-paladin)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-paladin)
+)
+
+;HUSSAR
+(defrule
+(unit-type-count-total scout-cavalry-line >= 5) ;always get hussar in case gold is gone soon
+(can-research ri-hussar)
+=>
+(research ri-hussar)
+)
+
+;HUSSAR
+(defrule
+(unit-type-count-total scout-cavalry-line >= 5)
+(can-research-with-escrow ri-hussar)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-hussar)
+)
+
+;WINGED HUSSAR
+(defrule
+(unit-type-count-total scout-cavalry-line >= 5) ;10
+(can-research ri-winged-hussar)
+=>
+(research ri-winged-hussar)
+)
+
+;WINGED HUSSAR
+(defrule
+(unit-type-count-total scout-cavalry-line >= 5) ;10
+(can-research-with-escrow ri-winged-hussar)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-winged-hussar)
+)
+
+;HEAVY CAMEL
+(defrule
+(unit-type-count-total camel-line >= 9)
+(can-research-with-escrow ri-heavy-camel)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-heavy-camel)
+)
+
+;IMPERIAL CAMEL
+(defrule
+(unit-type-count-total camel-line >= 9)
+(can-research-with-escrow ri-imperial-camel)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-imperial-camel)
+)
+
+;BLACKSMITH
+;PLATE MAIL ARMOR
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(unit-type-count-total warrior-priest > 5)
+(or	(unit-type-count-total huskarl-set > 5)
+(or (unit-type-count-total serjeant-set > 4)
+(or (unit-type-count-total condottiero > 5)
+(or (unit-type-count-total eagle-warrior-line > 5)
+(or (unit-type-count-total militiaman-line > 5)
+(or (unit-type-count-total flemish-pikeman > 6)
+(unit-type-count-total spearman-line > 5)))))))))
+(can-research-with-escrow ri-plate-mail)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-plate-mail)
+)
+
+;PLATE BARDING ARMOR
+(defrule
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total krepost-konnik-line > 5)
+(or (unit-type-count-total konnik-set > 5)
+(or (unit-type-count-total steppe-lancer-line > 5)
+(or (unit-type-count-total battle-elephant-line > 4)
+(or (unit-type-count-total knight-line > 5)
+(or (unit-type-count-total camel-line > 5)
+(or	(unit-type-count-total shrivamsha-rider-line > 5)
+(unit-type-count-total scout-cavalry-line > 5)))))))))
+(can-research-with-escrow ri-plate-barding)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-plate-barding)
+)
+
+;BLAST FURNACE
+(defrule
+(or	(and	(goal unique-infantry-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(and	(goal unique-cavalry-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total eagle-warrior-line > 5)
+(or (unit-type-count-total militiaman-line > 5)
+(or (unit-type-count-total spearman-line > 5)
+(or (unit-type-count-total camel-line > 5)
+(or (unit-type-count-total knight-line > 5)
+(or (unit-type-count-total flemish-pikeman > 6)
+(unit-type-count-total scout-cavalry-line > 5)))))))))
+(can-research-with-escrow ri-blast-furnace)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-blast-furnace)
+)
+
+;EXTRA BLAST FURNACE UNITS
+(defrule
+(or	(unit-type-count-total warrior-priest > 5)
+(or	(unit-type-count-total huskarl-set > 5)
+(or (unit-type-count-total steppe-lancer-line > 5)
+(or (unit-type-count-total krepost-konnik-line > 5)
+(or (unit-type-count-total konnik-set > 5)
+(or (unit-type-count-total condottiero > 3)
+(or (unit-type-count-total serjeant-set > 5)
+(or	(unit-type-count-total shrivamsha-rider-line > 5)
+(unit-type-count-total battle-elephant-line > 5)))))))))
+(can-research-with-escrow ri-blast-furnace)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-blast-furnace))
+
+;BRACER
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total archer-line > 5)
+(or (unit-type-count-total skirmisher-line > 5)
+(or (unit-type-count-total cavalry-archer-line > 5)
+(or (unit-type-count-total genitour-line > 5)
+(or (unit-type-count-total slinger > 5)
+(or	(unit-type-count-total elephant-archer-line > 4)
+(or (building-type-count-total donjon > 2)
+(or (building-type-count-total castle > 0)
+(or (building-type-count-total watch-tower-line > 2)
+(building-type-count-total krepost > 0))))))))))))
+(can-research-with-escrow ri-bracer)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-bracer)
+)
+
+;EXTRA BRACER
+(defrule
+(or	(goal is-town-under-attack yes)
+	(strategic-number sn-military-level < -1))
+	(can-research-with-escrow ri-bracer)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-bracer)
+)
+;RING ARCHER ARMOUR
+(defrule
+(or	(and	(goal unique-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or	(and	(goal unique-cav-archer-class yes)
+		(unit-type-count my-unique-unit-line > 4))
+(or (unit-type-count-total hand-cannoneer > 5) ;was missing before!
+(or (unit-type-count-total archer-line > 5)
+(or (unit-type-count-total skirmisher-line > 5)
+(or (unit-type-count-total genitour-line > 5)
+(or (unit-type-count-total slinger > 6)
+(or (unit-type-count-total janissary-line > 4)
+(or	(unit-type-count-total elephant-archer-line > 4)
+(unit-type-count-total cavalry-archer-line > 5))))))))))
+(can-research-with-escrow ri-ring-archer-armor)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-ring-archer-armor)
+)
+;SIEGE WORKSHOP
+;CAPPED RAM
+(defrule
+(goal is-town-under-attack no)
+(can-research-with-escrow ri-capped-ram)
+(unit-type-count-total battering-ram-line > 1)
+=>
+(release-escrow food)
+(research ri-capped-ram)
+)
+;SIEGE RAM
+(defrule
+(goal is-town-under-attack no)
+(can-research-with-escrow ri-siege-ram)
+(unit-type-count-total battering-ram-line > 3)
+=>
+(release-escrow food)
+(research ri-siege-ram)
+)
+;elite-armored-elephant (siege-elephant)
+(defrule
+(goal is-town-under-attack no)
+(unit-type-count-total armored-elephant-line > 3)
+(can-research-with-escrow ri-elite-armored-elephant)
+=>
+(release-escrow food)
+(research ri-elite-armored-elephant)
+)
+;HEAVY SCORPION
+(defrule
+(can-research-with-escrow ri-heavy-scorpion)
+(unit-type-count-total scorpion-line > 4) ;3
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-heavy-scorpion)
+)
+
+;ONAGER
+(defrule
+(can-research-with-escrow ri-onager)
+(unit-type-count-total mangonel-line > 3)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-onager)
+)
+
+;SIEGE ONAGER
+(defrule
+(soldier-count > 10)
+(can-research-with-escrow ri-siege-onager)
+(unit-type-count-total mangonel-line > 4)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-siege-onager)
+)
+
+;HOUFNICE
+(defrule ;for bohemians
+(can-research-with-escrow ri-houfnice)
+(unit-type-count-total bombard-cannon-line >= 1)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-houfnice))
+
+;UNIVERSITY
+
+;CHEMISTRY
+(defrule
+(can-research-with-escrow ri-chemistry) ;works with bohemian hand-cannoneers right away
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-chemistry)
+)
+
+;ARCHITECTURE
+(defrule
+(or	(and	(goal is-town-under-attack yes)
+			(strategic-number sn-military-level <= -1))
+(or	(wood-amount > 1000)
+(or	(building-type-count gate-class > 1)
+	(building-type-count castle > 1))))
+(can-research-with-escrow ri-architecture)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-architecture)
+)
+
+;SIEGE ENGINEERS
+(defrule
+(or	(unit-type-count-total trebuchet-set >= 2)
+(or	(unit-type-count-total dromon >= 2)
+(or	(unit-type-count-total cannon-galleon-line >= 2)
+	(and	(food-amount >= 1200) ;general high resources
+			(wood-amount >= 800)))))
+(can-research-with-escrow ri-siege-engineers)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-siege-engineers)
+)
+
+;BOMBARD TOWER	;DISABLED FOR NOW, JESTER ONLY USES WATCH-TOWERS FOR BETTER VALUE
+;(defrule
+;(or	(goal STONE-REMAINING yes) ;ignore this rule if no stone remains on the map
+;	(stone-amount >= 125)) ;or we have stone for 1 bombard-tower
+;(or	(strategic-number sn-military-level < 0) ;get if we need defense
+;	(and	(food-amount >= 1200)
+;			(wood-amount >= 400))) ;or get if we have excess resources
+;(can-research ri-bombard-tower)
+;=>
+;(research ri-bombard-tower)
+;)
+
+;KEEP
+(defrule
+(current-age >= imperial-age)
+(building-type-count-total watch-tower-line > 3)
+(building-type-count-total castle > 1)
+(research-available ri-keep)
+(can-research-with-escrow ri-keep)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-keep)
+)
+
+;ARROWSLITS
+(defrule
+(current-age >= imperial-age)
+(or	(building-type-count watch-tower-line >= 3);4
+	(building-type-count-total donjon >= 2))
+(building-type-count town-center > 0)
+(can-research-with-escrow ri-arrowslits)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-arrowslits))
+
+;TREADMILL CRANE
+(defrule
+(or	(building-type-count-total wonder > 0) ;we are building a wonder
+(or	(population >= max-pop)
+	(and	(current-age >= imperial-age)
+	(and	(food-amount > 2000)
+			(wood-amount > 2000))))) ;extreme excess resources
+	(can-research-with-escrow ri-treadmill-crane)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-treadmill-crane))
+
+;DOCK
+
+;DRY DOCK
+(defrule
+(current-age >= imperial-age)
+(or	(goal WATER-MAP separated)
+	(unit-type-count transport-ship > 1))
+(building-type-count dock > 0)
+(research-completed ri-careening)
+(can-research-with-escrow ri-dry-dock)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-dry-dock)
+)
+
+;GALLEON
+(defrule
+(current-age >= imperial-age)
+(or	(goal WATER-MAP separated)
+(and	(escrow-amount food > 500)
+		(escrow-amount wood > 400)))
+(unit-type-count-total galley-line > 4)
+(building-type-count dock > 0)
+(can-research-with-escrow ri-galleon)
+=>
+(release-escrow food)
+(release-escrow wood)
+(research ri-galleon)
+)
+
+;FAST FIRE SHIP
+(defrule
+(current-age >= imperial-age)
+(or	(players-unit-type-count target-player warboat-count > warboat-count)
+(and	(escrow-amount gold > 350)
+	(escrow-amount wood > 350)))
+(building-type-count dock > 0)
+(unit-type-count-total fire-ship-line > 3)
+(can-research-with-escrow ri-fast-fire-ship)
+=>
+(release-escrow wood)
+(release-escrow gold)
+(research ri-fast-fire-ship)
+)
+
+;CANNON GALLEON
+(defrule
+(current-age >= imperial-age)
+(or	(goal WATER-MAP separated)
+(or	(players-unit-type-count target-player warboat-count > warboat-count)
+(and	(escrow-amount food > 500)
+	(escrow-amount wood > 600))))
+(building-type-count dock > 0)
+(research-completed ri-chemistry)
+(warboat-count > 5)
+(can-research-with-escrow ri-cannon-galleon)
+=>
+(release-escrow wood)
+(release-escrow food)
+(research ri-cannon-galleon)
+)
+
+;ELITE TURTLE SHIP
+(defrule
+(unit-type-count-total turtle-ship-line > 5)
+(can-research-with-escrow ri-elite-turtle-ship)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-elite-turtle-ship)
+)
+
+;ELITE LONGBOAT
+(defrule
+(unit-type-count-total longboat-line > 5)
+(can-research-with-escrow ri-elite-longboat)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-elite-longboat)
+)
+
+;ELITE STEPPE-LANCER-LINE
+(defrule
+(unit-type-count-total steppe-lancer-line >= 5);10
+(can-research-with-escrow ri-elite-steppe-lancer)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-elite-steppe-lancer))
+
+;ELITE BATTLE-ELEPHANT-LINE
+(defrule
+(unit-type-count-total battle-elephant-line >= 5);10
+(can-research-with-escrow ri-elite-battle-elephant)
+=>
+(release-escrow food)
+(release-escrow gold)
+(research ri-elite-battle-elephant))
+
+;ELITE GENITOUR
+(defrule
+	(unit-type-count-total genitour-line >= 5)
+	(can-research-with-escrow ri-elite-genitour)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-elite-genitour))
+
+;==========;CIV-SPECIFIC RESEARCHES (work in progress);==========;
+
+		;use these values if you cannot get a civilizations specific unique research to work:
+	;my-unique-research = imperial-age unique research
+	;my-second-unique-research = castle-age unique research
+
+	;UNFINISHED CIVS:
+	;all finished now up to "The Mountain Royals" DLC
+
+	;ARMENIANS
+	;CILICIAN FLEET
+(defrule
+(or	(unit-type-count-total galley-line > 3)
+(or	(unit-type-count-total dromon > 2)
+	(unit-type-count-total demolition-ship-line > 2)))
+	(can-research-with-escrow ri-cicilian-fleet)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-cicilian-fleet)
+)
+
+	;FERETERS
+(defrule
+(or	(up-research-status c: ri-champion >= research-pending)
+(or	(research-completed ri-champion)
+(or	(unit-type-count-total warrior-priest > 6)
+	(unit-type-count-total militiaman-line > 6))))
+	(can-research-with-escrow ri-fereters)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-fereters)
+)
+	;AZTECS
+
+;atlatl
+(defrule
+(or	(unit-type-count-total genitour-placeholder > 7)
+(or	(and	(unit-type-count-total genitour-line > 7)
+			(can-train genitour-line)) ;for berber allies
+	(unit-type-count-total skirmisher-line > 7)))
+	(can-research-with-escrow ri-atlatl)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-atlatl)
+)
+;garland-wars
+(defrule
+(or	(unit-type-count-total militiaman-line > 7)
+(or	(unit-type-count-total jaguar-man-line > 7)
+	(unit-type-count-total eagle-warrior-line > 7)))
+	(can-research-with-escrow ri-garland-wars)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-garland-wars)
+)
+	;BENGALIS
+;PAIKS
+(defrule
+(or	(unit-type-count-total battle-elephant-line > 9)
+	(and	(unit-type-count-total ratha-set > 5)
+    		(research-completed my-unique-unit-upgrade)))
+    	(food-amount > 800)
+    	(gold-amount > 500)
+    (can-research-with-escrow ri-paiks)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+    (research ri-paiks)
+)
+;MAHAYANA
+(defrule
+(or	(unit-type-count-total villager >= high-res-vil-pop)
+	(population >= max-pop))
+    (can-research-with-escrow ri-mahayana)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+    (research ri-mahayana)
+)
+	;BERBERS
+
+;kasbah
+(defrule
+	(player-in-game any-ally)
+	(players-building-type-count any-ally castle >= 1)
+	(building-type-count castle >= 1)
+(or	(population >= high-res-vil-pop) ;decently high population
+	(population >= max-pop)) ;maxed out pop
+	(can-research-with-escrow ri-kasbah)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-kasbah)
+)
+	;maghrabi camels
+(defrule
+(or	(unit-type-count-total camel-archer-line > 7)
+	(unit-type-count-total camel-line > 7))
+	(can-research-with-escrow ri-maghrabi-camels)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-maghrabi-camels)
+)
+	;BOHEMIANS
+
+;wagenburg-tactics
+(defrule
+(or	(goal MY-UNIQUE-UNIT yes)
+	(goal HAND-CANNONEER yes))
+	(can-research-with-escrow ri-wagenburg-tactics)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-wagenburg-tactics))
+
+;hussite-reforms
+(defrule
+(or	(goal MONK yes)
+	(unit-type-count-total monk-set > 0)) ;2
+	(can-research-with-escrow ri-hussite-reforms)
+(or	(not	(research-completed ri-sanctity))
+(or	(not	(research-completed ri-fervor))
+	(not	(research-completed ri-faith)))) ;must be minimally one remaining
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-hussite-reforms)	;food cost instead of gold for monks
+)
+	;BRITONS
+
+;yeomen
+(defrule
+(or	(and	(goal ARCHER yes)
+			(unit-type-count-total archer-line > 7)) ;9
+	(and	(goal MY-UNIQUE-UNIT yes)
+			(unit-type-count-total my-unique-unit-line > 7))) ;9
+		(can-research-with-escrow ri-yeomen)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-yeomen)
+)
+;war-wolf
+(defrule
+	(unit-type-count-total trebuchet-set > 3)
+	(strategic-number sn-military-level >= 3);must be ahead
+	(unit-type-count-total civilian-population >= high-res-vil-pop);reasonable economy
+	(can-research-with-escrow ri-war-wolf)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-war-wolf)
+)
+	;BULGARIANS
+
+;stirrups
+(defrule
+	(goal KNIGHT yes)
+(or	(unit-type-count-total knight-line > 7)
+	(unit-type-count-total konnik-line > 7))
+	(can-research-with-escrow ri-stirrups)
+	=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-stirrups)
+)
+;bagains
+(defrule
+(or	(and	(goal SWORDMAN yes)
+			(unit-type-count-total militiaman-line >= 7))
+	(unit-type-count-total militiaman-line > 10))
+	(can-research-with-escrow ri-bagains)
+	=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-bagains)
+)
+	;BURGUNDIANS
+
+;burgundian vineyards
+(defrule
+	(goal burgundian-civ yes)
+(or	(strategic-number sn-military-level > 1) ;military superiority
+(or	(and	(food-amount > 2000)
+		(gold-amount < 400))
+	(unit-type-count-total villager >= max-vill-pop)))
+	(can-research-with-escrow ri-burgundian-vineyards)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-burgundian-vineyards)
+)
+;flemish revolution
+(defrule
+	(goal burgundian-civ yes)
+	(building-type-count town-center >= 1)
+(or	(and	(strategic-number sn-military-level <= -4)
+		(goal is-town-under-attack yes))
+	(and	(goal ATTACK yes)
+	(and	(food-amount > 2000) ;enough food to replenish villagers
+		(building-type-count town-center >= 3))))
+	(can-research-with-escrow ri-flemish-revolution)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-flemish-revolution)
+)
+	;RI-ELITE-COUSTILLIER
+(defrule
+	(unit-type-count-total coustillier-line > 9)
+	(can-research-with-escrow ri-elite-coustillier)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-elite-coustillier)
+)
+	;BURMESE
+
+;ri-howdah
+(defrule
+	(unit-type-count-total battle-elephant-line > 7)
+	(can-research-with-escrow ri-howdah)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-howdah)
+)
+;ri-manipur-cavalry
+(defrule
+(or	(unit-type-count-total scout-cavalry-line > 11)
+(or	(unit-type-count-total knight-line > 10)
+(or	(unit-type-count-total battle-elephant-line > 10) ;they can barely catch archers most days
+	(unit-type-count-total arambai-line > 9)))) ;these are included
+	(can-research-with-escrow ri-manipur-cavalry)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-manipur-cavalry)
+)
+	;BYZANTINES
+
+;greek fire
+(defrule
+(or	(unit-type-count-total fire-ship-line > 7)
+	(and	(unit-type-count-total fire-ship-line > 3)
+		(or	(unit-type-count-total dromon > 0) ;NEW UNIT
+			(unit-type-count-total cannon-galleon-line > 0))))
+	(can-research-with-escrow ri-greek-fire)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-greek-fire)
+)
+;logistica
+(defrule
+	(unit-type-count-total cataphract-line > 9)
+	(can-research-with-escrow ri-logistica)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-logistica)
+)
+	;CELTS
+
+;stronghold
+(defrule
+(or	(building-type-count-total castle >= 2)
+	(building-type-count-total watch-tower >= 3))
+(or	(current-age >= imperial-age)
+(or	(building-type-count-total castle >= 3)
+	(building-type-count-total watch-tower >= 6)))
+(or	(goal ATTACK yes)
+	(goal is-town-under-attack yes))
+	(can-research-with-escrow ri-stronghold)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-stronghold)
+)
+;furor celtica
+(defrule
+	(goal ATTACK yes)
+(or	(unit-type-count-total battering-ram-line >= 4) ;ignore armored-elephant for this
+(or	(unit-type-count-total scorpion-line >= 6)
+(or	(unit-type-count-total mangonel-line >= 6)
+	(unit-type-count-total trebuchet-set >= 3))))
+	(can-research-with-escrow ri-furor-celtica)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-furor-celtica)
+)
+	;CHINESE
+;GREAT WALL
+(defrule
+	(building-type-count-total town-center > 0) ;this should probably be on all of them but WHATEVA
+(or	(building-type-count-total watch-tower-line >= 4)
+(or	(building-type-count-total bombard-tower >= 4)
+(or	(building-type-count-total stone-wall-line >= 20)
+	(building-type-count-total gate-class >= 3))))
+	(can-research-with-escrow ri-great-wall)
+=>
+	(release-escrow wood)
+	(release-escrow stone)
+	(research ri-great-wall)
+)
+;ROCKETRY
+(defrule
+(or	(unit-type-count-total chu-ko-nu-line > 8)
+	(unit-type-count-total scorpion-line > 4))
+	(can-research-with-escrow ri-rocketry)
+=>
+	(release-escrow gold)
+	(release-escrow wood)
+	(research ri-rocketry)
+)
+	;CUMANS
+;STEPPE HUSBANDRY
+(defrule
+	(food-amount > 1000) ;min resources to consider investment
+	(gold-amount > 500)
+(or	(unit-type-count-total steppe-lancer-line >= 7)
+(or	(unit-type-count-total cavalry-archer-line >= 7)
+	(unit-type-count-total scout-cavalry-line >= 7)))
+	(can-research-with-escrow ri-steppe-husbandry)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-steppe-husbandry)
+)
+;CUMAN MERCENARIES
+(defrule
+	(food-amount > 1000) ;min resources to consider investment
+	(gold-amount > 500)
+	(can-research-with-escrow ri-cuman-mercenaries)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-cuman-mercenaries)
+)
+	;DRAVIDIANS
+;MEDICAL-CORPS
+(defrule
+(or	(unit-type-count-total battle-elephant-line >= 5)
+(or	(unit-type-count-total elephant-archer-line >= 5)
+	(unit-type-count-total armored-elephant-line >= 4)))
+	(can-research-with-escrow ri-medical-corps)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-medical-corps)
+)
+;cannot find any defconst for this anywhere
+;WOOTZ STEEL
+(defrule
+	(goal dravidian-civ yes) ;IMPORTANT: name the civ specifically when using "my-unique-research"
+(or	(unit-type-count-total infantry-class >= 7)
+	(unit-type-count-total cavalry-class >= 7))
+	(can-research-with-escrow my-unique-research) ;ri-wootz-steel
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research my-unique-research)
+)
+	;ETHIOPIANS
+;ROYAL HEIRS
+(defrule
+(not	(players-civ target-player aztec)) ;hopefully not a custom scenario game where they have cavalry xD lol
+(not	(players-civ target-player mayan))
+(not	(players-civ target-player incan))
+(or	(and	(current-age == castle-age)
+	(and	(gold-amount > 1100) ;min resources to consider investment
+			(food-amount > 900)))
+	(and	(current-age >= imperial-age) ;includes post-imperial-age
+	(and		(food-amount >= 700)
+				(gold-amount >= 600))))
+(or	(unit-type-count-total my-unique-unit-line >= 20) ;these 2 conditions must be true for either age
+	(unit-type-count-total camel-line > 5))
+	(can-research-with-escrow ri-royal-heirs)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-royal-heirs)
+)
+;TORSION ENGINES
+(defrule
+	(strategic-number sn-military-level >= 3) ;don't research unless we're ahead, its expensive!
+(or	(unit-type-count-total mangonel-line >= 4)
+(or	(unit-type-count-total bombard-cannon-line >= 4)
+(or	(unit-type-count-total scorpion-line >= 4)
+	(unit-type-count-total battering-ram-line >= 4)))) ;ignore armored-elephant
+	(can-research-with-escrow ri-torsion-engines)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-torsion-engines)
+)
+	;FRANKS
+;BEARDED AXE(defrule
+(defrule
+(or	(up-research-status c: my-unique-unit-upgrade >= research-pending)
+	(unit-type-count-total my-unique-unit-line >= 5))
+	(can-research-with-escrow ri-bearded-axe)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-bearded-axe)
+)
+
+;CHIVALRY
+(defrule
+(wood-amount >= 800) ;only get if we have excess resources
+(gold-amount >= 800)
+(or	(goal KNIGHT yes)
+(or	(up-research-status c: ri-paladin >= research-pending)
+(or	(unit-type-count-total knight-line > 8)
+	(unit-type-count-total scout-cavalry-line > 9))))
+	(can-research-with-escrow ri-chivalry)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-chivalry)
+)
+	;GEORGIANS
+;SVAN TOWERS
+(defrule
+(or	(and	(strategic-number sn-military-level <= -2)
+			(or	(building-type-count castle >= 2)
+				(building-type-count watch-tower-line >= 2)))
+(or	(building-type-count-total castle >= 3)
+	(building-type-count-total watch-tower >= 3)))
+	(can-research-with-escrow ri-svan-towers)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-svan-towers)
+)
+;AZNAURI CAVALRY
+(defrule
+(or	(unit-type-count-total villager >= high-res-vil-pop)
+	(population >= max-pop))
+(or	(unit-type-count-total scout-cavalry-line > 2)
+(or	(unit-type-count-total knight-line > 2)
+	(unit-type-count-total my-unique-unit-line > 2)))
+	(can-research-with-escrow ri-aznauri-cavalry)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-aznauri-cavalry)
+)
+	;GOTHS
+;ANARCHY ;fixed so huskarls will be trained at barracks now
+(defrule
+	(goal MY-UNIQUE-UNIT yes)
+	(can-research-with-escrow ri-anarchy)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-anarchy)
+)
+;PERFUSION
+(defrule
+	(goal MY-UNIQUE-UNIT yes)
+	(wood-amount >= 800) ;min resources for investment
+	(gold-amount >= 750)
+	(can-research-with-escrow ri-perfusion)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-perfusion)
+)
+;GURJARAS
+;KSHATRIYAS
+(defrule
+	(goal MILITARY-TRAINING yes)
+    (unit-type-count-total villager > min-vills)
+    (can-research-with-escrow ri-kshatriyas)
+=>
+    (release-escrow food)
+    (release-escrow gold)
+    (research ri-kshatriyas)
+)
+;FRONTIER GUARDS
+(defrule
+    (up-research-status c: ri-heavy-camel >= research-pending) ;includes research-completed (or should I think)
+(or	(unit-type-count-total camel-line > 5)
+	(unit-type-count-total elephant-archer-line > 3))
+    (can-research-with-escrow ri-frontier-guards)
+=>
+    (release-escrow food)
+    (release-escrow gold)
+    (research ri-frontier-guards)
+)
+;HINDUSTANIS
+;GRAND TRUNK ROAD
+(defrule
+(or	(population >= max-pop) ;safety backup
+(or	(unit-type-count-total villager-gold >= 10)
+(or	(unit-type-count-total trade-cart >= 7)
+(or	(unit-type-count-total trade-cog >= 7)
+	(hold-relics))))) ;we may have at least one or more relics
+	(can-research-with-escrow ri-grand-trunk-road)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-grand-trunk-road)
+)
+;SHATAGNI
+(defrule
+	(unit-type-count-total hand-cannoneer >= 7)
+	(can-research-with-escrow ri-shatagni)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-shatagni)
+)
+	;HUNS
+;MARAUDERS
+(defrule
+	(up-research-status c: my-unique-unit-upgrade >= research-pending)
+	(goal MY-UNIQUE-UNIT yes)
+(or	(unit-type-count-total my-unique-unit-line >= 4)
+	(unit-type-count-total tarkan-line >= 4))
+	(can-research-with-escrow ri-marauders)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-marauders)
+)
+;ATHEISM
+#load-if-defined VICTORY-STANDARD
+#load-if-defined VICTORY-RELICS
+(defrule
+(civ-selected hun)
+(or		(enemy-captured-relics)
+		(players-building-type-count any-enemy wonder > 0))
+	(can-research-with-escrow my-unique-research) ;could not find ri-atheism in any ai files?? This line works for imperial castle tech research at least!
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research my-unique-research)
+)
+#end-if
+#end-if
+	;INCANS
+;ANDEAN SLING
+(defrule
+(or	(unit-type-count-total genitour >= 4)
+(or	(unit-type-count-total elite-genitour >= 4)
+(or	(unit-type-count-total genitour-placeholder >= 4)
+(or	(unit-type-count-total skirmisher-line >= 7)
+	(unit-type-count-total slinger >= 4)))))
+	(can-research-with-escrow ri-andean-sling)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-andean-sling)
+)
+;FABRIC SHIELDS
+	(defrule
+(or	(and	(food-amount >= 750) ;min amount to consider for research investment if not ahead
+			(gold-amount >= 750))
+	(strategic-number sn-military-level >= 3)) ;we are ahead
+(or	(unit-type-count-total kamayuk-line >= 7)
+(or	(unit-type-count-total eagle-warrior-line >= 7)
+	(unit-type-count-total slinger >= 7)))
+	(can-research-with-escrow ri-fabric-shields)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-fabric-shields)
+)
+	;ITALIANS
+;PAVISE
+(defrule
+(or	(and	(goal ARCHER yes)
+			(unit-type-count-total archer-line >= 5))
+(or	(and	(goal MY-UNIQUE-UNIT yes)
+			(unit-type-count-total genoese-crossbowman-line >= 5))
+(or	(unit-type-count-total archer-line > 10)
+(or	(unit-type-count-total genoese-crossbowman-line > 10)
+	(unit-type-count-total condottiero > 7)))))
+	(can-research-with-escrow ri-pavise)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-pavise)
+)
+
+;SILK ROAD
+(defrule
+(or	(players-building-type-count any-ally market >= 1) ;must be someone worth trading with
+	(players-building-type-count any-ally dock >= 1))
+(or	(building-type-count market >= 1) ;must have trade infrastructure in place
+	(building-type-count dock >= 1))
+	(strategic-number sn-military-level >= 2) ;don't waste resources if we don't have reasonable military numbers
+	(can-research-with-escrow ri-silk-road)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-silk-road)
+)
+	;JAPANESE
+;YASAMA
+(defrule
+(or	(strategic-number sn-military-level <= 0) ;don't waste resources if we aren't outnumbered or under attack
+	(goal is-town-under-attack yes))
+(or	(building-type-count-total watch-tower-line >= 3)
+(or	(players-unit-type-count my-player-number 504 >= 1)
+(or	(players-unit-type-count my-player-number 505 >= 1)
+(or	(players-unit-type-count my-player-number 517 >= 1)
+	(players-unit-type-count my-player-number 518 >= 1))))) ;I didn't take time to research these ID's but I'm assuming they are tower-class buildings!
+	(can-research-with-escrow ri-yasama)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-yasama)
+)
+;KATAPARUTO
+(defrule
+	(strategic-number sn-military-level >= 2) ;we want decent military before investing
+(or	(unit-type-count-total trebuchet >= 2)
+	(unit-type-count-total trebuchet-set >= 2))
+	(can-research-with-escrow ri-kataparuto)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-kataparuto)
+)
+	;KHMER
+;TUSK SWORDS
+(defrule
+	(up-research-status c: ri-elite-battle-elephant >= research-pending)
+	(unit-type-count-total battle-elephant-line >= 5)
+	(can-research-with-escrow ri-tusk-swords)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-tusk-swords)
+)
+;DOUBLE CROSSBOW
+(defrule
+(or	(up-research-status c: ri-elite-ballista-elephant >= research-pending)
+(or	(up-research-status c: ri-heavy-scorpion >= research-pending)
+(or	(unit-type-count-total scorpion-line >= 6)
+(or	(unit-type-count-total ballista-elephant >= 6)
+	(unit-type-count-total elite-ballista-elephant >= 6)))))
+	(can-research-with-escrow ri-double-crossbow)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-double-crossbow)
+)
+	;KOREANS
+;EUPSEONG
+(defrule
+(or	(building-type-count-total watch-tower-line >= 3)
+(or	(building-type-count watch-tower-line >= 3) ;this used to bug out back in the day so including specific tower-types too
+(or	(building-type-count watch-tower >= 3)
+(or	(building-type-count guard-tower >= 3)
+	(building-type-count keep >= 3)))))
+	(can-research-with-escrow ri-eupseong)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-eupseong)
+)
+;SHINKICHON
+(defrule
+(up-research-status c: ri-onager >= research-pending) ;should have this first to be worth it
+	(unit-type-count-total mangonel-line >= 3)
+	(can-research-with-escrow ri-shinkichon)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-shinkichon)
+)
+	;LITHUANIANS
+;HILL FORTS
+(defrule
+	(building-type-count-total town-center >= 1)
+(or	(goal is-town-under-attack yes)
+(or	(strategic-number sn-military-level <= -2) ;likely threat
+	(building-type-count-total town-center >= 4))) ;worth it now
+	(can-research-with-escrow ri-hill-forts)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-hill-forts)
+)
+;TOWER SHIELDS
+(defrule
+(or	(and	(food-amount > 1100) ;get it if we have high resources already as skirms & pikes are common units
+			(gold-amount > 850))
+(or	(unit-type-count-total skirmisher-line >= 7) ;trash unit so higher number needed to be worth the gold cost!
+	(unit-type-count-total spearman-line >= 7)))
+	(can-research-with-escrow ri-tower-shields)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-tower-shields)
+)
+	;MAGYAR
+;CORVINIAN ARMY
+(defrule
+(or	(goal MY-UNIQUE-UNIT yes)
+	(unit-type-count-total magyar-huszar-line > 9))
+	(up-research-status c: my-unique-unit-upgrade >= research-pending)
+	;(can-research ri-mercenaries)
+	(can-research-with-escrow ri-corvinian-army)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	;(research ri-mercenaries)
+	(research ri-corvinian-army)
+)
+;RECURVE BOW
+(defrule
+(or	(and	(goal CAV-ARCHER yes)
+			(unit-type-count-total cavalry-archer-line >= 6))
+(or			(up-research-status c: ri-heavy-cavalry-archer >= research-pending)
+	(unit-type-count-total cavalry-archer-line >= 10)))
+	(can-research-with-escrow ri-recurve-bow)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-recurve-bow)
+)
+	;MALAY
+;THALASSOCRACY
+(defrule
+	(players-building-type-count any-enemy dock > 0)
+(or	(players-unit-type-count any-enemy galley-line > 2)
+(or	(players-unit-type-count any-enemy fire-ship-line > 2)
+(or	(players-unit-type-count any-enemy demolition-ship-line > 1)
+(or	(players-unit-type-count any-enemy cannon-galleon-line > 0)
+(or	(players-unit-type-count any-enemy dromon > 0)
+(or	(players-unit-type-count any-enemy longboat-line > 2)
+(or	(players-unit-type-count any-enemy turtle-ship-line > 2)
+(or	(players-unit-type-count any-enemy caravel-line > 2)
+	(players-unit-type-count any-enemy thirisadai > 0))))))))) ;is that all the different ships?! xD
+	(building-type-count dock >= 2) ;something worth defending
+	(can-research-with-escrow ri-thalassocracy)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-thalassocracy)
+)
+
+;FORCED LEVY
+(defrule
+(or	(goal SWORDMAN yes) ;expensive upgrade so better be sure we will use it
+	(and	(unit-type-count-total militiaman-line >= 10)
+			(up-pending-objects c: militiaman-line > 0))) ;must be currently training the suckers!
+	(up-research-status c: ri-supplies >= research-pending)
+	(can-research-with-escrow ri-forced-levy)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-forced-levy)
+)
+
+	;MALIANS
+;TIGUI
+(defrule
+(or	(and	(food-amount >= 1100) ;excess resources
+			(wood-amount >= 500))
+(or	(strategic-number sn-military-level <= -3) ;greatly outnumbered
+	(building-type-count-total town-center >= 5))) ;lots of tc's lookin' to do some KILLIN!
+	(can-research-with-escrow ri-tigui)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-tigui)
+)
+;FARIMBA
+(defrule
+(or	(up-research-status c: ri-light-cavalry >= research-pending)
+(or	(up-research-status c: ri-heavy-camel >= research-pending)
+(or	(up-research-status c: ri-cavalier >= research-pending)
+(or	(unit-type-count-total imperial-camel >= 7)
+(or	(up-compare-goal steppe-lancer-line >= 7)
+	(unit-type-count-total scout-cavalry-line >= 10))))))
+	(can-research-with-escrow ri-farimba)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-farimba)
+)
+
+	;MAYANS
+;HUL'CHE JAVELINEERS
+(defrule
+	(gold-amount >= 500) ;don't waste too much gold
+(or	(unit-type-count-total skirmisher-line >= 10)
+(or	(unit-type-count-total genitour-line >= 10)
+	(unit-type-count-total genitour-placeholder >= 10)))
+	(can-research-with-escrow ri-obsidian-arrows)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-obsidian-arrows)
+)
+;EL DORADO
+(defrule
+	(civ-selected mayan) ;define mayans
+(or	(and	(goal EAGLE-WARRIOR yes)
+			(unit-type-count-total eagle-warrior-line >= 9))
+			(unit-type-count-total eagle-warrior-line >= 14))
+	(up-research-status c: ri-elite-eagle-warrior >= research-pending) ;must have this first
+	(can-research-with-escrow my-unique-research) ;generic imperial-age unique-tech for any civ ;in this case, ri-el-dorado
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research my-unique-research)
+)
+	;MONGOL
+;NOMADS
+(defrule
+	(civ-selected mongol)
+	(goal is-town-under-attack yes)
+	(housing-headroom <= 0) ;we are housed
+	(can-research-with-escrow ri-nomads)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-nomads)
+)
+
+;DRILL
+(defrule
+	(civ-selected mongol)
+	(strategic-number sn-military-level >= 1) ;don't waste resources if outnumbered
+(or	(and	(unit-type-count-total battering-ram-line >= 4) ;ignore armored-elephant
+			(up-research-status c: ri-capped-ram >= research-pending)) ;must have this first
+(or	(unit-type-count-total scorpion-line >= 6)
+	(unit-type-count-total mangonel-line >= 3)))
+	(can-research-with-escrow my-unique-research) ;ri-drill
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research my-unique-research)
+)
+
+	;PERSIAN (NEW ONES)
+;KAMANDARAN
+(defrule
+	(civ-selected persian)
+	(goal ARCHER yes) ;only if pursuing archer strategy
+	(can-research-with-escrow ri-boiling-oil) ;ri-kamandaran
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-boiling-oil)
+)
+(defrule
+	(civ-selected persian)
+	(building-type-count-total castle >= 2)
+	(can-research-with-escrow my-unique-research) ;ri-citadels
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research my-unique-research)
+)
+	;POLES
+;szlachta-privileges
+(defrule
+	(goal pole-civ yes)
+	(goal KNIGHT yes)
+	(unit-type-count-total knight-line > 3)
+	(can-research-with-escrow ri-szlachta-privileges)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-szlachta-privileges)
+)
+;lechitic-legacy
+(defrule
+	(goal pole-civ yes)
+(or	(unit-type-count-total scout-cavalry-line > 7)
+	(unit-type-count-total winged-hussar > 7)) ; I hope this works for both!
+	(can-research-with-escrow ri-lechitic-legacy)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-lechitic-legacy)
+)
+	;PORTUGUESE
+;CARRACK
+(defrule
+(or (unit-type-count-total transport-ship >= 2)
+(or	(unit-type-count-total galley-line >= 3)
+(or	(unit-type-count-total fire-ship-line >= 3)
+	(unit-type-count-total caravel-line >= 3))))
+	(can-research-with-escrow ri-carrack)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-carrack)
+)
+;ARQUEBUS
+(defrule
+(civ-selected portuguese)
+(or	(unit-type-count-total archery-cannon-class >= 4)
+(or	(unit-type-count-total organ-gun >= 4)
+(or	(unit-type-count-total elite-organ-gun >= 4)
+(or	(unit-type-count-total cannon-galleon-line >= 3)
+(or	(unit-type-count-total dromon >= 3)
+(or	(unit-type-count-total bombard-cannon-line >= 4)
+(or	(building-type-count-total bombard-tower >= 4); speed
+	(up-research-status c: my-unique-unit-upgrade >= research-pending))))))))
+	(can-research ri-arquebus)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-arquebus)
+)
+
+#load-if-defined ROMANS-CIV
+	;ROMANS
+;BALLISTAS
+(defrule
+(or	(unit-type-count-total scorpion-line > 4)
+(or	(unit-type-count-total galley-line > 4)
+	(and	(wood-amount > 1500)
+			(gold-amount > 1500))))
+	(can-research-with-escrow ri-ballistas)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-ballistas)
+)
+;COMITATENSES
+(defrule
+(or	(unit-type-count-total knight-line > 4)
+(or	(unit-type-count-total militiaman-line > 4)
+(or	(and	(unit-type-count-total my-unique-unit-line >= 4)
+			(research-completed my-unique-unit-upgrade))
+	(and	(food-amount > 1400)
+			(gold-amount > 1400)))))
+	(can-research-with-escrow ri-comitatenses)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-comitatenses)
+)
+#end-if
+
+	;SARACENS
+;BIMARISTAN
+(defrule
+	(civ-selected saracen)
+	(soldier-count >= 10) ;at least some soldiers worth healing
+	(unit-type-count-total monk >= 2)
+	(can-research-with-escrow ri-bimaristan)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-bimaristan)
+)
+;COUNTERWEIGHTS
+(defrule
+	(food-amount >= 1800) ;don't waste res on this one unless we have extra
+	(gold-amount >= 1200)
+(or	(and	(up-research-status c: ri-onager >= research-pending)
+			(unit-type-count-total mangonel-line >= 4))
+(or	(unit-type-count-total trebuchet >= 4)
+	(unit-type-count-total trebuchet-set >= 4)))
+	(can-research-with-escrow ri-counterweights)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-counterweights)
+)
+	;SICILIANS
+;first-crusade
+(defrule
+	(building-type-count town-center >= 1)
+(or	(building-type-count town-center >= 2)
+	(not	(building-available town-center)))
+(or	(building-type-count town-center >= 5)
+(or	(goal is-town-under-attack yes)
+(or	(goal ATTACK yes)
+	(and	(goal SIEGE-FOR-CASTLE yes)
+		(unit-type-count villager >= max-vill-pop)))))
+	(can-research-with-escrow ri-first-crusade)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-first-crusade)
+)
+;hauberk (might use scutage still?)
+(defrule
+(or	(goal KNIGHT yes)
+	(unit-type-count-total knight-line > 8))
+	(can-research-with-escrow ri-scutage)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-scutage)
+)
+;scutage -> ALREADY REMOVED FROM THE GAME LMAO
+;(defrule
+;(or	(military-population >= 2)
+;	(players-military-population any-ally >= 2))
+;(or	(and	(gold-amount >= 1000)
+;		(or	(military-population >= 50)
+;			(up-compare-goal my-mil-pop c:>= max-mil-pop)))
+;(or	(population >= max-vill-pop)
+;	(players-population any-ally >= max-vill-pop)))
+;	(can-research-with-escrow ri-scutage)
+;=>
+;	(release-escrow food)
+;	(release-escrow gold)
+;	(research ri-scutage))
+
+	;SLAVS
+;DETINETS
+(defrule
+	(population > high-res-vil-pop)
+(or	(unit-type-count-total villager-stone >= 3)
+(or	(gold-amount >= 1050)
+	(unit-type-count-total trade-cart >= min-trade-pop)))
+	(can-research-with-escrow ri-detinets)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-detinets)
+)
+;DRUZHINA
+(defrule
+(or	(unit-type-count-total infantry-class >= 14)
+(or	(up-research-status c: ri-halberdier >= research-pending)
+	(up-research-status c: ri-champion >= research-pending)))
+	(unit-type-count-total infantry-class >= 7)
+	(can-research-with-escrow ri-druzhina)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-druzhina)
+)
+	;SPANISH
+;INQUISITION
+(defrule
+(or	(unit-type-count-total trade-cart >= min-trade-pop)
+(or	(unit-type-count-total trade-cog >= min-trade-pop)
+	(gold-amount >= 1400)))
+(or		(unit-type-count-total monastery-class >= 5)
+		(population >= high-res-vil-pop))
+	(unit-type-count-total monastery-class >= 1)
+	(can-research-with-escrow ri-inquisition)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-inquisition)
+)
+;SUPREMACY
+(defrule
+	(unit-type-count-total villager >= high-res-vil-pop)
+(or	(unit-type-count-total trade-cart >= min-trade-pop)
+(or	(unit-type-count-total trade-cog >= min-trade-pop)
+	(gold-amount >= 750)))
+	(can-research-with-escrow ri-supremacy)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-supremacy)
+)
+	;TATARS
+;SILK-ARMOR
+(defrule
+	(gold-amount >= 500) ;need some extra nummy nummy gold for the boys
+(or	(unit-type-count-total scout-cavalry-line >= 7)
+(or	(unit-type-count-total cavalry-archer-line >= 7)
+(or	(unit-type-count-total steppe-lancer-line >= 7)
+(or	(unit-type-count-total mercenary-kipchak >= 10)
+(or	(unit-type-count-total genitour-line >= 9)
+	(unit-type-count-total genitour-placeholder >= 9))))))
+	(can-research-with-escrow ri-silk-armor)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-silk-armor)
+)
+
+;TIMURID-SIEGECRAFT
+(defrule
+(or	(and	(gold-amount >= 1200)
+			(strategic-number sn-military-level >= 2)) ;must not be losing
+	(unit-type-count-total trebuchet-set >= 3))
+	(can-research-with-escrow ri-timurid-siegecraft)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-timurid-siegecraft)
+)
+	;TEUTONS
+;IRONCLAD
+(defrule
+	(strategic-number sn-military-level >= 2) ;indicative of attacking likely with siege
+(or	(unit-type-count-total siege-tower >= 2)
+(or	(unit-type-count-total bombard-cannon-line >= 2)
+(or	(unit-type-count-total trebuchet-set >= 2)
+(or	(unit-type-count-total battering-ram-line >= 2)
+	(unit-type-count-total scorpion-line >= 2)))))
+	(can-research-with-escrow ri-ironclad)
+=>
+	(release-escrow wood)
+	(release-escrow gold)
+	(research ri-ironclad))
+
+;CRENELLATIONS
+(defrule
+	(civ-selected teutonic)
+	(building-type-count castle >= 2) ;good tech to get only food and stone
+	(can-research-with-escrow my-unique-research) ;ri-crenellations
+=>
+	(release-escrow food)
+	(release-escrow stone)
+	(research my-unique-research)
+)
+	;TURKS
+;SIPAHI
+(defrule
+(or	(unit-type-count-total cavalry-archer-line >= 6)
+(or	(and	(or	(unit-type-count-total cavalry-archer-line >= 2)
+			(goal CAV-ARCHER yes))
+		(up-research-status c: ri-heavy-cavalry-archer >= research-pending))
+(or	(unit-type-count-total genitour >= 6)
+(or	(unit-type-count-total elite-genitour >= 6)
+	(unit-type-count-total genitour-placeholder >= 6)))))
+	(can-research-with-escrow ri-sipahi)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-sipahi)
+)
+;ARTILLERY
+(defrule
+	(civ-selected turkish)
+(or	(building-type-count bombard-tower >= 4) ;don't prematurely research until they're built
+(or	(unit-type-count-total bombard-cannon-line >= 3)
+	(unit-type-count-total cannon-galleon-line >= 2))) ;dromon probably not included...
+	(can-research-with-escrow my-unique-research) ;ri-artillery
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research my-unique-research)
+)
+	;VIETNAMESE
+;CHATRAS
+(defrule
+(or	(and	(strategic-number sn-military-level >= 2) ;get it if we are ahead
+			(unit-type-count-total battle-elephant-line >= 4)) ;and have some elephants
+	(up-research-status c: ri-elite-battle-elephant >= research-pending)) ;or we are researching elite unit
+	(can-research-with-escrow ri-chatras)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-chatras))
+;PAPER-MONEY
+(defrule
+	(goal WOOD-REMAINING yes) ;only get if there is still wood on the map ;pretty worthwhile upgrade so just get it fast
+	(unit-type-count-total villager > min-vills) ;don't get if we have low number of villagers
+(or	(unit-type-count-total villager-wood >= 10) ;average
+	(unit-type-count-total villager-wood >= min-vills)) ;minimum number of wood cutters to consider
+	(can-research-with-escrow ri-paper-money)
+=>
+	(release-escrow food)
+	(release-escrow wood)
+	(research ri-paper-money)
+)
+	;VIKINGS
+;CHIEFTAINS
+(defrule
+(or	(not	(players-civ target-player aztec)) ;im too lazy to label every cavalry-class xD
+(or	(not	(players-civ target-player mayan))
+	(not	(players-civ target-player incan))))
+	(unit-type-count-total infantry-class >= 6)
+(or	(current-age >= imperial-age)
+	(unit-type-count-total infantry-class >= 15))
+	(can-research-with-escrow ri-chieftains)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research ri-chieftains)
+)
+	;BOGSVEIGAR
+(defrule
+	(civ-selected viking)
+(or	(and	(up-research-status c: ri-arbalest >= research-pending) ;this is only +1 attack, make it hard to get
+			(unit-type-count-total archer-line >= 9))
+	(and	(up-research-status c: ri-elite-longboat >= research-pending)
+			(unit-type-count-total longboat-line >= 6)))
+	(up-research-status c: ri-bracer >= research-pending)
+	(up-research-status c: ri-chemistry >= research-pending)
+	(can-research-with-escrow my-unique-research)
+=>
+	(release-escrow food)
+	(release-escrow gold)
+	(research my-unique-research) ;ri-bogsveigar
+)
+	;<INSERT CIV> ;for any new civs!
+;<INSERT CASTLE RESEARCH>
+
+;<INSERT IMPERIAL RESEARCH>
+
+;====================END OF FILE

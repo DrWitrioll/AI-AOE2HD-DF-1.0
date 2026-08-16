@@ -253,7 +253,17 @@
 +    (set-strategic-number sn-percent-civilian-gatherers 82)
      (set-strategic-number sn-cap-civilian-builders 7)
  )
-@@ -29228,6 +29181,7 @@
+ 
+@@ -11760,8 +11713,6 @@
+ =>
+     (set-strategic-number sn-gather-defense-units 1)
+     (set-strategic-number sn-task-ungrouped-soldiers 0)
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-percent-building-cancellation 100)
+     (set-strategic-number sn-allow-civilian-defense 0)
+     (set-strategic-number sn-number-civilian-militia 0)
+@@ -29228,6 +29179,7 @@
      (wall-completed-percentage 1 < 55)
  =>
      (set-strategic-number sn-percent-civilian-builders 16)
@@ -261,7 +271,7 @@
      (set-strategic-number sn-cap-civilian-builders 5)
      (up-assign-builders c: palisade-wall c: 3)
  )
-@@ -29556,8 +29510,6 @@
+@@ -29556,8 +29508,6 @@
      (current-age == dark-age)
      (civilian-population < 8)
  =>
@@ -270,7 +280,7 @@
      (set-strategic-number sn-food-gatherer-percentage 90)
      (set-strategic-number sn-wood-gatherer-percentage 10)
      (set-strategic-number sn-gold-gatherer-percentage 0)
-@@ -29569,8 +29521,6 @@
+@@ -29569,8 +29519,6 @@
      (civilian-population >= 8)
      (civilian-population < 14)
  =>
@@ -279,7 +289,7 @@
      (set-strategic-number sn-food-gatherer-percentage 88)
      (set-strategic-number sn-wood-gatherer-percentage 12)
      (set-strategic-number sn-gold-gatherer-percentage 0)
-@@ -29582,8 +29532,6 @@
+@@ -29582,8 +29530,6 @@
      (civilian-population >= 14)
      (civilian-population < 18)
  =>
@@ -288,7 +298,7 @@
      (set-strategic-number sn-food-gatherer-percentage 75)
      (set-strategic-number sn-wood-gatherer-percentage 25)
      (set-strategic-number sn-gold-gatherer-percentage 0)
-@@ -29595,8 +29543,6 @@
+@@ -29594,8 +29540,6 @@
      (current-age == dark-age)
      (civilian-population >= 18)
  =>
@@ -297,7 +307,8 @@
      (set-strategic-number sn-food-gatherer-percentage 55)
      (set-strategic-number sn-wood-gatherer-percentage 20)
      (set-strategic-number sn-gold-gatherer-percentage 5)
-@@ -29613,11 +29559,11 @@
+@@ -29612,14 +29556,14 @@
+     (set-strategic-number sn-stone-gatherer-percentage 10)
  )
  
 -; Official-HD style boar kick-start.  FIX01 requested a hunter but never performed
@@ -315,7 +326,7 @@
      (dropsite-min-distance live-boar >= 0)
      (dropsite-min-distance live-boar <= 32)
  =>
-@@ -29978,8 +29924,6 @@
+@@ -29978,8 +29922,6 @@
  (defrule
      (goal g-emergency-defense 1)
  =>
@@ -324,8 +335,7 @@
      (set-strategic-number sn-allow-civilian-defense 0)
      (set-strategic-number sn-number-civilian-militia 0)
      (set-strategic-number sn-disable-villager-garrison 0)
-@@ -29995,9 +29939,9 @@
-     (set-goal g-v12f2-defense 0)
+@@ -29996,8 +29938,8 @@
  )
  
  ; ---------------------------------------------------------------------------

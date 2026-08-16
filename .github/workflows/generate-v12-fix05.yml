@@ -1,0 +1,56 @@
+name: Generate Dr Fortress V12 FIX05
+
+on:
+  push:
+    branches: [FIX]
+    paths:
+      - 'support/build_v12_fix05.py'
+      - '.github/workflows/generate-v12-fix05.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: FIX
+      - name: Generate FIX05 from verified FIX04
+        run: python3 support/build_v12_fix05.py
+      - name: Static build checks
+        run: |
+          python3 - <<'PY2'
+          from pathlib import Path
+          import hashlib
+          p=Path('Dr_Fortress_AI_V12_FIX05.per')
+          text=p.read_text(encoding='utf-8')
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '102148b13418b031a65e70ed402f17939b74658255d82d1dfb36d6bb0a1eafa5'
+          assert text.count('(defrule') == 2669
+          assert '(set-strategic-number sn-enable-new-building-system 1)' not in text
+          active='\n'.join(x for x in text.splitlines() if not x.lstrip().startswith(';'))
+          assert '(up-assign-builders c: house' not in active
+          assert text.count('#end-if') == 100
+          assert sum(text.count(x) for x in ['#load-if-defined','#load-if-not-defined']) == 100
+          depth=0
+          for line in text.splitlines():
+              code=line.split(';',1)[0]
+              depth += code.count('(')-code.count(')')
+              assert depth >= 0
+          assert depth == 0
+          print('FIX05 static workflow validation OK')
+          PY2
+      - name: Commit FIX05
+        run: |
+          git config user.name "Dr Fortress AI bot"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f support/V12_FIX05.generated.patch
+          git add Dr_Fortress_AI_V12_FIX05.per Dr_Fortress_AI_V12_FIX05.ai
+          if git diff --cached --quiet; then
+            echo "No output changes"
+          else
+            git commit -m "Build Dr Fortress AI V12 FIX05 major stabilization"
+            git push origin HEAD:FIX
+          fi

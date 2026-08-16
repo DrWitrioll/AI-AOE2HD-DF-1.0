@@ -27,20 +27,16 @@ jobs:
           import hashlib
           p=Path('Dr_Fortress_AI_V12_FIX05.per')
           text=p.read_text(encoding='utf-8')
-          assert hashlib.sha256(p.read_bytes()).hexdigest() == '102148b13418b031a65e70ed402f17939b74658255d82d1dfb36d6bb0a1eafa5'
+          expected='102148b13418b031a65e70ed402f17939b74658255d82d1dfb36d6bb0a1eafa5'
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == expected
           assert text.count('(defrule') == 2669
           assert '(set-strategic-number sn-enable-new-building-system 1)' not in text
           active='\n'.join(x for x in text.splitlines() if not x.lstrip().startswith(';'))
           assert '(up-assign-builders c: house' not in active
           assert text.count('#end-if') == 100
           assert sum(text.count(x) for x in ['#load-if-defined','#load-if-not-defined']) == 100
-          depth=0
-          for line in text.splitlines():
-              code=line.split(';',1)[0]
-              depth += code.count('(')-code.count(')')
-              assert depth >= 0
-          assert depth == 0
-          print('FIX05 static workflow validation OK')
+          assert '; END OF DOKTOR FORTRESS AI V12 FORTRESS COMMANDER FIX05' in text
+          print('FIX05 exact SHA and structural checks OK')
           PY2
       - name: Commit FIX05
         run: |

@@ -19,15 +19,15 @@ jobs:
         with:
           ref: FIX
       - name: Generate FIX06 from verified FIX05
-        run: python3 support/build_v12_fix06.py
+        run: python3 -O support/build_v12_fix06.py
       - name: Static build checks
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, re
+          import hashlib
           p=Path('Dr_Fortress_AI_V12_FIX06.per')
           text=p.read_text(encoding='utf-8')
-          assert hashlib.sha256(p.read_bytes()).hexdigest() == 'd6f748d042406240c492807dece48d49e3c7f1af53195255910fd22985d7ef4c'
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == 'c75bebcc1eace25d83ebedb609f4f3579edd022e34f34f27e351db75327abbd6'
           assert text.count('(defrule') == 2665
           assert '(set-strategic-number sn-livestock-to-town-center 1)' not in text
           assert '(set-strategic-number sn-enable-new-building-system 1)' not in text

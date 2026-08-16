@@ -1,0 +1,339 @@
+--- a/Dr_Fortress_AI_V12_FIX04.per
++++ b/Dr_Fortress_AI_V12_FIX04.per
+@@ -1,5 +1,5 @@
+ ; ============================================================================
+-; DOKTOR FORTRESS AI - V12 FORTRESS COMMANDER FIX03
++; DOKTOR FORTRESS AI - V12 FORTRESS COMMANDER FIX04
+ ; Age of Empires II HD / legacy AI expert-system script
+ ; Tuned for a slower, fortress-heavy, decision-oriented ruleset.
+ ;
+@@ -57,6 +57,8 @@
+ ; - FIXED9 Arabia replay tuning: Feudal palisades return, stone walls precede the first Castle, denser lumber camps and stronger 150-pop production depth
+ ; - V12 FIX02 SR replay tuning: zero-idle opening builder pool, official-HD boar lure kickstart, Resonance-style eco tech/age bank, wide resource-safe fortress rings, early TC2 and cavalry-doctrine production
+ ; - V12 FIX02 combat tuning: grouped base defense replaces emergency retreat, 45-second civilian safety latch, Resonance-like group formation distances and limited gate crossings
++; - V12 FIX04 systemic worker repair: builder/gatherer roles always partition to 100%, startup house builders are valid, and no pending build is paired with a zero builder cap
++; - V12 FIX04 replay proof: removes the AI-move 706/priority-100 command flood that transferred to the next villager after every DELETE
+ ;
+ ; IMPORTANT:
+ ; This is a custom AI script, not a replacement for the game executable.
+@@ -418,7 +420,7 @@
+     (true)
+ =>
+     (set-strategic-number sn-intelligent-gathering 1)
+-    (set-strategic-number sn-retask-gather-amount 0)
++    (set-strategic-number sn-retask-gather-amount 50)
+     (set-strategic-number sn-enable-training-queue 1)
+     (set-strategic-number sn-enable-new-building-system 1)
+     (set-strategic-number sn-build-frequency 1)
+@@ -432,16 +434,25 @@
+     (disable-self)
+ )
+ 
+-; V12 FIX03 startup worker-role hard reset.
++; V12 FIX04 Resonance-style civilian role initialization.
+ ; Do this before the normal exploration/economy setup so no stale house-builder
+ ; assignment can survive from the new-building system.
+ (defrule
+     (true)
+ =>
+-    (up-assign-builders c: house c: 0)
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+-    (set-strategic-number sn-percent-civilian-gatherers 100)
++    (up-assign-builders c: house c: 2)
++    (set-strategic-number sn-percent-civilian-builders 40)
++    (set-strategic-number sn-cap-civilian-builders 4)
++    (set-strategic-number sn-percent-civilian-gatherers 60)
++    (set-strategic-number sn-cap-civilian-gatherers 100)
++    (disable-self)
++)
++
++; After the opening house, one builder is enough for ordinary housing.
++(defrule
++    (game-time > 30)
++=>
++    (up-assign-builders c: house c: 1)
+     (disable-self)
+ )
+ 
+@@ -564,9 +575,9 @@
+     (set-strategic-number sn-safe-town-size 14)
+     (set-strategic-number sn-random-placement-factor 0)
+     (set-strategic-number sn-zero-priority-distance 450)
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+-    (set-strategic-number sn-percent-civilian-gatherers 100)
++    (set-strategic-number sn-percent-civilian-builders 40)
++    (set-strategic-number sn-cap-civilian-builders 4)
++    (set-strategic-number sn-percent-civilian-gatherers 60)
+     (set-strategic-number sn-cap-civilian-gatherers 100)
+     (disable-self)
+ )
+@@ -622,7 +633,7 @@
+ =>
+     (set-difficulty-parameter ability-to-dodge-missiles 0)
+     (set-difficulty-parameter ability-to-maintain-distance 0)
+-    (set-strategic-number sn-consecutive-idle-unit-limit 0)
++    (set-strategic-number sn-consecutive-idle-unit-limit 1)
+     (set-strategic-number sn-percent-attack-soldiers 82)
+     (set-strategic-number sn-percent-attack-boats 85)
+     (set-strategic-number sn-minimum-attack-group-size 12)
+@@ -1277,77 +1288,10 @@
+ )
+ 
+ ; ============================================================================
+-; FIXED7 STAGED DARK-AGE HUNTING (official HD AI pattern, simplified)
+-; One lure hunter starts the boar, support arrives as it nears the TC, and only
+-; then does the full processing group join. After nearby boar are gone, ordinary
+-; wild-game hunting is enabled with a small group instead of reserving 5+ hunters forever.
++; V12 FIX04 HUNTING ENGINE
++; The older FIXED7 hunting state machine was retired here. The single V12 staged
++; boar engine below owns lure timing so two systems cannot retask the same hunter.
+ ; ============================================================================
+-(defrule
+-    (current-age == dark-age)
+-    (game-time > 450)
+-    (civilian-population >= 12)
+-    (dropsite-min-distance live-boar >= 0)
+-    (dropsite-min-distance live-boar <= 32)
+-    (strategic-number sn-enable-boar-hunting == 0)
+-=>
+-    (set-strategic-number sn-enable-boar-hunting 2)
+-    (set-strategic-number sn-minimum-boar-hunt-group-size 1)
+-    (set-strategic-number sn-minimum-number-hunters 1)
+-    (set-strategic-number sn-maximum-food-drop-distance 16)
+-    (set-strategic-number sn-maximum-hunt-drop-distance 32)
+-    (up-request-hunters c: 1)
+-)
+-(defrule
+-    (current-age == dark-age)
+-    (dropsite-min-distance live-boar >= 0)
+-    (dropsite-min-distance live-boar <= 16)
+-    (strategic-number sn-enable-boar-hunting >= 1)
+-    (unit-type-count male-hunter < 2)
+-    (unit-type-count female-hunter < 2)
+-    (or (unit-type-count male-hunter >= 1) (unit-type-count female-hunter >= 1))
+-=>
+-    (set-strategic-number sn-minimum-number-hunters 2)
+-    (up-request-hunters c: 1)
+-)
+-(defrule
+-    (current-age == dark-age)
+-    (dropsite-min-distance live-boar >= 0)
+-    (dropsite-min-distance live-boar <= 10)
+-    (unit-type-count male-hunter <= 2)
+-    (unit-type-count female-hunter <= 2)
+-    (strategic-number sn-enable-boar-hunting >= 1)
+-=>
+-    (set-strategic-number sn-minimum-boar-hunt-group-size 7)
+-    (set-strategic-number sn-minimum-number-hunters 7)
+-    (up-retask-gatherers food c: 1)
+-    (up-request-hunters c: 6)
+-)
+-(defrule
+-    (current-age == dark-age)
+-    (dropsite-min-distance boar-hunting <= 10)
+-    (dropsite-min-distance live-boar >= 11)
+-    (strategic-number sn-minimum-number-hunters > 2)
+-=>
+-    (set-strategic-number sn-minimum-boar-hunt-group-size 1)
+-    (set-strategic-number sn-minimum-number-hunters 2)
+-)
+-(defrule
+-    (current-age == dark-age)
+-    (civilian-population >= 16)
+-    (or (dropsite-min-distance live-boar > 32) (dropsite-min-distance live-boar <= -1))
+-    (strategic-number sn-enable-boar-hunting != 1)
+-=>
+-    (set-strategic-number sn-enable-boar-hunting 1)
+-    (set-strategic-number sn-minimum-boar-hunt-group-size 2)
+-    (set-strategic-number sn-minimum-number-hunters 2)
+-)
+-(defrule
+-    (current-age >= feudal-age)
+-    (strategic-number sn-minimum-number-hunters > 2)
+-=>
+-    (set-strategic-number sn-minimum-boar-hunt-group-size 2)
+-    (set-strategic-number sn-minimum-number-hunters 2)
+-)
+ 
+ ; -----------------------------
+ ; Economy distribution by age
+@@ -1662,6 +1606,7 @@
+     (current-age >= feudal-age)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 18)
++    (set-strategic-number sn-percent-civilian-gatherers 82)
+     (set-strategic-number sn-cap-civilian-builders 7)
+ )
+ (defrule
+@@ -1669,6 +1614,7 @@
+     (current-age >= feudal-age)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 32)
++    (set-strategic-number sn-percent-civilian-gatherers 68)
+     (set-strategic-number sn-cap-civilian-builders 16)
+     (up-assign-builders c: palisade-wall c: 4)
+     (up-assign-builders c: stone-wall-line c: 5)
+@@ -1680,6 +1626,7 @@
+     (current-age >= feudal-age)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 18)
++    (set-strategic-number sn-percent-civilian-gatherers 82)
+     (set-strategic-number sn-cap-civilian-builders 10)
+ )
+ (defrule
+@@ -1687,6 +1634,7 @@
+     (current-age >= feudal-age)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 14)
++    (set-strategic-number sn-percent-civilian-gatherers 86)
+     (set-strategic-number sn-cap-civilian-builders 8)
+ )
+ (defrule
+@@ -1694,13 +1642,15 @@
+     (current-age >= feudal-age)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 16)
++    (set-strategic-number sn-percent-civilian-gatherers 84)
+     (set-strategic-number sn-cap-civilian-builders 10)
+ )
+ (defrule
+     (goal g-war-state state-emergency)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
++    (set-strategic-number sn-percent-civilian-builders 8)
++    (set-strategic-number sn-percent-civilian-gatherers 92)
++    (set-strategic-number sn-cap-civilian-builders 2)
+ )
+ 
+ ; FIXED6 early wall crews. Feudal palisades are a real project, not a one-villager side job.
+@@ -1710,6 +1660,7 @@
+     (not(wall-completed-percentage 1 >= 90))
+ =>
+     (set-strategic-number sn-percent-civilian-builders 24)
++    (set-strategic-number sn-percent-civilian-gatherers 76)
+     (set-strategic-number sn-cap-civilian-builders 8)
+     (up-assign-builders c: palisade-wall c: 4)
+ )
+@@ -1720,21 +1671,22 @@
+     (not(wall-completed-percentage 1 >= 80))
+ =>
+     (set-strategic-number sn-percent-civilian-builders 20)
++    (set-strategic-number sn-percent-civilian-gatherers 80)
+     (set-strategic-number sn-cap-civilian-builders 6)
+     (up-assign-builders c: palisade-wall c: 3)
+ )
+ 
+-; V12 FIX03: Hardest Dark Age must never reserve a generic builder.
+-; The old 10% FIXED7 reservation selected one of the three starting villagers and
+-; kept replacing it after DELETE, producing the apparent immobile-villager bug.
++; V12 FIX04: keep a valid builder/gatherer partition in Dark Age.
++; A house plan must never coexist with a zero builder cap. ResonanceBot's stable
++; opening proves that a small builder pool plus normal gatherers avoids the task loop.
+ (defrule
+     (difficulty == hardest)
+     (goal g-war-state state-develop)
+     (current-age == dark-age)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+-    (set-strategic-number sn-percent-civilian-gatherers 100)
++    (set-strategic-number sn-percent-civilian-builders 40)
++    (set-strategic-number sn-percent-civilian-gatherers 60)
++    (set-strategic-number sn-cap-civilian-builders 4)
+ )
+ (defrule
+     (difficulty == hardest)
+@@ -1743,6 +1695,7 @@
+     (wall-completed-percentage 1 >= 90)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 18)
++    (set-strategic-number sn-percent-civilian-gatherers 82)
+     (set-strategic-number sn-cap-civilian-builders 7)
+ )
+@@ -29228,6 +29181,7 @@
+     (wall-completed-percentage 1 < 55)
+ =>
+     (set-strategic-number sn-percent-civilian-builders 16)
++    (set-strategic-number sn-percent-civilian-gatherers 84)
+     (set-strategic-number sn-cap-civilian-builders 5)
+     (up-assign-builders c: palisade-wall c: 3)
+ )
+@@ -29556,8 +29510,6 @@
+     (current-age == dark-age)
+     (civilian-population < 8)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-food-gatherer-percentage 90)
+     (set-strategic-number sn-wood-gatherer-percentage 10)
+     (set-strategic-number sn-gold-gatherer-percentage 0)
+@@ -29569,8 +29521,6 @@
+     (civilian-population >= 8)
+     (civilian-population < 14)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-food-gatherer-percentage 88)
+     (set-strategic-number sn-wood-gatherer-percentage 12)
+     (set-strategic-number sn-gold-gatherer-percentage 0)
+@@ -29582,8 +29532,6 @@
+     (civilian-population >= 14)
+     (civilian-population < 18)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-food-gatherer-percentage 75)
+     (set-strategic-number sn-wood-gatherer-percentage 25)
+     (set-strategic-number sn-gold-gatherer-percentage 0)
+@@ -29595,8 +29543,6 @@
+     (current-age == dark-age)
+     (civilian-population >= 18)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-food-gatherer-percentage 55)
+     (set-strategic-number sn-wood-gatherer-percentage 20)
+     (set-strategic-number sn-gold-gatherer-percentage 5)
+@@ -29613,11 +29559,11 @@
+ )
+ 
+-; Official-HD style boar kick-start.  FIX01 requested a hunter but never performed
+-; the one-time food-gatherer retask that actually begins the lure.
++; Single authoritative official-HD-style boar kick-start.
++; Sheep get the opening food window; one lure villager starts only after 7:00.
+ (defrule
+     (difficulty == hardest)
+     (current-age == dark-age)
+     (goal g-v12f2-boar 0)
+-    (game-time > 210)
+-    (civilian-population >= 9)
++    (game-time > 420)
++    (civilian-population >= 12)
+     (dropsite-min-distance live-boar >= 0)
+     (dropsite-min-distance live-boar <= 32)
+ =>
+@@ -29978,8 +29924,6 @@
+ (defrule
+     (goal g-emergency-defense 1)
+ =>
+-    (set-strategic-number sn-percent-civilian-builders 0)
+-    (set-strategic-number sn-cap-civilian-builders 0)
+     (set-strategic-number sn-allow-civilian-defense 0)
+     (set-strategic-number sn-number-civilian-militia 0)
+     (set-strategic-number sn-disable-villager-garrison 0)
+@@ -29995,9 +29939,9 @@
+     (set-goal g-v12f2-defense 0)
+ )
+ 
+ ; ---------------------------------------------------------------------------
+-; V12 FIX03 startup-worker fix
+-; Final V12 FIX03 banner
++; V12 FIX04 systemic civilian-task repair
++; Final V12 FIX04 banner
+ ; ---------------------------------------------------------------------------
+-; END OF DOKTOR FORTRESS AI V12 FORTRESS COMMANDER FIX03
++; END OF DOKTOR FORTRESS AI V12 FORTRESS COMMANDER FIX04
+ ; ============================================================================

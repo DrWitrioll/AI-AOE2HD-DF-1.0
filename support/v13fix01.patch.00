@@ -1,0 +1,102 @@
+--- ResonanceBot 5-1c.per
++++ Dr_Fortress_AI_V13_FIX01.per
+@@ -1,3 +1,22 @@
++; ============================================================================
++; DR FORTRESS AI V13 FIX01
++; Architecture reset: ResonanceBot 5-1c is the economic / civilian / age-up core.
++; Fortress is a defensive, military and siege doctrine layered on top.
++;
++; IMPORTANT DESIGN RULES
++; - Opening civilian tasking is intentionally left to ResonanceBot.
++; - Dark -> Feudal -> Castle -> Imperial economy is intentionally ResonanceBot.
++; - Fortress never enters a dedicated Castle-saving economy.
++; - Castles are opportunistic high-value defensive anchors: build only when the
++;   normal economy already makes one affordable and the placement has value.
++; - Fortress adds fortification, threat memory, defensive formations, civ-aware
++;   production, siege packages, recovery, concentrated counterattacks and
++;   population profiles for 125 / 150 / 200.
++;
++; Original ResonanceBot code below remains attributed to @Resonance22.  V13 is a
++; derived experimental AI for Age of Empires II HD, not the original bot.
++; ============================================================================
++
+ ;-------------------ResonanceBot AI was made by @Resonance22----------------------------
+ ;-------------------http://www.youtube.com/Resonance22Channel---------------------------
+ ;-------------------This AI plays only Random Map and requires 150 or more Pop---------
+@@ -9771,6 +9790,7 @@
+ 	(current-age == feudal-age)
+ 	(unit-type-count-total villager < 75) ;previously 38
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
+ =>
+ 	(train villager)
+ )
+@@ -10944,6 +10964,7 @@
+ 	(game-time > 1800))
+ 	(unit-type-count-total villager < 100)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
+ =>
+ 	(train villager)
+ )
+@@ -10959,6 +10980,7 @@
+ 	(game-time > 1800))
+ 	(unit-type-count-total villager < 100)
+ 	(can-train-with-escrow villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
+ =>
+ 	(release-escrow food)
+ 	(train villager)
+@@ -10977,6 +10999,8 @@
+ 	(building-type-count-total feitoria < 1) ;hopefully doesn't break anything?
+ 	(unit-type-count-total villager < 125)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
++    (or (population-cap > 150) (unit-type-count-total villager < 100))
+ =>
+ 	(train villager)
+ )
+@@ -10990,6 +11014,8 @@
+ 	(difficulty == moderate)))
+ 	(unit-type-count-total villager < 125)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
++    (or (population-cap > 150) (unit-type-count-total villager < 100))
+ =>
+ 	(train villager)
+ )
+@@ -11006,6 +11032,9 @@
+ 	(game-time >= 3000))
+ 	(unit-type-count-total villager < 150)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
++    (or (population-cap > 150) (unit-type-count-total villager < 100))
++    (or (population-cap > 200) (unit-type-count-total villager < 125))
+ =>
+ 	(train villager)
+ )
+@@ -11022,6 +11051,9 @@
+ 	(game-time >= 3000))
+ 	(unit-type-count-total villager < 140)
+ 	(can-train-with-escrow villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
++    (or (population-cap > 150) (unit-type-count-total villager < 100))
++    (or (population-cap > 200) (unit-type-count-total villager < 125))
+ =>
+ 	(release-escrow food)
+ 	(train villager)
+@@ -11039,6 +11071,9 @@
+ 	(game-time >= 3000))
+ 	(unit-type-count-total villager < 180)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-total villager < 70))
++    (or (population-cap > 150) (unit-type-count-total villager < 100))
++    (or (population-cap > 200) (unit-type-count-total villager < 125))
+ =>
+ 	(train villager)
+ )
+@@ -11055,6 +11090,9 @@
+ 	(game-time >= 3000))
+ 	(unit-type-count-total villager < 220)
+ 	(can-train villager)
++    (or (population-cap > 125) (unit-type-count-tota

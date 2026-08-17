@@ -1,0 +1,138 @@
++; Inner ring - Feudal palisade after the normal Resonance transition buildings
++; exist.  This avoids stealing the opening wood that makes Resonance stable.
++(defrule
++    (difficulty == hardest)
++    (current-age == feudal-age)
++    (building-type-count-total market >= 1)
++    (building-type-count-total blacksmith >= 1)
++    (wall-completed-percentage 1 < 70)
++    (wood-amount > 210)
++    (up-pending-objects c: palisade-wall < 1)
++    (not (town-under-attack))
++    (can-build-wall 1 palisade-wall)
++=>
++    (build-wall 1 palisade-wall)
++)
++
++; Castle Age may finish/replace the inner ring with stone whenever the ordinary
++; economy already has spare stone.  No Castle or wall stone escrow exists.
++(defrule
++    (difficulty == hardest)
++    (current-age >= castle-age)
++    (wall-completed-percentage 1 < 100)
++    (stone-amount > 280)
++    (not (town-under-attack))
++    (can-build-wall 1 stone-wall-line)
++=>
++    (build-wall 1 stone-wall-line)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age >= castle-age)
++    (wall-completed-percentage 1 < 100)
++    (wood-amount > 300)
++    (stone-amount <= 280)
++    (not (town-under-attack))
++    (can-build-wall 1 palisade-wall)
++=>
++    (build-wall 1 palisade-wall)
++)
++
++; Outer stone ring is opportunistic and resource-safe.
++(defrule
++    (difficulty == hardest)
++    (current-age >= castle-age)
++    (wall-completed-percentage 1 >= 70)
++    (wall-completed-percentage 2 < 90)
++    (stone-amount > 360)
++    (not (town-under-attack))
++    (can-build-wall 2 stone-wall-line)
++=>
++    (build-wall 2 stone-wall-line)
++)
++
++; Controlled gates.
++(defrule
++    (current-age >= feudal-age)
++    (wall-completed-percentage 1 >= 25)
++    (building-type-count-total gate < 1)
++    (not (town-under-attack))
++    (can-build-gate 1)
++=>
++    (build-gate 1)
++)
++(defrule
++    (current-age >= castle-age)
++    (wall-completed-percentage 2 >= 55)
++    (building-type-count-total gate < 2)
++    (not (town-under-attack))
++    (can-build-gate 2)
++=>
++    (build-gate 2)
++)
++
++; ---------------------------------------------------------------------------
++; Observation network.  Local eyes first, forward eyes only after the economy
++; is developed.  Targets: 2 Dark, 4 Feudal, 8 Castle, 15 Imperial on Hardest.
++; ---------------------------------------------------------------------------
++(defrule
++    (difficulty == hardest)
++    (current-age == dark-age)
++    (game-time > 330)
++    (building-type-count-total df13-outpost < 1)
++    (wood-amount > 120)
++    (up-pending-objects c: df13-outpost < 1)
++    (can-build df13-outpost)
++=>
++    (build df13-outpost)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == dark-age)
++    (game-time > 480)
++    (building-type-count-total df13-outpost < 2)
++    (wood-amount > 150)
++    (up-pending-objects c: df13-outpost < 1)
++    (can-build df13-outpost)
++=>
++    (build df13-outpost)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == feudal-age)
++    (building-type-count-total df13-outpost < 4)
++    (wood-amount > 170)
++    (up-pending-objects c: df13-outpost < 1)
++    (can-build df13-outpost)
++=>
++    (build-forward df13-outpost)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == castle-age)
++    (building-type-count-total df13-outpost < 8)
++    (wood-amount > 210)
++    (up-pending-objects c: df13-outpost < 1)
++    (can-build df13-outpost)
++=>
++    (build-forward df13-outpost)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == imperial-age)
++    (building-type-count-total df13-outpost < 15)
++    (wood-amount > 260)
++    (up-pending-objects c: df13-outpost < 1)
++    (can-build df13-outpost)
++=>
++    (build-forward df13-outpost)
++)
++
++; Combat towers face confirmed danger but never consume the opening economy.
++(defrule
++    (difficulty == hardest)
++    (current-age >= feudal-age)
++    (goal df13-defense-state 1)
++    (building-type-count-total watch-tower-line < 2)
++    (stone-amount > 220)
++    (up-pending-objects c: watch-tower-line 

@@ -1,0 +1,20 @@
+{
+  "sha256": "523cf6f0866650d9328c8693761b9d95a96a47244e182964d190cae75745c31f",
+  "size_bytes": 868066,
+  "lines": 32772,
+  "defrules": 2744,
+  "gated_legacy_economy_rules": 276,
+  "max_conditions": 12,
+  "max_actions": 15,
+  "paren_depth": 0,
+  "preprocessor_loads": 100,
+  "preprocessor_ends": 100,
+  "fix07_house2_rules": 1,
+  "fix07_house1_rules": 1,
+  "castle_stone_escrow_positive_in_fix07_rules": 0,
+  "age_research_present": {
+    "feudal": true,
+    "castle": true,
+    "imperial": true
+  }
+}

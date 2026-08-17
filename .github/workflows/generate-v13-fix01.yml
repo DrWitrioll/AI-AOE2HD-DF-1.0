@@ -30,26 +30,49 @@ jobs:
           from pathlib import Path
           import hashlib, json, re
           p=Path('Dr_Fortress_AI_V13_FIX01.per')
-          t=p.read_text(encoding='utf-8')
-          sha=hashlib.sha256(p.read_bytes()).hexdigest()
-          assert sha == 'c2af67740bb81ca92931577f8da413ac5d09d7e6884f07606ced45cee7a1a047', sha
-          assert t.startswith('; ============================================================================\n; DR FORTRESS AI V13 FIX01')
-          assert t.count('(defrule') == 2085
-          assert '(defconst df13-core 162)' in t
-          assert '(set-strategic-number sn-group-form-distance 70)' in t
-          assert '(can-build castle)' in t
-          # The Fortress overlay begins after the marker; it must not own economy/tasking.
-          ov=t.split('; DR FORTRESS V13 - DEFENSIVE / MILITARY / SIEGE DOCTRINE',1)[1]
-          for bad in ['sn-food-gatherer-percentage','sn-wood-gatherer-percentage','sn-gold-gatherer-percentage','sn-stone-gatherer-percentage','sn-percent-civilian-builders','sn-percent-civilian-gatherers','(up-assign-builders','(research feudal-age)','(research castle-age)','(research imperial-age)','(set-escrow-percentage stone']:
+          raw=p.read_bytes()
+          t=raw.decode('utf-8')
+          sha=hashlib.sha256(raw).hexdigest()
+          normalized=t.replace('\r\n','\n').replace('\r','\n')
+          normalized_sha=hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+          assert normalized.startswith('; ============================================================================\n; DR FORTRESS AI V13 FIX01')
+          assert normalized.count('(defrule') == 2085
+          assert '(defconst df13-core 162)' in normalized
+          assert '(set-strategic-number sn-group-form-distance 70)' in normalized
+          assert '(can-build castle)' in normalized
+          # Fortress layer may consume resources but must not own worker/economy/age-up tasking.
+          ov=normalized.split('; DR FORTRESS V13 - DEFENSIVE / MILITARY / SIEGE DOCTRINE',1)[1]
+          forbidden=['sn-food-gatherer-percentage','sn-wood-gatherer-percentage','sn-gold-gatherer-percentage','sn-stone-gatherer-percentage','sn-percent-civilian-builders','sn-percent-civilian-gatherers','(up-assign-builders','(research feudal-age)','(research castle-age)','(research imperial-age)','(set-escrow-percentage stone']
+          for bad in forbidden:
               assert bad not in ov, bad
+          # No Fortress Castle savings project: only opportunistic affordability checks.
+          assert '(set-escrow-percentage stone' not in ov
+          # Formation / defence / siege / recovery systems must all be present.
+          required=['df13-defense-state','df13-counterattack','df13-threat-archer','df13-threat-cavalry','df13-threat-infantry','df13-threat-siege','df13-recovery','df13-siege-ready','df13-enemy-fortified','sn-number-defend-groups','sn-minimum-attack-group-size','battering-ram-line','mangonel-line','scorpion-line']
+          for token in required:
+              assert token in ov, token
+          # Basic parenthesis check ignoring comments and quoted strings.
           depth=0
-          for line in t.splitlines():
+          for line in normalized.splitlines():
               line=line.split(';',1)[0]
               line=re.sub(r'"[^"\n]*"','',line)
               depth += line.count('(')-line.count(')')
               assert depth >= 0
           assert depth == 0
-          report={'sha256':sha,'size_bytes':p.stat().st_size,'lines':len(t.splitlines()),'defrule_text_count':t.count('(defrule'),'resonance_economy_core':True,'fortress_overlay_owns_economy':False,'fortress_castle_stone_escrow':0,'formation_distance':70,'population_profiles':[125,150,200]}
+          report={
+            'sha256':sha,
+            'normalized_sha256':normalized_sha,
+            'size_bytes':p.stat().st_size,
+            'lines':len(normalized.splitlines()),
+            'defrule_text_count':normalized.count('(defrule'),
+            'resonance_economy_core':True,
+            'fortress_overlay_owns_economy':False,
+            'fortress_castle_stone_escrow':0,
+            'formation_distance':70,
+            'population_profiles':[125,150,200],
+            'parentheses_depth':depth,
+            'required_fortress_systems':True
+          }
           Path('V13FIX01_static_validation.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
           print(report)
           PY

@@ -119,3 +119,5 @@ jobs:
           git rm -f .github/workflows/fix14-tier-priority.yml
           git commit -m "Remove one-shot FIX14 generator"
           git push origin HEAD:main
+
+# retrigger after workflow exists on default branch

@@ -1,5 +1,22 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX08
+; DR FORTRESS AI V13 FIX10
+; FIX10 research/wall/farm/monk repair:
+; - military tier unlocks are now systematically researched because the custom DAT keeps all older tiers trainable.
+; - normal production prefers the best exact tier that is currently affordable; recovery still deliberately buys cheap legacy tiers.
+; - family-level can-train gates no longer block a cheaper exact-tier fallback.
+; - Fortress wall placement is explicitly enabled on Tiny/Small/Medium maps; Outpost logic no longer overwrites wall geometry.
+; - Feudal palisade continuation targets a meaningful defensive line instead of stopping at 35 percent.
+; - farm construction is globally throttled with a wood reserve so repeated farm replacement cannot consume the economy in a burst.
+; - monk massing is capped and Illumination/monastery upgrades are encouraged to reduce low-faith retry pressure.
+; - the inherited setup warning no longer mistakes 200 gathered gold for non-standard starting resources.
+; FIX09 custom-DAT multi-tier production doctrine:
+; - designed for empires2_x1_p1(1).dat where researched tiers unlock as separate paid units.
+; - old tiers remain trainable after later research and are intentionally used as economic/tactical choices.
+; - inherited *-line train actions are routed through exact-tier family request dispatchers.
+; - recovery/army-rebuild prefers cheap legacy tiers, balanced economy prefers middle tiers, rich assault prefers top tiers.
+; - exact family counting/threat detection still uses *-line where it is useful and safe.
+; - Barracks, Archery Range, Stable, Siege Workshop, Dock and Castle unique-unit production are covered.
+; - FIX08 formation, defense, retreat, scout, wall and command behavior is preserved.
 ; FIX08 replay/command repair:
 ; - custom taunt/command interface is enabled by default (command 125 can still disable it explicitly).
 ; - strategy command layer is open at startup instead of silently requiring a hidden unlock first.
@@ -78,6 +95,31 @@
 (defconst df13-knight-request 181)
 (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
 
+; FIX09 exact-tier family production requests.
+(defconst df13-militia-request 185)
+(defconst df13-spearman-request 186)
+(defconst df13-archer-request 187)
+(defconst df13-skirmisher-request 188)
+(defconst df13-cavarcher-request 189)
+(defconst df13-camel-request 191)
+(defconst df13-eagle-request 192)
+(defconst df13-ram-request 193)
+(defconst df13-mangonel-request 194)
+(defconst df13-scorpion-request 195)
+(defconst df13-galley-request 196)
+(defconst df13-fire-request 197)
+(defconst df13-demo-request 198)
+(defconst df13-cannon-galleon-request 199)
+(defconst df13-steppe-request 200)
+(defconst df13-elephant-request 201)
+(defconst df13-genitour-request 202)
+(defconst df13-longboat-request 203)
+(defconst df13-turtle-request 204)
+(defconst df13-magyar-huszar-request 205)
+(defconst df13-unique-request 206)
+(defconst df13-farm-throttle 207) ;FIX10: serialize replacement-farm orders
+(defconst df13-farm-timer 46) ;FIX10: timer 46 was unused; farm-order cooldown
+
 (defconst ally-yes 36 ) 
 (defconst allied-attack 31) 
 (defconst treaty-time 33) ;new Patch 5.8
@@ -109,8 +151,8 @@
 (defconst slavic 32767) 
 (defconst ri-eagle-warrior 384) 
 (defconst ri-gillnets 32767) 
-(defconst heavy-eagle-warrior 32767)
-(defconst eagle-scout 32767)
+(defconst heavy-eagle-warrior 753)
+(defconst eagle-scout 751)
 (defconst ri-chieftains 463)
 (defconst ri-obsidian-arrows 485)
 (defconst ri-chivalry 32767) 
@@ -146,21 +188,21 @@
 (defconst ri-pavise 32767) 
 (defconst ri-elite-genoese-crossbow 32767) 
 (defconst ri-revetments 32767) 
-(defconst imperial-camel 32767) 
+(defconst imperial-camel 897) 
 (defconst slinger 32767) 
 (defconst condottiero 184)
 (defconst condottiero1 773)
 (defconst condottiero2 882)
-(defconst kamayuk 32767) 
-(defconst elite-kamayuk 32767) 
-(defconst elephant-archer 32767) 
-(defconst elite-elephant-archer 32767) 
-(defconst genoese-crossbowman 32767) 
-(defconst elite-genoese-crossbowman 32767) 
-(defconst magyar-huszar 32767) 
-(defconst elite-magyar-huszar 32767) 
-(defconst boyar 32767) 
-(defconst elite-boyar 32767)   
+(defconst kamayuk 879) 
+(defconst elite-kamayuk 881) 
+(defconst elephant-archer 873) 
+(defconst elite-elephant-archer 875) 
+(defconst genoese-crossbowman 866) 
+(defconst elite-genoese-crossbowman 868) 
+(defconst magyar-huszar 869) 
+(defconst elite-magyar-huszar 871) 
+(defconst boyar 876) 
+(defconst elite-boyar 878)   
 (defconst ri-ironclad 489) ;new
 ;end-if
 ;AoAK Civs
@@ -341,8 +383,8 @@
 (defconst elite-rattan-archer 1131)
 (defconst arambai 1126)
 (defconst elite-arambai 1128)
-(defconst battle-elephant 1134)
-(defconst elite-battle-elephant 1123)
+(defconst battle-elephant 1132)
+(defconst elite-battle-elephant 1134)
 (defconst karambit-warrior 1123)
 (defconst elite-karambit-warrior 1125)
 (defconst imperial-skirmisher 1155)
@@ -1786,10 +1828,9 @@
 (or(players-unit-type-count any-enemy caravel-line >= 3)
 (or(players-unit-type-count any-enemy longboat-line >= 3)
 (players-unit-type-count any-enemy cannon-galleon-line >= 2))))))
-(can-train fire-ship-line)
 (unit-type-count fire-ship-line < 15)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -1801,10 +1842,9 @@
 (or(players-unit-type-count any-enemy caravel-line >= 5)
 (or(players-unit-type-count any-enemy fire-ship-line >= 5)
 (players-unit-type-count any-enemy turtle-ship-line >= 2)))
-(can-train demolition-ship-line)
 (unit-type-count demolition-ship-line < 15)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -1855,7 +1895,6 @@
 (goal elephantrush 0) ;rise of the rajas new
 (game-time < 1800) ;once 1620
 (unit-type-count-total knight-line < 30)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -1872,9 +1911,8 @@
 (players-unit-type-count every-enemy genoese-crossbowman-line <= 7) 
 (goal enemyanticavalry 0)
 (unit-type-count-total steppe-lancer-line < 10) ;we mix in Steppe Lancers with Knights
-(can-train steppe-lancer-line)
 =>
-(train steppe-lancer-line)
+(set-goal df13-steppe-request 1)
 )
 
 (defrule
@@ -1885,9 +1923,8 @@
 (goal elephantrush 1) ;rise of the rajas new
 (game-time < 1800) ;once 1620
 (unit-type-count-total battle-elephant-line < 30)
-(can-train battle-elephant-line)
 =>
-(train battle-elephant-line)
+(set-goal df13-elephant-request 1)
 )
 
 (defrule
@@ -1903,9 +1940,8 @@
 (goal knightrush 1)
 (game-time < 1800) ;once 1620
 (unit-type-count-total camel-line < 30)
-(can-train camel-line)
 =>
-(train camel-line)
+(set-goal df13-camel-request 1)
 )
 
 (defrule
@@ -1919,7 +1955,6 @@
 (goal knightrush 1)
 (game-time < 1800) ;once 1620
 (unit-type-count-total scout-cavalry-line < 10)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -1965,9 +2000,8 @@
 (goal knightrush 1)
 (game-time < 1800) 
 (unit-type-count-total eagle-warrior-line < 30)
-(can-train eagle-warrior-line)
 =>
-(train eagle-warrior-line)
+(set-goal df13-eagle-request 1)
 )
 
 (defrule
@@ -1999,9 +2033,8 @@
 (game-time < 1800) 
 (wood-amount > 100)
 (unit-type-count-total archer-line < 40)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -2014,9 +2047,8 @@
 (game-time < 1800) 
 (wood-amount > 100)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -2030,9 +2062,8 @@
 (or(players-unit-type-count any-enemy skirmisher-line >= 6) ;new added
 (players-unit-type-count any-enemy rattan-archer-line >= 6))
 (unit-type-count-total skirmisher-line < 5)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -2045,9 +2076,8 @@
 (game-time < 1800) 
 (wood-amount > 100)
 (unit-type-count-total skirmisher-line < 40)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -2066,9 +2096,8 @@
 (players-unit-type-count any-enemy knight-line >= 10))))))))
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 20)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -2086,9 +2115,8 @@
 (or(players-unit-type-count any-enemy skirmisher-line >= 5) 
 (players-unit-type-count any-enemy archer-line >= 5))))))
 (unit-type-count-total mangonel-line < 1)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -2103,9 +2131,8 @@
 (or(players-building-type-count any-enemy stone-wall-line >= 5)
 (players-building-type-count any-enemy watch-tower-line >= 2)))
 (unit-type-count-total battering-ram-line < 1)
-(can-train battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 )
 
 (defrule
@@ -2120,9 +2147,8 @@
 (or(players-building-type-count any-enemy stone-wall-line >= 5)
 (players-building-type-count any-enemy watch-tower-line >= 2)))
 (unit-type-count-total battering-ram-line < 1)
-(can-train battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 (disable-self)
 )
 
@@ -2135,9 +2161,8 @@
 (or(players-building-type-count any-enemy castle >= 1)
 (players-building-type-count any-enemy watch-tower-line >= 3))
 (unit-type-count-total battering-ram-line < 1)
-(can-train battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 )
 
 (defrule
@@ -2179,9 +2204,8 @@
 (game-time < 1800) 
 (wood-amount > 100)
 (unit-type-count-total my-unique-unit-line < 35)
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -2245,9 +2269,8 @@
 (or(players-unit-type-count any-enemy skirmisher-line >= 5) 
 (players-unit-type-count any-enemy archer-line >= 5))))))))
 (unit-type-count-total mangonel-line < 5)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -2259,7 +2282,7 @@
 (current-age == castle-age)
 (game-time < 1620)
 ;(wood-amount > 100)
-(unit-type-count-total monk < 20)
+(unit-type-count-total monk < 10)
 (can-train monk)
 =>
 (train monk)
@@ -2409,9 +2432,8 @@
 (unit-type-count-total eagle-warrior-line < 1)
 (unit-type-count-total scout-cavalry-line < 1)
 (unit-type-count-total spearman-line < 1)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 (disable-self)
 )
 
@@ -2424,7 +2446,6 @@
 (goal knightrush 1)
 (game-time < 3300)
 (unit-type-count-total knight-line < 50)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -2442,9 +2463,8 @@
 (players-unit-type-count every-enemy camel-line <= 12) 
 (players-unit-type-count every-enemy genoese-crossbowman-line <= 10) 
 (unit-type-count-total steppe-lancer-line < 30) ;we mix in Steppe Lancers with Cavaliers
-(can-train steppe-lancer-line)
 =>
-(train steppe-lancer-line)
+(set-goal df13-steppe-request 1)
 )
 
 (defrule
@@ -2461,9 +2481,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total my-unique-unit-line < 40)
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -2492,7 +2511,6 @@
 (goal knightrush 1)
 (game-time < 3300)
 (unit-type-count-total scout-cavalry-line < 60)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -2510,9 +2528,8 @@
 (goal knightrush 1)
 (game-time < 3300)
 (unit-type-count-total camel-line < 50)
-(can-train camel-line)
 =>
-(train camel-line)
+(set-goal df13-camel-request 1)
 )
 
 (defrule
@@ -2561,9 +2578,8 @@
 (goal knightrush 1)
 (game-time < 3300) 
 (unit-type-count-total eagle-warrior-line < 60)
-(can-train eagle-warrior-line)
 =>
-(train eagle-warrior-line)
+(set-goal df13-eagle-request 1)
 )
 
 (defrule
@@ -2577,9 +2593,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 60)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -2614,9 +2629,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total archer-line < 60)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -2628,9 +2642,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total militiaman-line < 60)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -2642,9 +2655,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total cavalry-archer-line < 60)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -2655,9 +2667,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total my-unique-unit-line < 40) ;for Kipchaks
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -2699,9 +2710,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total skirmisher-line < 60)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -2720,9 +2730,8 @@
 (or(players-unit-type-count any-enemy elephant-archer-line >= 7) ;forgotten
 (players-unit-type-count any-enemy war-wagon-line >= 7))))))
 (unit-type-count-total skirmisher-line < 60)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -2753,9 +2762,8 @@
 (players-unit-type-count any-enemy knight-line >= 10)))))
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 50)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -2792,9 +2800,8 @@
 (or(players-unit-type-count any-enemy skirmisher-line >= 10) 
 (players-unit-type-count any-enemy genoese-crossbowman-line >= 5)))))) ;previously archer-line
 (unit-type-count-total mangonel-line < 5)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -2833,9 +2840,8 @@
 (or(players-building-type-count any-enemy bombard-tower >= 2)
 (players-building-type-count any-enemy watch-tower-line >= 2))))
 (unit-type-count-total battering-ram-line < 3)
-(can-train battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 )
 
 (defrule
@@ -2884,9 +2890,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total my-unique-unit-line < 60)
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -2916,9 +2921,8 @@
 (or(players-military-population any-enemy >= 30)
 (town-under-attack))
 (unit-type-count-total spearman-line < 60)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -2971,9 +2975,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 60)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -2985,7 +2988,6 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total scout-cavalry-line < 60)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -3003,9 +3005,8 @@
 (goal makeinfantry 1)
 (game-time < 3300)
 (unit-type-count-total militiaman-line < 60)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #load-if-defined DE-AVAILABLE
@@ -3019,9 +3020,8 @@
 (or(research-completed ri-bagains)
 (up-research-status c: ri-bagains >= research-pending)) ;gives twohanded 5 armor
 (unit-type-count-total militiaman-line < 60)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #end-if
@@ -3040,9 +3040,8 @@
 (game-time < 3300) 
 (wood-amount > 100)
 (unit-type-count-total my-unique-unit-line < 30)
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -3807,9 +3806,8 @@
 (military-population <= 40) ;previously 8
 (goal createarmy 0) 
 (unit-type-count-total my-unique-unit-line < 35) ;new Patch 5.8 v2.1g
-(can-train my-unique-unit-line)
 =>  
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 #end-if
@@ -4344,7 +4342,6 @@
 	(goal createarmy 0)
 	(current-age == imperial-age)
 	(research-completed ri-paladin)
-	(can-train knight-line)
 =>
 	(set-goal df13-knight-request 1)
 ) 
@@ -4359,9 +4356,8 @@
 	(goal magyarciv 1))) ;forgotten
 	(current-age == imperial-age)
 	;(research-completed my-unique-unit-upgrade)
-	(can-train my-unique-unit-line)
 =>
-	(train my-unique-unit-line)
+	(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -4389,9 +4385,8 @@
 	(goal createarmy 0)
 	(current-age == imperial-age)
 	(goal camelrush 1) ;forgotten
-	(can-train camel-line)
 =>
-	(train camel-line)
+	(set-goal df13-camel-request 1)
 ) 
 
 (defrule
@@ -4405,7 +4400,6 @@
 	(or(research-completed ri-cavalier)
 	(goal camelrush 1)) ;forgotten
 	(research-completed ri-light-cavalry)
-	(can-train scout-cavalry-line)
 =>
 	(set-goal df13-scout-request 1)
 ) 
@@ -4418,9 +4412,8 @@
 	(current-age == imperial-age)
 	(or(research-completed ri-elite-eagle-warrior)
 	(research-completed ri-eagle-warrior))
-	(can-train eagle-warrior-line)
 =>
-	(train eagle-warrior-line)
+	(set-goal df13-eagle-request 1)
 ) 
 
 (defrule
@@ -4433,9 +4426,8 @@
 	(or(research-completed ri-elite-eagle-warrior)
 	(research-completed ri-eagle-warrior))
 	(research-completed ri-pikeman)
-	(can-train spearman-line)
 =>
-	(train spearman-line)
+	(set-goal df13-spearman-request 1)
 ) 
 
 #end-if
@@ -4754,9 +4746,8 @@
 	(or(players-unit-type-count any-enemy mangonel-line >= 5)
 	(players-unit-type-count any-enemy scorpion-line >= 10))))
 	(unit-type-count mangonel-line < 5)
-	(can-train mangonel-line)
 =>
-	(train mangonel-line)
+	(set-goal df13-mangonel-request 1)
 ) 
 
 (defrule
@@ -4790,9 +4781,8 @@
 	(or(players-unit-type-count any-enemy war-elephant-line >= 20)
 	(goal enemydlccavalry 1))))) ;rise of the rajas, new
 	(unit-type-count spearman-line < 60)
-	(can-train spearman-line)
 =>
-	(train spearman-line)
+	(set-goal df13-spearman-request 1)
 ) 
 
 (defrule
@@ -4808,9 +4798,8 @@
 	(or(players-unit-type-count any-enemy hand-cannoneer >= 30)
 	(players-unit-type-count any-enemy spearman-line >= 30)))))
 	(unit-type-count skirmisher-line < 60)
-	(can-train skirmisher-line)
 =>
-	(train skirmisher-line)
+	(set-goal df13-skirmisher-request 1)
 ) 
 
 (defrule
@@ -4820,9 +4809,8 @@
 	(goal createarmy 0)
 	(current-age == imperial-age)
 	(research-completed my-unique-unit-upgrade)
-	(can-train my-unique-unit-line)
 =>
-	(train my-unique-unit-line)
+	(set-goal df13-unique-request 1)
 ) 
 
 ;=======Advancing to the Next Age==========
@@ -5848,8 +5836,12 @@
 (building-type-count town-center >= 1)
 (building-type-count farm <= 10)
 (can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 => 
 (build farm)
+(set-goal df13-farm-throttle 1)
+(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -5857,8 +5849,12 @@
 (building-type-count town-center >= 1)
 (building-type-count farm <= 10)
 (can-build-with-escrow farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
  =>
 (build farm)
+(set-goal df13-farm-throttle 1)
+(enable-timer df13-farm-timer 8)
 (release-escrow wood)
 )
 
@@ -8077,8 +8073,11 @@
 	(unit-type-count-total villager < 8)
 	(building-type-count-total farm < 3)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -8090,8 +8089,11 @@
 	(building-type-count-total farm < 5)
 	(idle-farm-count < 1)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -8103,8 +8105,11 @@
 	(building-type-count-total farm < 10)
 	(idle-farm-count < 2)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -8116,8 +8121,11 @@
 	(building-type-count-total farm < 8)
 	(idle-farm-count < 1)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -8435,9 +8443,8 @@
 (up-research-status c: feudal-age < research-pending)
 (game-time < 900)
 (unit-type-count-total militiaman-line < 5)
-(can-train militiaman-line)
 =>
-(train militiaman-line)  
+(set-goal df13-militia-request 1)  
 )
 
 (defrule
@@ -8446,9 +8453,8 @@
 (current-age == dark-age)
 (game-time < 900)
 (unit-type-count-total militiaman-line < 1)
-(can-train militiaman-line)
 =>
-(train militiaman-line)  
+(set-goal df13-militia-request 1)  
 )
 
 ;======Docks for Water Maps=============
@@ -9184,12 +9190,15 @@
 
 (defrule
 	(current-age == feudal-age)
-	(wood-amount >= 300)
+	(wood-amount >= 420)
 	(building-type-count-total farm < 15)
 	(idle-farm-count < 3)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -9200,8 +9209,12 @@
 	(building-type-count-total mill > 0)
 	(idle-farm-count < 1)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -9482,9 +9495,8 @@
 (unit-type-count-total spearman-line < 2)
 (food-amount > 60)
 (wood-amount > 60)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -9497,9 +9509,8 @@
 (unit-type-count-total spearman-line < 4)
 (food-amount > 60)
 (wood-amount > 60)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -9507,9 +9518,8 @@
 (goal feudalarmy 1)
 (unit-type-count-total archer-line < 2)
 (wood-amount > 60)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -9519,9 +9529,8 @@
 (food-amount > 100)
 (wood-amount > 100)
 (unit-type-count-total skirmisher-line < 2)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -9533,9 +9542,8 @@
 (food-amount > 200)
 (wood-amount > 200)
 (unit-type-count-total skirmisher-line < 4)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -9546,9 +9554,8 @@
 (food-amount > 300)
 (wood-amount > 300)
 (unit-type-count-total skirmisher-line < 5)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -9564,9 +9571,8 @@
 (civ-selected aztec)))))
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 4)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -9583,9 +9589,8 @@
 (or(players-unit-type-count every-enemy archer-line <= 10)
 (unit-type-count-total skirmisher-line >= 4))))
 (unit-type-count-total militiaman-line < 6)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -9602,9 +9607,8 @@
 (or(players-unit-type-count every-enemy archer-line <= 10)
 (unit-type-count-total skirmisher-line >= 4))))
 (unit-type-count-total militiaman-line < 10)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 ;--- if the maximum Age is Feudal
@@ -9621,9 +9625,8 @@
 (or(players-unit-type-count every-enemy archer-line <= 10)
 (unit-type-count-total skirmisher-line >= 4))))
 (unit-type-count-total militiaman-line < 10)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 ;---
 
@@ -9635,7 +9638,6 @@
 (goal scoutrush 1)
 (game-time < 960)
 (unit-type-count-total scout-cavalry-line < 5)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9651,7 +9653,6 @@
 (difficulty <= hardest))
 (players-unit-type-count every-enemy spearman-line < 5)
 (unit-type-count-total scout-cavalry-line < 8)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9677,7 +9678,6 @@
 (current-age == feudal-age)
 (goal feudalarmy 1)
 (unit-type-count-total scout-cavalry-line < 5)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9690,7 +9690,6 @@
 (current-age == feudal-age)
 (goal feudalarmy 1)
 (unit-type-count-total scout-cavalry-line < 3)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9702,7 +9701,6 @@
 (goal feudalarmy 1)
 (research-completed ri-man-at-arms)
 (unit-type-count-total scout-cavalry-line < 8)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9715,7 +9713,6 @@
 (current-age == feudal-age)
 (goal feudalarmy 1)
 (unit-type-count-total scout-cavalry-line < 4)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -9729,9 +9726,8 @@
 (current-age == feudal-age)
 (goal feudalarmy 1)
 (unit-type-count-total eagle-warrior-line < 10)
-(can-train eagle-warrior-line)
 =>
-(train eagle-warrior-line)
+(set-goal df13-eagle-request 1)
 )
 
 (defrule
@@ -9903,9 +9899,8 @@
 	(gold-amount > 245))
 	(unit-type-count-total archer-line < 6)
 	(wood-amount > 100)
-	(can-train archer-line)
 =>
-	(train archer-line)
+	(set-goal df13-archer-request 1)
 ) 
 
 (defrule
@@ -9918,9 +9913,8 @@
 	(up-research-status c: castle-age >= research-pending)
 	(unit-type-count-total skirmisher-line < 5)
 	(wood-amount > 100)
-	(can-train skirmisher-line)
 =>
-	(train skirmisher-line)
+	(set-goal df13-skirmisher-request 1)
 ) 
 
 (defrule
@@ -9934,9 +9928,8 @@
 	(up-research-status c: castle-age >= research-pending)
 	(unit-type-count-total spearman-line < 5)
 	(wood-amount > 100)
-	(can-train spearman-line)
 =>
-	(train spearman-line)
+	(set-goal df13-spearman-request 1)
 ) 
 
 #end-if
@@ -10084,9 +10077,8 @@
 (goal feudalarmy 1) ;added
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 6)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 ;Prep for suspected Feudal War!
@@ -10261,9 +10253,8 @@
 (goal feudalarmy 1) ;added
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 6)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10274,9 +10265,8 @@
 (town-under-attack))
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 3)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10284,9 +10274,8 @@
 (goal feudalarmy 1)
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 6)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10294,9 +10283,8 @@
 (goal feudalarmy 1)
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 10)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10306,9 +10294,8 @@
 (wood-amount >= 400)
 (gold-amount >= 300)
 (unit-type-count-total archer-line < 15)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10317,9 +10304,8 @@
 (or(players-unit-type-count any-enemy scout-cavalry-line >= 2)
 (players-unit-type-count any-enemy knight-line >= 1))
 (unit-type-count-total spearman-line < 4)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -10329,9 +10315,8 @@
 (or(players-unit-type-count any-enemy scout-cavalry-line >= 5)
 (players-unit-type-count any-enemy knight-line >= 3)))
 (unit-type-count-total spearman-line < 8)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 ;(defrule
@@ -10345,7 +10330,7 @@
 ;(unit-type-count-total spearman-line < 8)
 ;(can-train spearman-line)
 ;=>
-;(train spearman-line)
+;(set-goal df13-spearman-request 1)
 ;)
 
 (defrule
@@ -10354,9 +10339,8 @@
 (or(players-unit-type-count any-enemy archer-line >= 3)
 (players-unit-type-count any-enemy skirmisher-line >= 3))
 (unit-type-count-total skirmisher-line < 4)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -10366,9 +10350,8 @@
 (or(players-unit-type-count any-enemy archer-line >= 6)
 (players-unit-type-count any-enemy skirmisher-line >= 6))
 (unit-type-count-total skirmisher-line < 8)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -10378,9 +10361,8 @@
 (or(players-unit-type-count any-enemy archer-line >= 10)
 (players-unit-type-count any-enemy skirmisher-line >= 10))
 (unit-type-count-total skirmisher-line < 12)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -10427,9 +10409,8 @@
 (enemy-buildings-in-town))
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 8)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10438,9 +10419,8 @@
 (enemy-buildings-in-town))
 (current-age == feudal-age)
 (unit-type-count-total archer-line < 12)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -10451,9 +10431,8 @@
 (or(players-unit-type-count any-enemy scout-cavalry-line >= 3)
 (players-unit-type-count any-enemy knight-line >= 1)))
 (unit-type-count-total spearman-line < 6)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -10462,9 +10441,8 @@
 (town-under-attack)
 (players-unit-type-count any-enemy archer-line >= 3)
 (unit-type-count-total skirmisher-line < 8)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 ;Enemy is Tower Rushing me? 
@@ -10539,9 +10517,8 @@
 (current-age == feudal-age)
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 4)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -10553,9 +10530,8 @@
 (players-building-type-count any-enemy watch-tower-line >= 1)
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 6)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 ;======CastleAge===========
@@ -12204,8 +12180,12 @@
 	(building-type-count-total mill > 0)
 	(idle-farm-count < 1)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -12681,8 +12661,12 @@
 	(building-type-count-total mill > 0)
 	(idle-farm-count < 1)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -13031,42 +13015,55 @@
 
 (defrule
 	(game-time > 1320)
-	(wood-amount > 300)
+	(wood-amount > 420)
 	(building-type-count-total farm < 17)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
 	(game-time < 1740)
 	(game-time > 1500)
-	(wood-amount > 300)
+	(wood-amount > 420)
 	(current-age == castle-age)
 	(unit-type-count-total villager > 55)
 	(building-type-count-total farm < 22)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
 	(game-time > 1740)
-	(wood-amount > 300)
+	(wood-amount > 420)
 	(current-age == castle-age)
 	(unit-type-count-total villager > 65)
 	(building-type-count-total farm < 24)
 	(can-build farm)
+(goal df13-farm-throttle 0)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
 	(game-time > 2400)
 	(building-type-count-total farm < 12)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -13074,8 +13071,12 @@
 	(unit-type-count-total villager > 45)
 	(building-type-count-total farm < 18)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -13083,8 +13084,12 @@
 	(unit-type-count-total villager > 75)
 	(building-type-count-total farm < 24)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -13092,8 +13097,12 @@
 	(unit-type-count-total villager > 120)
 	(building-type-count-total farm < 40)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -13101,8 +13110,12 @@
 	(unit-type-count-total villager > 130)
 	(building-type-count-total farm < 55)
 	(can-build farm)
+(goal df13-farm-throttle 0)
+(wood-amount > 420)
 =>
 	(build farm)
+	(set-goal df13-farm-throttle 1)
+	(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -14292,9 +14305,8 @@
 (goal boom 0)
 (players-building-count any-enemy >= 1)
 (unit-type-count-total militiaman-line < 3)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -14308,9 +14320,8 @@
 (goal boom 0)
 (players-building-count any-enemy >= 1)
 (unit-type-count-total militiaman-line < 3)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -15056,9 +15067,8 @@
 (players-unit-type-count any-enemy galley-line >= 2)
 (warboat-count <= 5)
 (unit-type-count-total fire-ship-line < 5)
-(can-train fire-ship-line)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -15073,9 +15083,8 @@
 (players-unit-type-count every-enemy demolition-ship-line <= 2)
 (warboat-count <= 15)
 (unit-type-count-total fire-ship-line < 15)
-(can-train fire-ship-line)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -15088,9 +15097,8 @@
 (unit-type-count-total galley-line >= 8))
 (warboat-count <= 15)
 (unit-type-count-total demolition-ship-line < 10)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 #load-if-defined BOG-ISLANDS-MAP
@@ -15111,9 +15119,8 @@
 (unit-type-count-total galley-line >= 5))
 (warboat-count <= 5)
 (unit-type-count-total demolition-ship-line < 1)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 #end-if
@@ -15129,11 +15136,10 @@
 (goal water-map 0)
 (goal feudalgalleys 1)
 (current-age == feudal-age)
-(can-train galley-line)
 (players-military-population any-enemy <= 15)
 (unit-type-count galley-line < 5)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15143,10 +15149,9 @@
 (players-military-population any-enemy <= 15)
 (players-unit-type-count any-enemy galley-line >= 2)
 (wood-amount >= 180)
-(can-train galley-line)
 (unit-type-count galley-line < 10)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15156,10 +15161,9 @@
 (players-military-population any-enemy <= 15)
 (players-unit-type-count any-enemy galley-line >= 5)
 (wood-amount >= 200)
-(can-train galley-line)
 (unit-type-count galley-line < 15)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 ) 
 
 (defrule
@@ -15296,10 +15300,9 @@
 (cc-players-building-type-count every-enemy dock < 1)
 (current-age >= castle-age)
 (wood-amount >= 200)
-(can-train galley-line)
 (unit-type-count galley-line < 10)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15308,10 +15311,9 @@
 (cc-players-building-type-count any-enemy dock >= 1)
 (current-age >= castle-age)
 (wood-amount >= 200)
-(can-train galley-line)
 (unit-type-count galley-line < 15)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15321,10 +15323,9 @@
 (or(players-unit-type-count any-enemy fire-ship-line >= 10)
 (or(players-unit-type-count any-enemy turtle-ship-line >= 5)
 (players-unit-type-count any-enemy cannon-galleon-line >= 5)))
-(can-train demolition-ship-line)
 (unit-type-count demolition-ship-line < 10)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -15337,10 +15338,9 @@
 (or(players-unit-type-count any-enemy fire-ship-line >= 1)
 (or(players-unit-type-count any-enemy turtle-ship-line >= 1)
 (players-unit-type-count any-enemy cannon-galleon-line >= 1)))))
-(can-train demolition-ship-line)
 (unit-type-count demolition-ship-line < 10)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -15349,10 +15349,9 @@
 (wood-amount >= 300)
 (gold-amount >= 250)
 (military-population >= 25)
-(can-train demolition-ship-line)
 (unit-type-count demolition-ship-line < 2)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -15363,10 +15362,9 @@
 (or(players-unit-type-count any-enemy longboat-line >= 5)
 (or(players-unit-type-count any-enemy caravel-line >= 5)
 (players-unit-type-count any-enemy cannon-galleon-line >= 5))))
-(can-train fire-ship-line)
 (unit-type-count fire-ship-line < 10)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -15378,25 +15376,22 @@
 (or(players-unit-type-count any-enemy caravel-line >= 1)
 (or(players-unit-type-count any-enemy galley-line >= 1)
 (players-unit-type-count any-enemy longboat-line >= 1)))
-(can-train fire-ship-line)
 (unit-type-count fire-ship-line < 10)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
 (goal createnavy 1)
 (current-age >= castle-age)
 (wood-amount >= 200)
-(not(can-train demolition-ship-line))
 (or(players-unit-type-count any-enemy caravel-line >= 5)
 (or(players-unit-type-count any-enemy galley-line >= 5)
 (or(players-unit-type-count any-enemy longboat-line >= 2)
 (players-unit-type-count any-enemy cannon-galleon-line >= 2))))
-(can-train fire-ship-line)
 (unit-type-count fire-ship-line < 15)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -15408,10 +15403,9 @@
 (or(players-unit-type-count any-enemy galley-line >= 3) ;previously 2
 (or(players-unit-type-count any-enemy longboat-line >= 2)
 (players-unit-type-count any-enemy cannon-galleon-line >= 2))))
-(can-train fire-ship-line)
 (unit-type-count fire-ship-line < 15)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 )
 
 (defrule
@@ -15419,10 +15413,9 @@
 (cc-players-building-type-count every-enemy dock < 1)
 (current-age == imperial-age)
 (wood-amount >= 200)
-(can-train cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 3)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 )
 
 (defrule
@@ -15430,10 +15423,9 @@
 (warboat-count >= 10)
 (current-age == imperial-age)
 (wood-amount >= 200)
-(can-train cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 10)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 )
 
 (defrule
@@ -15441,10 +15433,9 @@
 (warboat-count >= 30)
 (current-age == imperial-age)
 (wood-amount >= 200)
-(can-train cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 20)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 )
 
 (defrule
@@ -15457,10 +15448,9 @@
 (or(players-unit-type-count any-enemy fire-ship-line >= 2)
 (or(players-unit-type-count any-enemy turtle-ship-line >= 1)
 (players-unit-type-count any-enemy cannon-galleon-line >= 1)))))
-(can-train demolition-ship-line)
 (unit-type-count demolition-ship-line < 10)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -15552,10 +15542,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 5)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 5)
 (players-unit-type-count any-enemy longboat-line >= 5))))
-(can-train galley-line)
 (unit-type-count galley-line < 30)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15566,10 +15555,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 10)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 10)
 (players-unit-type-count any-enemy longboat-line >= 10))))
-(can-train galley-line)
 (unit-type-count galley-line < 40)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15580,10 +15568,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 20)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 20)
 (players-unit-type-count any-enemy longboat-line >= 20))))
-(can-train galley-line)
 (unit-type-count galley-line < 50)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15594,10 +15581,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 30)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 30)
 (players-unit-type-count any-enemy longboat-line >= 30))))
-(can-train galley-line)
 (unit-type-count galley-line < 70) ;previously 60
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 ;===================Water Map Forward Builders=========
@@ -15675,10 +15661,9 @@
 (goal feudalgalleys 1)
 (current-age == feudal-age)
 (players-military-population any-enemy <= 15)
-(can-train-with-escrow galley-line)
 (unit-type-count galley-line < 8)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15690,10 +15675,9 @@
 (warboat-count <= 20)
 (players-military-population any-enemy >= 12)
 (players-building-type-count any-enemy dock >= 1)
-(can-train-with-escrow galley-line)
 (unit-type-count galley-line < 10)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15705,10 +15689,9 @@
 (warboat-count <= 25)
 (players-military-population any-enemy >= 15)
 (players-building-type-count any-enemy dock >= 2)
-(can-train-with-escrow galley-line)
 (unit-type-count galley-line < 15)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15718,10 +15701,9 @@
 (goal createnavy 1)
 (current-age == imperial-age)
 (warboat-count >= 15)
-(can-train-with-escrow cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 5)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15746,10 +15728,9 @@
 (players-military-population any-enemy >= 15)
 (players-unit-type-count any-enemy galley-line >= 10)
 (players-building-type-count any-enemy dock >= 1)
-(can-train-with-escrow fire-ship-line)
 (unit-type-count fire-ship-line < 10)
 =>
-(train fire-ship-line)
+(set-goal df13-fire-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15763,10 +15744,9 @@
 (town-under-attack))
 (players-military-population any-enemy >= 15)
 (players-building-type-count any-enemy dock >= 1)
-(can-train-with-escrow demolition-ship-line)
 (unit-type-count demolition-ship-line < 10)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15832,10 +15812,9 @@
 (or(players-unit-type-count any-enemy longboat-line >= 5)
 (players-unit-type-count any-enemy turtle-ship-line >= 5)))))
 (players-building-type-count any-enemy dock >= 2)
-(can-train-with-escrow galley-line)
 (unit-type-count galley-line < 10)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15846,10 +15825,9 @@
 (current-age == imperial-age)
 (building-type-count-total dock >= 3)
 (warboat-count >= 10)
-(can-train-with-escrow cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 3)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -15864,10 +15842,9 @@
 (players-military-population any-enemy <= 15)
 (players-unit-type-count any-enemy galley-line >= 4)
 (wood-amount >= 150)
-(can-train galley-line)
 (unit-type-count galley-line < 12)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15877,10 +15854,9 @@
 (players-military-population any-enemy <= 15)
 (players-unit-type-count any-enemy galley-line >= 8)
 (wood-amount >= 180)
-(can-train galley-line)
 (unit-type-count galley-line < 18)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15888,10 +15864,9 @@
 (goal createnavy 1)
 (current-age >= castle-age)
 (wood-amount >= 200)
-(can-train galley-line)
 (unit-type-count galley-line < 30)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15902,10 +15877,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 8)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 8)
 (players-unit-type-count any-enemy longboat-line >= 15))))
-(can-train longboat-line)
 (unit-type-count longboat-line < 30)
 =>
-(train longboat-line)
+(set-goal df13-longboat-request 1)
 )
 
 (defrule
@@ -15918,10 +15892,9 @@
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 8)
 (or(players-unit-type-count any-enemy fire-ship-line >= 15)
 (players-unit-type-count any-enemy longboat-line >= 15))))
-(can-train turtle-ship-line)
 (unit-type-count turtle-ship-line < 20)
 =>
-(train turtle-ship-line)
+(set-goal df13-turtle-request 1)
 )
 
 (defrule
@@ -15933,10 +15906,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 30)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 40)
 (players-unit-type-count any-enemy longboat-line >= 40))))
-(can-train galley-line)
 (unit-type-count galley-line < 70)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15948,10 +15920,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 50)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 50)
 (players-unit-type-count any-enemy longboat-line >= 50))))
-(can-train galley-line)
 (unit-type-count galley-line < 80)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15965,10 +15936,9 @@
 (or(players-unit-type-count any-enemy demolition-ship-line >= 60)
 (or(players-unit-type-count any-enemy cannon-galleon-line >= 60)
 (players-unit-type-count any-enemy longboat-line >= 60)))))
-(can-train galley-line)
 (unit-type-count galley-line < 150)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -15977,10 +15947,9 @@
 (warboat-count >= 40)
 (current-age == imperial-age)
 (wood-amount >= 200)
-(can-train cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 25)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 )
 
 (defrule
@@ -15990,10 +15959,9 @@
 (population-cap >= 400)
 (current-age == imperial-age)
 (wood-amount >= 200)
-(can-train cannon-galleon-line)
 (unit-type-count cannon-galleon-line < 40)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 )
 
 ;================Unit Threat/Counters/Counter Goals===========================================
@@ -16279,7 +16247,7 @@
 (or(players-unit-type-count any-enemy elephant-archer-line >= 10)
 (players-unit-type-count any-enemy war-elephant-line >= 10))))))
 (gold-amount > 200)
-(unit-type-count-total monk < 15)
+(unit-type-count-total monk < 12)
 (can-train monk)
 =>
 (train monk)
@@ -16319,9 +16287,8 @@
 (current-age >= castle-age)
 (military-population <= 60)
 (unit-type-count-total my-unique-unit-line < 40)
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 #end-if
@@ -16338,9 +16305,8 @@
 (goal enemyantiinfantry 0))
 (current-age >= castle-age)
 (unit-type-count-total my-unique-unit-line < 80)
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -16353,9 +16319,8 @@
 (goal enemyanticavalry 1))
 (current-age >= castle-age)
 (unit-type-count-total my-unique-unit-line < 80)
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -16368,9 +16333,8 @@
 (goal enemyantiinfantry 1))
 (current-age >= castle-age)
 (unit-type-count-total my-unique-unit-line < 80)
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 (defrule
@@ -16379,9 +16343,8 @@
 (goal water-map 1)
 (current-age >= castle-age)
 (unit-type-count-total my-unique-unit-line < 30)
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
 )
 
 #end-if
@@ -16398,9 +16361,8 @@
 (not(civ-selected turkish))
 (current-age >= castle-age)
 (unit-type-count-total spearman-line < 20)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16414,9 +16376,8 @@
 (food-amount > 300)
 (gold-amount > 200)
 (unit-type-count-total militiaman-line < 40)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -16429,9 +16390,8 @@
 (current-age == castle-age)
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 30)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -16445,9 +16405,8 @@
 (current-age == imperial-age)
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 50)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #load-if-defined DE-AVAILABLE
@@ -16464,9 +16423,8 @@
 (or(research-completed ri-bagains)
 (up-research-status c: ri-bagains >= research-pending)) ;gives twohanded 5 armor
 (unit-type-count-total militiaman-line < 60)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #end-if
@@ -16484,9 +16442,8 @@
 (current-age == imperial-age)
 (research-completed ri-man-at-arms)
 (unit-type-count-total militiaman-line < 60)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #end-if
@@ -16502,9 +16459,8 @@
 (goal stopinfantry 1)
 (current-age >= castle-age)
 (unit-type-count-total spearman-line < 20)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16518,11 +16474,10 @@
 (not(civ-selected turkish))
 (military-population <= 30)
 (unit-type-count-total spearman-line < 20)
-(can-train-with-escrow spearman-line)
 =>
 (release-escrow food)
 (release-escrow wood)
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16538,9 +16493,8 @@
 (goal water-map 0)
 (not(civ-selected turkish))
 (unit-type-count-total spearman-line < 80)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16552,9 +16506,8 @@
 (not(civ-selected turkish))
 (current-age >= castle-age)
 (unit-type-count-total spearman-line < 10)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16564,9 +16517,8 @@
 (not(civ-selected turkish))
 (current-age >= castle-age)
 (unit-type-count-total spearman-line < 5)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -16582,9 +16534,8 @@
 (or(players-unit-type-count any-enemy scout-cavalry-line >= 10)
 (players-unit-type-count any-enemy battering-ram-line >= 2))))))))
 (unit-type-count-total eagle-warrior-line < 25)
-(can-train eagle-warrior-line)
 =>
-(train eagle-warrior-line)
+(set-goal df13-eagle-request 1)
 )
 
 (defrule
@@ -16602,9 +16553,8 @@
 (or(players-unit-type-count any-enemy scout-cavalry-line >= 10)
 (players-unit-type-count any-enemy battering-ram-line >= 2))))))))))
 (unit-type-count-total eagle-warrior-line < 50) ;previously 40
-(can-train eagle-warrior-line)
 =>
-(train eagle-warrior-line)
+(set-goal df13-eagle-request 1)
 )
 
 (defrule
@@ -16616,7 +16566,6 @@
 (not(civ-selected teutonic))
 (current-age == imperial-age)
 (unit-type-count-total scout-cavalry-line < 25)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16648,9 +16597,8 @@
 (military-population < 30)
 (current-age == imperial-age)
 (unit-type-count-total magyar-huszar-line < 40)
-(can-train magyar-huszar-line)
 =>
-(train magyar-huszar-line)
+(set-goal df13-magyar-huszar-request 1)
 )
 
 #end-if
@@ -16668,9 +16616,8 @@
 (military-population < 30)
 (current-age == imperial-age)
 (unit-type-count-total militiaman-line < 40)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 #end-if
@@ -16702,7 +16649,6 @@
 (not(civ-selected teutonic))
 (current-age >= castle-age)
 (unit-type-count-total scout-cavalry-line < 30)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16718,7 +16664,6 @@
 (civ-selected turkish)
 (military-population <= 30)
 (unit-type-count-total scout-cavalry-line < 20)
-(can-train-with-escrow scout-cavalry-line)
 =>
 (release-escrow food)
 (set-goal df13-scout-request 1)
@@ -16734,7 +16679,6 @@
 (game-time >= 2100))
 (civ-selected turkish)
 (unit-type-count-total scout-cavalry-line < 150)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16751,7 +16695,6 @@
 (goal water-map 0)
 (not(civ-selected teutonic))
 (unit-type-count-total scout-cavalry-line < 80)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16763,7 +16706,6 @@
 (not(civ-selected teutonic))
 (current-age >= castle-age)
 (unit-type-count-total scout-cavalry-line < 10)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16778,7 +16720,6 @@
 (players-unit-type-count any-enemy missionary >= 3)
 (current-age == castle-age)
 (unit-type-count-total scout-cavalry-line < 10)
-(can-train scout-cavalry-line)
 =>
 (set-goal df13-scout-request 1)
 )
@@ -16792,9 +16733,8 @@
 (players-unit-type-count every-enemy monk <= 7)
 (players-unit-type-count every-enemy missionary <= 7)
 (unit-type-count-total battle-elephant-line < 15) ;rise of the rajas, new
-(can-train battle-elephant-line)
 =>
-(train battle-elephant-line)
+(set-goal df13-elephant-request 1)
 )
 
 (defrule
@@ -16806,9 +16746,8 @@
 (players-unit-type-count every-enemy monk <= 7)
 (players-unit-type-count every-enemy missionary <= 7)
 (unit-type-count-total battle-elephant-line < 40) ;rise of the rajas, new
-(can-train battle-elephant-line)
 =>
-(train battle-elephant-line)
+(set-goal df13-elephant-request 1)
 )
 
 (defrule
@@ -16820,7 +16759,6 @@
 (not(goal malayciv 1)) ;rise of the rajas, new
 (current-age >= castle-age)
 (unit-type-count-total knight-line < 15)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -16835,7 +16773,6 @@
 (or(players-unit-type-count any-enemy monk >= 7)
 (players-unit-type-count any-enemy missionary >= 7)))
 (unit-type-count-total knight-line < 15)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -16853,7 +16790,6 @@
 (players-unit-type-count any-enemy archer-line >= 5))))
 (current-age == castle-age)
 (unit-type-count-total knight-line < 10)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -16900,9 +16836,8 @@
 (or(players-unit-type-count any-enemy mangudai-line >= 5)
 (players-unit-type-count any-enemy war-elephant-line >= 5)))))))))
 (unit-type-count-total camel-line < 10)
-(can-train camel-line)
 =>
-(train camel-line)
+(set-goal df13-camel-request 1)
 )
 
 (defrule
@@ -16923,9 +16858,8 @@
 (not(civ-selected bulgarians)) ;new DE v2.2c
 (current-age == castle-age)
 (unit-type-count-total archer-line < 30)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -16937,9 +16871,8 @@
 (civ-selected bulgarians)) ;new DE v2.2c
 (current-age == castle-age)
 (unit-type-count-total skirmisher-line < 30)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -16952,9 +16885,8 @@
 (civ-selected turkish)
 (current-age == castle-age)
 (unit-type-count-total skirmisher-line < 10)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -16967,9 +16899,8 @@
 (not(civ-selected turkish))
 (current-age == castle-age)
 (unit-type-count-total skirmisher-line < 10)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -16980,9 +16911,8 @@
 (goal stoparcher 0)
 (current-age == imperial-age)
 (unit-type-count-total archer-line < 30)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -16994,9 +16924,8 @@
 (not(civ-selected turkish))
 (current-age >= castle-age)
 (unit-type-count-total skirmisher-line < 30)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -17024,11 +16953,10 @@
 (not(civ-selected turkish))
 (military-population <= 30)
 (unit-type-count-total skirmisher-line < 20)
-(can-train-with-escrow skirmisher-line)
 =>
 (release-escrow food)
 (release-escrow wood)
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -17042,9 +16970,8 @@
 (game-time >= 2700))
 (not(civ-selected turkish))
 (unit-type-count-total skirmisher-line < 80)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -17099,9 +17026,8 @@
 (or(players-building-type-count any-enemy gate >= 1)
 (players-building-type-count any-enemy castle >= 1))))
 (unit-type-count-total battering-ram-line < 1)
-(can-train-with-escrow battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -17114,9 +17040,8 @@
 (or(goal boom 1)
 (town-under-attack))))
 (unit-type-count-total mangonel-line < 4)
-(can-train-with-escrow mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -17134,9 +17059,8 @@
 (or(players-unit-type-count any-enemy scorpion-line >= 10)
 (players-unit-type-count any-enemy longbowman-line >= 30))))))))))
 (unit-type-count-total mangonel-line < 10)
-(can-train-with-escrow mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -17155,9 +17079,8 @@
 (players-unit-type-count any-enemy longbowman-line >= 10))))))))))
 (current-age == castle-age)
 (unit-type-count-total mangonel-line < 10)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -17176,9 +17099,8 @@
 (players-unit-type-count any-enemy scorpion-line >= 7))))))))))
 (current-age == imperial-age)
 (unit-type-count-total mangonel-line < 10)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -17195,9 +17117,8 @@
 (players-unit-type-count any-enemy longbowman-line >= 20))))))))
 (current-age == imperial-age)
 (unit-type-count-total mangonel-line < 10)
-(can-train mangonel-line)
 =>
-(train mangonel-line)
+(set-goal df13-mangonel-request 1)
 )
 
 (defrule
@@ -17216,9 +17137,8 @@
 (or(unit-type-count-total mangonel-line >= 2)
 (unit-type-count-total battering-ram-line >= 1))
 (unit-type-count-total scorpion-line < 10)
-(can-train scorpion-line)
 =>
-(train scorpion-line)
+(set-goal df13-scorpion-request 1)
 )
 
 (defrule
@@ -17236,9 +17156,8 @@
 (or(unit-type-count-total trebuchet-set >= 2) 
 (unit-type-count-total battering-ram-line >= 2)) ;previously town-under-attack
 (unit-type-count-total scorpion-line < 14)
-(can-train scorpion-line)
 =>
-(train scorpion-line)
+(set-goal df13-scorpion-request 1)
 )
 
 (defrule
@@ -17247,9 +17166,8 @@
 (current-age >= castle-age)
 (military-population > 15)
 (unit-type-count-total battering-ram-line < 5)
-(can-train battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 )
 
 (defrule
@@ -17261,9 +17179,8 @@
 (or(players-building-type-count any-enemy gate >= 1)
 (players-building-type-count any-enemy castle >= 1)))
 (unit-type-count-total battering-ram-line < 5)
-(can-train-with-escrow battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -17276,9 +17193,8 @@
 (current-age >= castle-age)
 (military-population > 5)
 (unit-type-count-total battering-ram-line < 5)
-(can-train-with-escrow battering-ram-line)
 =>
-(train battering-ram-line)
+(set-goal df13-ram-request 1)
 (release-escrow wood)
 (release-escrow gold)
 )
@@ -17310,7 +17226,7 @@
 (players-unit-type-count every-enemy eagle-warrior-line < 5)
 (current-age == imperial-age)
 (gold-amount > 300)
-(unit-type-count-total monk < 25)
+(unit-type-count-total monk < 12)
 (can-train monk)
 =>
 (train monk)
@@ -17334,7 +17250,6 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total knight-line < 50)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 )
@@ -17346,9 +17261,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 #load-if-defined DE-AVAILABLE
@@ -17365,9 +17279,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -17381,9 +17294,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 30)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 #end-if
@@ -17399,9 +17311,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -17418,9 +17329,8 @@
 (or(players-unit-type-count any-enemy mangonel-line >= 6)
 (players-unit-type-count any-enemy cavalry-archer-line >= 15)))))
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -17437,9 +17347,8 @@
 (or(players-unit-type-count any-enemy mangudai-line >= 5)
 (players-unit-type-count any-enemy war-elephant-line >= 5)))))))))
 (unit-type-count-total camel-line < 15)
-(can-train camel-line)
 =>
-(train camel-line)
+(set-goal df13-camel-request 1)
 )
 
 ;=============== Forgotten Specific Changes ==============================
@@ -17460,9 +17369,8 @@
 (goal stoparcher 0)
 (current-age == imperial-age)
 (unit-type-count-total archer-line < 30)
-(can-train archer-line)
 =>
-(train archer-line)
+(set-goal df13-archer-request 1)
 )
 
 (defrule
@@ -17472,9 +17380,8 @@
 (goal createarmy 1)
 (current-age == imperial-age)
 (unit-type-count-total skirmisher-line < 80)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -17483,9 +17390,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 50)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -17511,9 +17417,8 @@
 (goal enemyantiinfantry 1))
 (current-age >= castle-age)
 (unit-type-count-total camel-line < 40)
-(can-train camel-line)
 =>
-(train camel-line)
+(set-goal df13-camel-request 1)
 )
 
 (defrule
@@ -17991,9 +17896,8 @@
 (game-time < 1800) 
 (wood-amount > 110)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -18007,9 +17911,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -18024,9 +17927,8 @@
 (goal createarmy 1)
 (current-age >= castle-age)
 (unit-type-count-total steppe-lancer-line < 40)
-(can-train steppe-lancer-line)
 =>
-(train steppe-lancer-line)
+(set-goal df13-steppe-request 1)
 )
 
 #end-if
@@ -18069,9 +17971,8 @@
 (or(town-under-attack)
 (current-age-time >= 120)))
 (unit-type-count-total militiaman-line < 30)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
+(set-goal df13-militia-request 1)
 )
 
 (defrule
@@ -18113,9 +18014,8 @@
 (players-unit-type-count any-enemy knight-line >= 10))))))))
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 30)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 #load-if-defined DE-AVAILABLE
@@ -18135,9 +18035,8 @@
 (players-unit-type-count any-enemy knight-line >= 10)))))))
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 10)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 #end-if
@@ -18158,9 +18057,8 @@
 (wood-amount > 100)
 (building-type-count siege-workshop < 1)
 (unit-type-count-total skirmisher-line < 20)
-(can-train skirmisher-line)
 =>
-(train skirmisher-line)
+(set-goal df13-skirmisher-request 1)
 )
 
 (defrule
@@ -18178,9 +18076,8 @@
 (wood-amount > 100)
 (building-type-count siege-workshop < 1)
 (unit-type-count-total genitour-line < 20)
-(can-train genitour-line)
 =>
-(train genitour-line)
+(set-goal df13-genitour-request 1)
 )
 
 (defrule
@@ -18264,9 +18161,8 @@
 (game-time < 1800) 
 (wood-amount > 110)
 (unit-type-count-total cavalry-archer-line < 40)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
 )
 
 (defrule
@@ -18284,9 +18180,8 @@
 (players-unit-type-count any-enemy knight-line >= 10))))))))
 (wood-amount > 100)
 (unit-type-count-total spearman-line < 20)
-(can-train spearman-line)
 =>
-(train spearman-line)
+(set-goal df13-spearman-request 1)
 )
 
 (defrule
@@ -18650,9 +18545,8 @@
 (current-age == feudal-age)
 (wood-amount > 250)
 (unit-type-count galley-line < 10)
-(can-train galley-line)
 =>
-(train galley-line)
+(set-goal df13-galley-request 1)
 )
 
 (defrule
@@ -20894,10 +20788,9 @@
 (or(goal uniquecastle 1)
 (goal uniqueimperial 1)))
 (not(civ-selected malay))
-(can-train my-unique-unit-line)
 =>
-(train my-unique-unit-line)
-(train my-unique-unit-line)
+(set-goal df13-unique-request 1)
+(set-goal df13-unique-request 1)
 (disable-self)
 )
 
@@ -20912,11 +20805,10 @@
 (difficulty == easiest)
 (goal uniqueinfantry 1)
 (military-population <= 3)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
-(train militiaman-line)
-(train militiaman-line)
+(set-goal df13-militia-request 1)
+(set-goal df13-militia-request 1)
+(set-goal df13-militia-request 1)
 (disable-self)
 )
 
@@ -20931,7 +20823,6 @@
 (difficulty == easiest)
 (goal uniquecavalry 1)
 (military-population <= 4)
-(can-train knight-line)
 =>
 (set-goal df13-knight-request 1)
 (set-goal df13-scout-request 1)
@@ -20951,10 +20842,9 @@
 (or(civ-selected mongol)
 (civ-selected saracen)))
 (military-population <= 4)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
+(set-goal df13-cavarcher-request 1)
 (disable-self)
 )
 
@@ -20973,10 +20863,9 @@
 (or(civ-selected cumans)
 (civ-selected tatars))) ;new v2.2d DE
 (military-population <= 4)
-(can-train cavalry-archer-line)
 =>
-(train cavalry-archer-line)
-(train cavalry-archer-line)
+(set-goal df13-cavarcher-request 1)
+(set-goal df13-cavarcher-request 1)
 (disable-self)
 )
 
@@ -20991,11 +20880,10 @@
 (difficulty == easiest)
 (civ-selected bulgarians) ;new v2.2d DE
 (military-population <= 3)
-(can-train militiaman-line)
 =>
-(train militiaman-line)
-(train militiaman-line)
-(train militiaman-line)
+(set-goal df13-militia-request 1)
+(set-goal df13-militia-request 1)
+(set-goal df13-militia-request 1)
 (disable-self)
 )
 
@@ -21015,10 +20903,9 @@
 (not(civ-selected mongol))
 (not(civ-selected saracen))
 (military-population <= 3)
-(can-train archer-line)
 =>
-(train archer-line)
-(train archer-line)
+(set-goal df13-archer-request 1)
+(set-goal df13-archer-request 1)
 (disable-self)
 )
 
@@ -25334,9 +25221,8 @@
 (unit-type-count-total galley-line >= 5)))
 (warboat-count <= 8)
 (unit-type-count-total demolition-ship-line < 1)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -25352,9 +25238,8 @@
 (unit-type-count-total galley-line >= 5)))
 (warboat-count <= 8)
 (unit-type-count-total demolition-ship-line < 1)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 (disable-self)
 )
 
@@ -25371,9 +25256,8 @@
 (or(goal aibattle 1) ;not sure if will keep this
 (current-age == castle-age))
 (unit-type-count-total demolition-ship-line < 2)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 )
 
 (defrule
@@ -25388,9 +25272,8 @@
 (unit-type-count-total galley-line >= 5)))
 (warboat-count <= 10)
 (unit-type-count-total demolition-ship-line < 1)
-(can-train demolition-ship-line)
 =>
-(train demolition-ship-line)
+(set-goal df13-demo-request 1)
 (disable-self)
 )
 
@@ -25406,9 +25289,8 @@
 (unit-type-count-total galley-line >= 4)))
 (warboat-count >= 5)
 (unit-type-count-total cannon-galleon-line < 1)
-(can-train cannon-galleon-line)
 =>
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
 (disable-self)
 )
 
@@ -25424,10 +25306,9 @@
 (unit-type-count-total galley-line >= 4)))
 (warboat-count >= 10)
 (unit-type-count-total cannon-galleon-line < 2)
-(can-train cannon-galleon-line)
 =>
-(train cannon-galleon-line)
-(train cannon-galleon-line)
+(set-goal df13-cannon-galleon-request 1)
+(set-goal df13-cannon-galleon-request 1)
 (disable-self)
 )
 
@@ -25560,8 +25441,11 @@
 (building-type-count-total farm < 9)
 (idle-farm-count < 1)
 (can-build farm)
+(goal df13-farm-throttle 0)
 =>
 (build farm)
+(set-goal df13-farm-throttle 1)
+(enable-timer df13-farm-timer 8)
 )
 
 (defrule
@@ -26495,10 +26379,9 @@
 (game-time >= 150)
 (game-time <= 210)
 (or(death-match-game)
-(or(current-age >= feudal-age) ;changed from starting-age
-(gold-amount >= 200)))
+(not(starting-age == dark-age)))
 =>
-(chat-to-all "[FORTRESS] [CMD-39] Unsupported setup: this profile expects a Dark Age start with Standard resources.")
+(chat-to-all "[FORTRESS] [CMD-39] Unsupported setup: this profile expects a Dark Age start.")
 (chat-to-all "[FORTRESS] Supported inherited game modes are Random Map and Regicide.")
 (chat-to-all "[FORTRESS] For reliable testing, use the newest Doktor Fortress AI build.")
 (disable-self)
@@ -28446,34 +28329,30 @@
     (unit-type-count-total militiaman-line < 6)
     (food-amount > 140)
     (gold-amount > 60)
-    (can-train militiaman-line)
 =>
-    (train militiaman-line)
+    (set-goal df13-militia-request 1)
 )
 (defrule
     (goal df13-military-rebuild 1)
     (unit-type-count-total spearman-line < 6)
     (food-amount > 120)
     (wood-amount > 90)
-    (can-train spearman-line)
 =>
-    (train spearman-line)
+    (set-goal df13-spearman-request 1)
 )
 (defrule
     (goal df13-military-rebuild 1)
     (unit-type-count-total archer-line < 6)
     (wood-amount > 130)
     (gold-amount > 70)
-    (can-train archer-line)
 =>
-    (train archer-line)
+    (set-goal df13-archer-request 1)
 )
 (defrule
     (goal df13-military-rebuild 1)
     (unit-type-count-total knight-line < 4)
     (food-amount > 180)
     (gold-amount > 120)
-    (can-train knight-line)
 =>
     (set-goal df13-knight-request 1)
 )
@@ -28486,6 +28365,17 @@
 ; Feudal trigger waited for BOTH Market + Blacksmith + >210 wood.  In the
 ; replay that left only ~51-56 seconds between the Blacksmith and Castle Age.
 ;
+; FIX10: Fortress owns its wall planners on every map size.
+; ResonanceBot only enabled wall placement 2 on maps larger than Medium, which
+; silently disabled our Tiny/Small/Medium Fortress wall rules.
+(defrule
+    (true)
+=>
+    (enable-wall-placement 1)
+    (enable-wall-placement 2)
+    (disable-self)
+)
+
 ; New invariant: every Fortress instance attempts at least one palisade wall
 ; command during Feudal Age.  The first footprint is deliberately compact so
 ; islands/coasts have a much better chance of producing a valid partial wall.
@@ -28666,7 +28556,7 @@
 (defrule
     (current-age == feudal-age)
     (goal df13-wall-bootstrap 1)
-    (wall-completed-percentage 1 < 35)
+    (wall-completed-percentage 1 < 75)
     (wood-amount > 145)
     (up-pending-objects c: palisade-wall < 1)
     (not (town-under-attack))
@@ -28674,6 +28564,22 @@
 =>
     (build-wall 1 palisade-wall)
 )
+
+; FIX10 pressure fallback: after three Feudal minutes the inner line keeps
+; growing even while the town is under pressure.  This prevents a permanently
+; abandoned 1-2 segment "bootstrap" wall.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 180)
+    (goal df13-wall-bootstrap 1)
+    (wall-completed-percentage 1 < 60)
+    (wood-amount > 110)
+    (up-pending-objects c: palisade-wall < 1)
+    (can-build-wall 1 palisade-wall)
+=>
+    (build-wall 1 palisade-wall)
+)
+
 
 ; Castle fallback if terrain/resource timing prevented the Feudal command.
 ; Stone is preferred immediately.  Palisade is allowed only as a last emergency
@@ -28845,24 +28751,8 @@
 ; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 10
 ; versus the compact 13-point inner palisade envelope.  Wall rules occur earlier in the
 ; pass, so the replay-approved wall geometry itself is not enlarged here.
-(defrule
-    (difficulty == hardest)
-    (current-age == dark-age)
-    (building-type-count-total df13-outpost < 2)
-=>
-    (set-strategic-number sn-minimum-town-size 5)
-    (set-strategic-number sn-maximum-town-size 9)
-    (set-strategic-number sn-safe-town-size 7)
-)
-(defrule
-    (difficulty == hardest)
-    (current-age == feudal-age)
-    (building-type-count-total df13-outpost < 4)
-=>
-    (set-strategic-number sn-minimum-town-size 6)
-    (set-strategic-number sn-maximum-town-size 10)
-    (set-strategic-number sn-safe-town-size 8)
-)
+
+
 (defrule
     (difficulty == hardest)
     (current-age == dark-age)
@@ -29125,7 +29015,6 @@
     (goal makecavalry 1)
     (unit-type-count-total scout-cavalry-line < 3)
     (food-amount > 120)
-    (can-train scout-cavalry-line)
 =>
     (set-goal df13-scout-request 1)
 )
@@ -29135,7 +29024,6 @@
     (unit-type-count-total knight-line < 8)
     (food-amount > 220)
     (gold-amount > 160)
-    (can-train knight-line)
 =>
     (set-goal df13-knight-request 1)
 )
@@ -29150,7 +29038,6 @@
 (defrule
     (goal makeinfantry 1)
     (research-completed ri-man-at-arms)
-    (not (research-completed ri-long-swordsman))
     (unit-type-count-total man-at-arms < 4)
     (can-train man-at-arms)
 =>
@@ -29159,7 +29046,6 @@
 (defrule
     (goal makeinfantry 1)
     (research-completed ri-long-swordsman)
-    (not (research-completed ri-two-handed-swordsman))
     (unit-type-count-total long-swordsman < 4)
     (can-train long-swordsman)
 =>
@@ -29168,7 +29054,6 @@
 (defrule
     (goal makeinfantry 1)
     (research-completed ri-two-handed-swordsman)
-    (not (research-completed ri-champion))
     (unit-type-count-total two-handed-swordsman < 6)
     (can-train two-handed-swordsman)
 =>
@@ -29185,7 +29070,6 @@
 (defrule
     (or (goal makeinfantry 1) (goal df13-threat-cavalry 1))
     (research-completed ri-pikeman)
-    (not (research-completed ri-halberdier))
     (unit-type-count-total pikeman < 5)
     (can-train pikeman)
 =>
@@ -29202,7 +29086,6 @@
 (defrule
     (goal makearchers 1)
     (research-completed ri-crossbow)
-    (not (research-completed ri-arbalest))
     (unit-type-count-total crossbowman < 5)
     (can-train crossbowman)
 =>
@@ -29243,7 +29126,6 @@
 (defrule
     (goal makesiege 1)
     (research-completed ri-capped-ram)
-    (not (research-completed ri-siege-ram))
     (unit-type-count-total capped-ram < 3)
     (can-train capped-ram)
 =>
@@ -29260,7 +29142,6 @@
 (defrule
     (goal makesiege 1)
     (research-completed ri-onager)
-    (not (research-completed ri-siege-onager))
     (unit-type-count-total onager < 3)
     (can-train onager)
 =>
@@ -29288,7 +29169,6 @@
 (defrule
     (goal createnavy 1)
     (research-completed ri-war-galley)
-    (not (research-completed ri-galleon))
     (unit-type-count-total war-galley < 5)
     (can-train war-galley)
 =>
@@ -29327,119 +29207,37 @@
     (train elite-cannon-galleon)
 )
 
-; Knight family: Paladin > Cavalier > Knight.  Existing older models remain.
-(defrule
-    (goal df13-knight-request 1)
-    (research-completed ri-paladin)
-    (can-train paladin)
-=>
-    (train paladin)
-    (set-goal df13-knight-request 0)
-)
-(defrule
-    (goal df13-knight-request 1)
-    (not (research-completed ri-paladin))
-    (research-completed ri-cavalier)
-    (can-train cavalier)
-=>
-    (train cavalier)
-    (set-goal df13-knight-request 0)
-)
-(defrule
-    (goal df13-knight-request 1)
-    (not (research-completed ri-cavalier))
-    (can-train knight)
-=>
-    (train knight)
-    (set-goal df13-knight-request 0)
-)
+; Knight family: custom DAT keeps all three tiers trainable.
+; Rebuild/low reserves buy the cheap legacy Knight, balanced reserves use
+; Cavalier, and a rich assault economy buys Paladin.  can-train is the final
+; authority, so custom DAT prices and civ availability remain respected.
 
-; Scout family: Hussar > Light Cavalry > Scout Cavalry.  Scout Cavalry is a
-; separate paid reconnaissance tier, not a stockpile waiting for free conversion.
-(defrule
-    (goal df13-scout-request 1)
-    (research-completed ri-hussar)
-    (can-train hussar)
-=>
-    (train hussar)
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-hussar))
-    (research-completed ri-light-cavalry)
-    (can-train light-cavalry)
-=>
-    (train light-cavalry)
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty == hardest)
-    (unit-type-count-total scout-cavalry < 6)
-    (can-train scout-cavalry)
-=>
-    (train scout-cavalry)
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty == hard)
-    (unit-type-count-total scout-cavalry < 5)
-    (can-train scout-cavalry)
-=>
-    (train scout-cavalry)
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty == moderate)
-    (unit-type-count-total scout-cavalry < 3)
-    (can-train scout-cavalry)
-=>
-    (train scout-cavalry)
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty > hard)
-    (unit-type-count-total scout-cavalry < 2)
-    (can-train scout-cavalry)
-=>
-    (train scout-cavalry)
-    (set-goal df13-scout-request 0)
-)
+
+
+
+
+
+
+; Scout family follows the same paid-tier doctrine.  The Dark/Feudal Scout cap
+; is still respected by the existing requester rules; late rebuilds may buy a
+; cheap Scout instead of waiting for Light Cavalry/Hussar resources.
+
+
+
+
+
 
 ; Clear stale Scout requests at caps.  Legacy tactical rules may request again
 ; next cycle, but cannot bypass the difficulty cap.
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty == hardest)
-    (unit-type-count-total scout-cavalry >= 6)
-=>
-    (set-goal df13-scout-request 0)
-)
-(defrule
-    (goal df13-scout-request 1)
-    (not (research-completed ri-light-cavalry))
-    (difficulty == moderate)
-    (unit-type-count-total scout-cavalry >= 3)
-=>
-    (set-goal df13-scout-request 0)
-)
+
+
 (defrule
     (current-age >= feudal-age)
     (goal df13-threat-cavalry 1)
     (unit-type-count-total spearman-line < 8)
     (food-amount > 100)
-    (can-train spearman-line)
 =>
-    (train spearman-line)
+    (set-goal df13-spearman-request 1)
 )
 (defrule
     (current-age >= feudal-age)
@@ -29447,9 +29245,8 @@
     (unit-type-count-total skirmisher-line < 10)
     (food-amount > 100)
     (wood-amount > 100)
-    (can-train skirmisher-line)
 =>
-    (train skirmisher-line)
+    (set-goal df13-skirmisher-request 1)
 )
 (defrule
     (current-age >= feudal-age)
@@ -29457,9 +29254,8 @@
     (unit-type-count-total archer-line < 10)
     (wood-amount > 120)
     (gold-amount > 80)
-    (can-train archer-line)
 =>
-    (train archer-line)
+    (set-goal df13-archer-request 1)
 )
 
 ; ---------------------------------------------------------------------------
@@ -29506,9 +29302,8 @@
     (unit-type-count-total battering-ram-line < 3)
     (wood-amount > 220)
     (gold-amount > 120)
-    (can-train battering-ram-line)
 =>
-    (train battering-ram-line)
+    (set-goal df13-ram-request 1)
 )
 ; Mangonels against ranged masses.
 (defrule
@@ -29517,9 +29312,8 @@
     (unit-type-count-total mangonel-line < 3)
     (wood-amount > 220)
     (gold-amount > 150)
-    (can-train mangonel-line)
 =>
-    (train mangonel-line)
+    (set-goal df13-mangonel-request 1)
 )
 ; Scorpions against massed infantry.
 (defrule
@@ -29528,9 +29322,8 @@
     (unit-type-count-total scorpion-line < 4)
     (wood-amount > 220)
     (gold-amount > 120)
-    (can-train scorpion-line)
 =>
-    (train scorpion-line)
+    (set-goal df13-scorpion-request 1)
 )
 
 ; Siege package readiness.
@@ -29677,3 +29470,2058 @@
 ; ---------------------------------------------------------------------------
 ; End V13 Fortress doctrine.
 ; ---------------------------------------------------------------------------
+
+; ============================================================================
+; FIX10 ECONOMY / RESEARCH / EXACT-TIER DISPATCHERS
+; ============================================================================
+
+; Farm replacement cooldown.  The timer may expire while a farm foundation is
+; still pending; in that case the throttle remains locked until the pending
+; foundation clears.
+
+
+(defrule
+    (goal df13-farm-throttle 1)
+    (timer-triggered df13-farm-timer)
+    (up-pending-objects c: farm < 1)
+=>
+    (set-goal df13-farm-throttle 0)
+    (disable-timer df13-farm-timer)
+)
+
+
+; Military unlock sweep.  In the custom DAT these researches add options rather
+; than deleting the cheaper model, so there is no longer a strategic reason to
+; postpone an available tier unlock indefinitely.
+
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-man-at-arms)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-man-at-arms)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-long-swordsman)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-long-swordsman)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-two-handed-swordsman)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-two-handed-swordsman)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-champion)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-champion)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-pikeman)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-pikeman)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-halberdier)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-halberdier)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-eagle-warrior)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-eagle-warrior)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-eagle-warrior)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-eagle-warrior)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-crossbow)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-crossbow)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-arbalest)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-arbalest)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-skirmisher)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-skirmisher)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-imperial-skirmisher)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-imperial-skirmisher)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-heavy-cavalry-archer)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-heavy-cavalry-archer)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-light-cavalry)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-light-cavalry)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-hussar)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-hussar)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-cavalier)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-cavalier)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-paladin)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-paladin)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-heavy-camel)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-heavy-camel)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-imperial-camel)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-imperial-camel)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-capped-ram)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-capped-ram)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-siege-ram)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-siege-ram)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-onager)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-onager)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-siege-onager)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-siege-onager)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-heavy-scorpion)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-heavy-scorpion)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-war-galley)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-war-galley)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-galleon)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-galleon)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-fast-fire-ship)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-fast-fire-ship)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-heavy-demolition-ship)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-heavy-demolition-ship)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-cannon-galleon)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-cannon-galleon)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-deck-guns)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-deck-guns)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow my-unique-unit-upgrade)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research my-unique-unit-upgrade)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-battle-elephant)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-battle-elephant)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-steppe-lancer)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-steppe-lancer)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-genitour)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-genitour)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-caravel)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-caravel)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-longboat)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-longboat)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-turtle-ship)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-turtle-ship)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-elite-magyar-huszar)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-elite-magyar-huszar)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-illumination)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-illumination)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-theocracy)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-theocracy)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-block-printing)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-block-printing)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-fervor)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-fervor)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-redemption)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-redemption)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-sanctity)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-sanctity)
+)
+
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal escrowtoadvance 0)
+    (goal buildwonder 0)
+    (can-research-with-escrow ri-atonement)
+=>
+    (release-escrow food)
+    (release-escrow wood)
+    (release-escrow gold)
+    (research ri-atonement)
+)
+
+
+; df13-knight-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-knight-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train knight)
+=>
+    (train knight)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train paladin)
+=>
+    (train paladin)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cavalier)
+=>
+    (train cavalier)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train knight)
+=>
+    (train knight)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train cavalier)
+=>
+    (train cavalier)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train paladin)
+=>
+    (train paladin)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (and(not(can-train knight))
+        (and(not(can-train cavalier))
+        (not(can-train paladin))))
+=>
+    (set-goal df13-knight-request 0)
+)
+
+
+; df13-scout-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-scout-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train hussar)
+=>
+    (train hussar)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train light-cavalry)
+=>
+    (train light-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train light-cavalry)
+=>
+    (train light-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train hussar)
+=>
+    (train hussar)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (and(not(can-train scout-cavalry))
+        (and(not(can-train light-cavalry))
+        (not(can-train hussar))))
+=>
+    (set-goal df13-scout-request 0)
+)
+
+
+; df13-militia-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-militia-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train militiaman)
+=>
+    (train militiaman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train champion)
+=>
+    (train champion)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train two-handed-swordsman)
+=>
+    (train two-handed-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train long-swordsman)
+=>
+    (train long-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train man-at-arms)
+=>
+    (train man-at-arms)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train militiaman)
+=>
+    (train militiaman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train man-at-arms)
+=>
+    (train man-at-arms)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train long-swordsman)
+=>
+    (train long-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train two-handed-swordsman)
+=>
+    (train two-handed-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train champion)
+=>
+    (train champion)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (and(not(can-train militiaman))
+        (and(not(can-train man-at-arms))
+        (and(not(can-train long-swordsman))
+        (and(not(can-train two-handed-swordsman))
+        (not(can-train champion))))))
+=>
+    (set-goal df13-militia-request 0)
+)
+
+
+; df13-spearman-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-spearman-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train spearman)
+=>
+    (train spearman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train halberdier)
+=>
+    (train halberdier)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train pikeman)
+=>
+    (train pikeman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train spearman)
+=>
+    (train spearman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train pikeman)
+=>
+    (train pikeman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train halberdier)
+=>
+    (train halberdier)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (and(not(can-train spearman))
+        (and(not(can-train pikeman))
+        (not(can-train halberdier))))
+=>
+    (set-goal df13-spearman-request 0)
+)
+
+
+; df13-archer-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-archer-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train archer)
+=>
+    (train archer)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train arbalest)
+=>
+    (train arbalest)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train crossbowman)
+=>
+    (train crossbowman)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train archer)
+=>
+    (train archer)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train crossbowman)
+=>
+    (train crossbowman)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train arbalest)
+=>
+    (train arbalest)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (and(not(can-train archer))
+        (and(not(can-train crossbowman))
+        (not(can-train arbalest))))
+=>
+    (set-goal df13-archer-request 0)
+)
+
+
+; df13-skirmisher-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train skirmisher)
+=>
+    (train skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train imperial-skirmisher)
+=>
+    (train imperial-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-skirmisher)
+=>
+    (train elite-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train skirmisher)
+=>
+    (train skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-skirmisher)
+=>
+    (train elite-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train imperial-skirmisher)
+=>
+    (train imperial-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (and(not(can-train skirmisher))
+        (and(not(can-train elite-skirmisher))
+        (not(can-train imperial-skirmisher))))
+=>
+    (set-goal df13-skirmisher-request 0)
+)
+
+
+; df13-cavarcher-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train cavalry-archer)
+=>
+    (train cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train heavy-cavalry-archer)
+=>
+    (train heavy-cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cavalry-archer)
+=>
+    (train cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train heavy-cavalry-archer)
+=>
+    (train heavy-cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (and(not(can-train cavalry-archer))
+        (not(can-train heavy-cavalry-archer)))
+=>
+    (set-goal df13-cavarcher-request 0)
+)
+
+
+; df13-camel-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-camel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train camel)
+=>
+    (train camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train imperial-camel)
+=>
+    (train imperial-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train heavy-camel)
+=>
+    (train heavy-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train camel)
+=>
+    (train camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train heavy-camel)
+=>
+    (train heavy-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train imperial-camel)
+=>
+    (train imperial-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (and(not(can-train camel))
+        (and(not(can-train heavy-camel))
+        (not(can-train imperial-camel))))
+=>
+    (set-goal df13-camel-request 0)
+)
+
+
+; df13-eagle-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-eagle-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train eagle-scout)
+=>
+    (train eagle-scout)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train heavy-eagle-warrior)
+=>
+    (train heavy-eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train eagle-warrior)
+=>
+    (train eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train eagle-scout)
+=>
+    (train eagle-scout)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train eagle-warrior)
+=>
+    (train eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train heavy-eagle-warrior)
+=>
+    (train heavy-eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (and(not(can-train eagle-scout))
+        (and(not(can-train eagle-warrior))
+        (not(can-train heavy-eagle-warrior))))
+=>
+    (set-goal df13-eagle-request 0)
+)
+
+
+; df13-ram-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-ram-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train battering-ram)
+=>
+    (train battering-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train siege-ram)
+=>
+    (train siege-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train capped-ram)
+=>
+    (train capped-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train battering-ram)
+=>
+    (train battering-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train capped-ram)
+=>
+    (train capped-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train siege-ram)
+=>
+    (train siege-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (and(not(can-train battering-ram))
+        (and(not(can-train capped-ram))
+        (not(can-train siege-ram))))
+=>
+    (set-goal df13-ram-request 0)
+)
+
+
+; df13-mangonel-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train mangonel)
+=>
+    (train mangonel)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train siege-onager)
+=>
+    (train siege-onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train onager)
+=>
+    (train onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train mangonel)
+=>
+    (train mangonel)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train onager)
+=>
+    (train onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train siege-onager)
+=>
+    (train siege-onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (and(not(can-train mangonel))
+        (and(not(can-train onager))
+        (not(can-train siege-onager))))
+=>
+    (set-goal df13-mangonel-request 0)
+)
+
+
+; df13-scorpion-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train scorpion)
+=>
+    (train scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train heavy-scorpion)
+=>
+    (train heavy-scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train scorpion)
+=>
+    (train scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train heavy-scorpion)
+=>
+    (train heavy-scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (and(not(can-train scorpion))
+        (not(can-train heavy-scorpion)))
+=>
+    (set-goal df13-scorpion-request 0)
+)
+
+
+; df13-galley-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-galley-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train galley)
+=>
+    (train galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train galleon)
+=>
+    (train galleon)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train war-galley)
+=>
+    (train war-galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train galley)
+=>
+    (train galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train war-galley)
+=>
+    (train war-galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train galleon)
+=>
+    (train galleon)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (and(not(can-train galley))
+        (and(not(can-train war-galley))
+        (not(can-train galleon))))
+=>
+    (set-goal df13-galley-request 0)
+)
+
+
+; df13-fire-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-fire-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train fire-galley)
+=>
+    (train fire-galley)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train fast-fire-ship)
+=>
+    (train fast-fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train fire-ship)
+=>
+    (train fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train fire-galley)
+=>
+    (train fire-galley)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train fire-ship)
+=>
+    (train fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train fast-fire-ship)
+=>
+    (train fast-fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (and(not(can-train fire-galley))
+        (and(not(can-train fire-ship))
+        (not(can-train fast-fire-ship))))
+=>
+    (set-goal df13-fire-request 0)
+)
+
+
+; df13-demo-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-demo-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train demo-raft)
+=>
+    (train demo-raft)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train heavy-demolition-ship)
+=>
+    (train heavy-demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train demolition-ship)
+=>
+    (train demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train demo-raft)
+=>
+    (train demo-raft)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train demolition-ship)
+=>
+    (train demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train heavy-demolition-ship)
+=>
+    (train heavy-demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (and(not(can-train demo-raft))
+        (and(not(can-train demolition-ship))
+        (not(can-train heavy-demolition-ship))))
+=>
+    (set-goal df13-demo-request 0)
+)
+
+
+; df13-cannon-galleon-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train cannon-galleon)
+=>
+    (train cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-cannon-galleon)
+=>
+    (train elite-cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cannon-galleon)
+=>
+    (train cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-cannon-galleon)
+=>
+    (train elite-cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (and(not(can-train cannon-galleon))
+        (not(can-train elite-cannon-galleon)))
+=>
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+
+; df13-steppe-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-steppe-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train steppe-lancer)
+=>
+    (train steppe-lancer)
+    (set-goal df13-steppe-request 0)
+)
+
+(defrule
+    (goal df13-steppe-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-steppe-lancer)
+=>
+    (train elite-steppe-lancer)
+    (set-goal df13-steppe-request 0)
+)
+
+(defrule
+    (goal df13-steppe-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train steppe-lancer)
+=>
+    (train steppe-lancer)
+    (set-goal df13-steppe-request 0)
+)
+
+(defrule
+    (goal df13-steppe-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-steppe-lancer)
+=>
+    (train elite-steppe-lancer)
+    (set-goal df13-steppe-request 0)
+)
+
+(defrule
+    (goal df13-steppe-request 1)
+    (and(not(can-train steppe-lancer))
+        (not(can-train elite-steppe-lancer)))
+=>
+    (set-goal df13-steppe-request 0)
+)
+
+
+; df13-elephant-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-elephant-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train battle-elephant)
+=>
+    (train battle-elephant)
+    (set-goal df13-elephant-request 0)
+)
+
+(defrule
+    (goal df13-elephant-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-battle-elephant)
+=>
+    (train elite-battle-elephant)
+    (set-goal df13-elephant-request 0)
+)
+
+(defrule
+    (goal df13-elephant-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train battle-elephant)
+=>
+    (train battle-elephant)
+    (set-goal df13-elephant-request 0)
+)
+
+(defrule
+    (goal df13-elephant-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-battle-elephant)
+=>
+    (train elite-battle-elephant)
+    (set-goal df13-elephant-request 0)
+)
+
+(defrule
+    (goal df13-elephant-request 1)
+    (and(not(can-train battle-elephant))
+        (not(can-train elite-battle-elephant)))
+=>
+    (set-goal df13-elephant-request 0)
+)
+
+
+; df13-genitour-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-genitour-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train genitour)
+=>
+    (train genitour)
+    (set-goal df13-genitour-request 0)
+)
+
+(defrule
+    (goal df13-genitour-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-genitour)
+=>
+    (train elite-genitour)
+    (set-goal df13-genitour-request 0)
+)
+
+(defrule
+    (goal df13-genitour-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train genitour)
+=>
+    (train genitour)
+    (set-goal df13-genitour-request 0)
+)
+
+(defrule
+    (goal df13-genitour-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-genitour)
+=>
+    (train elite-genitour)
+    (set-goal df13-genitour-request 0)
+)
+
+(defrule
+    (goal df13-genitour-request 1)
+    (and(not(can-train genitour))
+        (not(can-train elite-genitour)))
+=>
+    (set-goal df13-genitour-request 0)
+)
+
+
+; df13-longboat-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-longboat-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train longboat)
+=>
+    (train longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-longboat)
+=>
+    (train elite-longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train longboat)
+=>
+    (train longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-longboat)
+=>
+    (train elite-longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (and(not(can-train longboat))
+        (not(can-train elite-longboat)))
+=>
+    (set-goal df13-longboat-request 0)
+)
+
+
+; df13-turtle-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-turtle-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train turtle-ship)
+=>
+    (train turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+
+(defrule
+    (goal df13-turtle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-turtle-ship)
+=>
+    (train elite-turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+
+(defrule
+    (goal df13-turtle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train turtle-ship)
+=>
+    (train turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+
+(defrule
+    (goal df13-turtle-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-turtle-ship)
+=>
+    (train elite-turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+
+(defrule
+    (goal df13-turtle-request 1)
+    (and(not(can-train turtle-ship))
+        (not(can-train elite-turtle-ship)))
+=>
+    (set-goal df13-turtle-request 0)
+)
+
+
+; df13-magyar-huszar-request: recovery = cheapest; normal = best currently affordable tier.
+
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train magyar-huszar)
+=>
+    (train magyar-huszar)
+    (set-goal df13-magyar-huszar-request 0)
+)
+
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train elite-magyar-huszar)
+=>
+    (train elite-magyar-huszar)
+    (set-goal df13-magyar-huszar-request 0)
+)
+
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train magyar-huszar)
+=>
+    (train magyar-huszar)
+    (set-goal df13-magyar-huszar-request 0)
+)
+
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train elite-magyar-huszar)
+=>
+    (train elite-magyar-huszar)
+    (set-goal df13-magyar-huszar-request 0)
+)
+
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (and(not(can-train magyar-huszar))
+        (not(can-train elite-magyar-huszar)))
+=>
+    (set-goal df13-magyar-huszar-request 0)
+)
+
+
+; Preserve the early Scout-only population caps from FIX08/FIX09.
+
+
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == hardest)
+    (unit-type-count-total scout-cavalry >= 6)
+=>
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == moderate)
+    (unit-type-count-total scout-cavalry >= 3)
+=>
+    (set-goal df13-scout-request 0)
+)
+
+
+; Castle unique unit.  HD exposes a generic exact base token but no generic
+; exact Elite-UU token, so my-unique-unit-line is retained only for the rich
+; "best available" choice; the base unit remains an explicit cheap fallback.
+
+
+(defrule
+    (goal df13-unique-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train my-unique-unit)
+=>
+    (train my-unique-unit)
+    (set-goal df13-unique-request 0)
+)
+
+(defrule
+    (goal df13-unique-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train my-unique-unit-line)
+=>
+    (train my-unique-unit-line)
+    (set-goal df13-unique-request 0)
+)
+
+(defrule
+    (goal df13-unique-request 1)
+    (can-train my-unique-unit)
+=>
+    (train my-unique-unit)
+    (set-goal df13-unique-request 0)
+)
+
+(defrule
+    (goal df13-unique-request 1)
+    (not(can-train my-unique-unit))
+    (not(can-train my-unique-unit-line))
+=>
+    (set-goal df13-unique-request 0)
+)
+
+
+; ============================================================================
+; End V13 FIX10 additions.
+; ============================================================================

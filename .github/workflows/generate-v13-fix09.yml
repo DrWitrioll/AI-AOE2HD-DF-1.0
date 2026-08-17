@@ -1,0 +1,101 @@
+name: Generate V13 FIX09
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/generate-v13-fix09.yml'
+      - '.fix09.patch.z.b64'
+permissions:
+  contents: write
+jobs:
+  build-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and validate V13 FIX09
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Dr_Fortress_AI_V13_FIX08.per Dr_Fortress_AI_V13_FIX09.per
+          python - <<'PY'
+          from pathlib import Path
+          import base64,zlib
+          data=base64.b64decode(Path('.fix09.patch.z.b64').read_text().strip())
+          Path('/tmp/fix09.patch').write_bytes(zlib.decompress(data))
+          PY
+          patch -p1 < /tmp/fix09.patch
+          : > Dr_Fortress_AI_V13_FIX09.ai
+          python - <<'PY'
+          from pathlib import Path
+          import re,hashlib
+          p=Path('Dr_Fortress_AI_V13_FIX09.per')
+          s=p.read_text(encoding='utf-8')
+          assert 'DR FORTRESS AI V13 FIX09' in s
+          clean=[]
+          for line in s.splitlines():
+              buf=[]; ins=False
+              for ch in line:
+                  if ch=='"': ins=not ins; buf.append(' '); continue
+                  if ch==';' and not ins: break
+                  buf.append(' ' if ins else ch)
+              clean.append(''.join(buf))
+          c='\n'.join(clean); bal=0
+          for ch in c:
+              if ch=='(': bal+=1
+              elif ch==')': bal-=1
+              assert bal >= 0
+          assert bal == 0
+          assert not re.findall(r'\(goal\s+[^\s()]+\s*(?:>=|<=|>|<)',c)
+          lt=re.findall(r'\(train\s+([a-z0-9-]+-line)\)',c)
+          assert set(lt) <= {'my-unique-unit-line'}
+          assert lt.count('my-unique-unit-line') == 2
+          for x in ['df13-militia-request','df13-spearman-request','df13-archer-request','df13-ram-request','df13-galley-request','df13-unique-request']:
+              assert x in s
+          assert '(defconst battle-elephant 1132)' in s
+          assert '(defconst elite-battle-elephant 1134)' in s
+          assert '(defconst heavy-eagle-warrior 753)' in s
+          print('FIX09 validation OK',p.stat().st_size,hashlib.sha256(p.read_bytes()).hexdigest())
+          PY
+          cp Dr_Fortress_AI_V13_FIX09.per /tmp/Dr_Fortress_AI_V13_FIX09.per
+          cp Dr_Fortress_AI_V13_FIX09.ai /tmp/Dr_Fortress_AI_V13_FIX09.ai
+      - name: Commit FIX09 to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f Dr_Fortress_AI_V13_FIX07.per Dr_Fortress_AI_V13_FIX07.ai
+          git add Dr_Fortress_AI_V13_FIX09.per Dr_Fortress_AI_V13_FIX09.ai
+          git add -u Dr_Fortress_AI_V13_FIX07.per Dr_Fortress_AI_V13_FIX07.ai || true
+          git commit -m 'Add V13 FIX09 multi-tier DAT production doctrine'
+          git push origin main
+      - name: Archive FIX09
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          for branch in V13 FIX support; do
+            git checkout "$branch"
+            cp /tmp/Dr_Fortress_AI_V13_FIX09.per .
+            cp /tmp/Dr_Fortress_AI_V13_FIX09.ai .
+            git add Dr_Fortress_AI_V13_FIX09.per Dr_Fortress_AI_V13_FIX09.ai
+            if ! git diff --cached --quiet; then
+              git commit -m 'Archive V13 FIX09'
+              git push origin "$branch"
+            fi
+          done
+      - name: Cleanup one-shot generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout main
+          git pull --ff-only origin main
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f .github/workflows/generate-v13-fix09.yml .fix09.patch.z.b64
+          git add -u .github/workflows/generate-v13-fix09.yml .fix09.patch.z.b64
+          git commit -m 'Remove one-shot FIX09 generator'
+          git push origin main

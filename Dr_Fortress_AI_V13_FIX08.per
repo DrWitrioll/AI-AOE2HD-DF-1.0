@@ -1,5 +1,15 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX06
+; DR FORTRESS AI V13 FIX08
+; FIX08 replay/command repair:
+; - custom taunt/command interface is enabled by default (command 125 can still disable it explicitly).
+; - strategy command layer is open at startup instead of silently requiring a hidden unlock first.
+; - military-collapse recovery rebuilds a mixed defensive army after catastrophic losses.
+; - inherited land retreat/advantage checks use target-player instead of an unrelated any-enemy.
+; - Dark/early-Feudal reconnaissance ignores incidental enemies while scouting and captured livestock returns to the TC.
+; - Feudal palisade remains a compact inner security layer; Castle/Imperial stone-wall distances are unchanged.
+; FIX07 parser repair:
+; - HD legacy parser compatibility: invalid relational goal tests were replaced with exact-stage OR tests.
+; - fixes ERR2011 at former line 28572 and the two equivalent latent errors later in the wall/gate block.
 ; FIX06 multiplayer replay repair (Mediterranean / 150 pop / Very Hard):
 ; - Fortress walls are permanent strategic infrastructure; inherited wall deletion is disabled.
 ; - Castle-age developed walls never downgrade from stone to palisade.
@@ -63,7 +73,7 @@
 
 (defconst military-superiority 190)
 
-; FIX06 custom-data tier requests and additive wall expansion state.
+; FIX07/FIX06 custom-data tier requests and additive wall expansion state.
 (defconst df13-scout-request 180)
 (defconst df13-knight-request 181)
 (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
@@ -21497,8 +21507,8 @@
 (game-time > 3000)
 (population-cap >= 200) 
 (military-population < 70)
-(or(players-building-type-count any-enemy castle >= 2)
-(players-military-population any-enemy >= 40))
+(or(players-building-type-count target-player castle >= 2)
+(players-military-population target-player >= 40))
 (or(difficulty <= hardest)
 (difficulty == hard))
 =>
@@ -21515,8 +21525,8 @@
 (game-time > 2400)
 (population-cap >= 150) 
 (military-population < 50)
-(or(players-building-type-count any-enemy castle >= 1)
-(players-military-population any-enemy >= 30))
+(or(players-building-type-count target-player castle >= 1)
+(players-military-population target-player >= 30))
 (or(game-time > 2400)
 (or(difficulty <= hardest)
 (or(difficulty == hard)
@@ -21537,7 +21547,7 @@
 (game-time > 720)
 (game-time < 1080)
 (military-population >= 5)
-(players-military-population any-enemy <= 3)
+(players-military-population target-player <= 3)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -21556,7 +21566,7 @@
 (game-time > 720)
 (game-time < 900)
 (military-population >= 5)
-(players-military-population any-enemy > 3)
+(players-military-population target-player > 3)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21575,7 +21585,7 @@
 (game-time > 900)
 (game-time < 1200)
 (military-population >= 15)
-(players-military-population any-enemy <= 10)
+(players-military-population target-player <= 10)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -21595,8 +21605,8 @@
 (game-time > 900)
 (game-time < 1200)
 (military-population >= 15)
-(or(players-building-type-count any-enemy castle >= 1)
-(players-military-population any-enemy > 10))
+(or(players-building-type-count target-player castle >= 1)
+(players-military-population target-player > 10))
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21616,7 +21626,7 @@
 (game-time > 900)
 (game-time < 1200)
 (military-population < 15)
-(players-military-population any-enemy > 10)
+(players-military-population target-player > 10)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21635,8 +21645,8 @@
 (game-time > 1080)
 (game-time < 1200)
 (military-population < 15)
-(or(players-building-type-count any-enemy castle >= 1)
-(players-military-population any-enemy > 10))
+(or(players-building-type-count target-player castle >= 1)
+(players-military-population target-player > 10))
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21676,8 +21686,8 @@
 (game-time > 1200)
 (game-time < 1500)
 (military-population >= 20)
-(players-building-type-count any-enemy castle < 1)
-(players-military-population any-enemy <= 15)
+(players-building-type-count target-player castle < 1)
+(players-military-population target-player <= 15)
 (difficulty == moderate)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I have a military advantage. It is time to attack!")
@@ -21697,8 +21707,8 @@
 (game-time > 1200)
 (game-time < 1500)
 (military-population >= 20)
-(players-building-type-count any-enemy castle < 1)
-(players-military-population any-enemy <= 15)
+(players-building-type-count target-player castle < 1)
+(players-military-population target-player <= 15)
 (or(difficulty <= hardest)
 (difficulty == hard))
 =>
@@ -21746,8 +21756,8 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population >= 20)
-(or(players-building-type-count any-enemy castle >= 1)
-(players-military-population any-enemy > 15))
+(or(players-building-type-count target-player castle >= 1)
+(players-military-population target-player > 15))
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21768,7 +21778,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population < 20)
-(players-military-population any-enemy > 10)
+(players-military-population target-player > 10)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21790,7 +21800,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population < 20)
-(players-military-population any-enemy > 10)
+(players-military-population target-player > 10)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21810,7 +21820,7 @@
 (game-time > 1500)
 (game-time < 1800)
 (military-population >= 30)
-(players-military-population any-enemy <= 25)
+(players-military-population target-player <= 25)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -21833,8 +21843,8 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population >= 30)
-(or(players-building-type-count any-enemy castle >= 1)
-(players-military-population any-enemy > 25))
+(or(players-building-type-count target-player castle >= 1)
+(players-military-population target-player > 25))
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21855,7 +21865,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population < 30)
-(players-military-population any-enemy > 15)
+(players-military-population target-player > 15)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21877,7 +21887,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population < 30)
-(players-military-population any-enemy > 15)
+(players-military-population target-player > 15)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21897,7 +21907,7 @@
 (game-time > 1800)
 (game-time < 2100)
 (military-population >= 40)
-(players-military-population any-enemy <= 33)
+(players-military-population target-player <= 33)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -21920,7 +21930,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population >= 40)
-(players-military-population any-enemy > 33)
+(players-military-population target-player > 33)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21941,7 +21951,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population < 40)
-(players-military-population any-enemy > 20)
+(players-military-population target-player > 20)
 =>
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
@@ -21961,7 +21971,7 @@
 (game-time > 2100)
 (game-time < 2400)
 (military-population >= 45)
-(players-military-population any-enemy <= 38)
+(players-military-population target-player <= 38)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -21983,7 +21993,7 @@
 (or(starting-age == dark-age)
 (starting-age == feudal-age))
 (military-population >= 45)
-(players-military-population any-enemy > 38)
+(players-military-population target-player > 38)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -22003,7 +22013,7 @@
 (game-time > 2100)
 (game-time < 2400)
 (military-population < 45)
-(players-military-population any-enemy > 25)
+(players-military-population target-player > 25)
 (not(difficulty == easiest))
 (not(difficulty == easy))
 =>
@@ -26541,8 +26551,8 @@
 (set-goal chatadvice 0) ;previously 1
 (set-goal earlyresign 1)
 (set-goal dynamicdifficulty 1)
-(set-goal specialcommands 0)
-(set-goal disablecommands 1)
+(set-goal specialcommands 1)
+(set-goal disablecommands 0)
 (disable-self)
 )
 
@@ -28031,6 +28041,7 @@
 (defconst df13-aftershock 177)
 (defconst df13-wall-bootstrap 178)    ;0=no Feudal wall command yet, 1=walling started
 (defconst df13-field-patrol 179)      ;0=hold, 1=10+ soldier search/engage posture
+(defconst df13-military-rebuild 183)   ;0=normal, 1=rebuild army after catastrophic losses
 (defconst df13-outpost 598)
 
 ; ---------------------------------------------------------------------------
@@ -28055,6 +28066,7 @@
     (set-goal df13-observation-tier 0)
     (set-goal df13-castle-opportunity 0)
     (set-goal df13-assault-ready 0)
+    (set-goal df13-military-rebuild 0)
 )
 
 ; Population profiles.
@@ -28085,6 +28097,25 @@
     (set-strategic-number sn-group-form-distance 70)
     (set-strategic-number sn-task-ungrouped-soldiers 0)
     (set-strategic-number sn-group-leader-defense-distance 2)
+)
+
+; FIX08 reconnaissance discipline.  Captured livestock walks home automatically.
+; While the only military presence is the reconnaissance element and no Scout
+; rush is ordered, incidental enemy sightings do not pull it off exploration.
+(defrule
+    (true)
+=>
+    (set-strategic-number sn-livestock-to-town-center 1)
+)
+(defrule
+    (or (current-age == dark-age) (current-age == feudal-age))
+    (military-population <= 3)
+    (goal scoutrush 0)
+    (not (town-under-attack))
+=>
+    (set-strategic-number sn-percent-enemy-sighted-response 0)
+    (set-strategic-number sn-enemy-sighted-response-distance 0)
+    (set-strategic-number sn-task-ungrouped-soldiers 0)
 )
 
 ; ---------------------------------------------------------------------------
@@ -28226,6 +28257,7 @@
 (defrule
     (goal df13-counterattack 1)
     (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
     (military-population >= 12)
 =>
     (set-strategic-number sn-number-attack-groups 2)
@@ -28301,6 +28333,152 @@
 )
 
 ; ---------------------------------------------------------------------------
+; FIX08 military-collapse recovery.  This is intentionally separate from the
+; economic recovery state above.  A healthy town that loses its army must not
+; continue as a villager-only economy.  Thresholds scale with 125/150/200+.
+; ---------------------------------------------------------------------------
+(defrule
+    (game-time > 900)
+    (current-age >= castle-age)
+    (goal df13-recovery 0)
+    (goal df13-pop-profile 1)
+    (civilian-population >= 28)
+    (military-population < 8)
+=>
+    (set-goal df13-military-rebuild 1)
+)
+(defrule
+    (game-time > 900)
+    (current-age >= castle-age)
+    (goal df13-recovery 0)
+    (goal df13-pop-profile 2)
+    (civilian-population >= 30)
+    (military-population < 10)
+=>
+    (set-goal df13-military-rebuild 1)
+)
+(defrule
+    (game-time > 900)
+    (current-age >= castle-age)
+    (goal df13-recovery 0)
+    (goal df13-pop-profile 3)
+    (civilian-population >= 32)
+    (military-population < 12)
+=>
+    (set-goal df13-military-rebuild 1)
+)
+
+(defrule
+    (goal df13-recovery 1)
+    (goal df13-military-rebuild 1)
+=>
+    (set-goal df13-military-rebuild 0)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (goal df13-pop-profile 1)
+    (military-population >= 18)
+=>
+    (set-goal df13-military-rebuild 0)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (goal df13-pop-profile 2)
+    (military-population >= 24)
+=>
+    (set-goal df13-military-rebuild 0)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (goal df13-pop-profile 3)
+    (military-population >= 30)
+=>
+    (set-goal df13-military-rebuild 0)
+)
+
+; Rebuild posture: no fresh offensive groups until a useful field force exists.
+(defrule
+    (goal df13-military-rebuild 1)
+=>
+    (set-goal createarmy 1)
+    (set-goal balancedarmy 1)
+    (set-strategic-number sn-number-attack-groups 0)
+    (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-strategic-number sn-number-defend-groups 1)
+    (set-strategic-number sn-minimum-defend-group-size 4)
+    (set-strategic-number sn-maximum-defend-group-size 20)
+    (set-strategic-number sn-task-ungrouped-soldiers 0)
+)
+
+; Recreate basic mixed-production infrastructure if it was destroyed.
+(defrule
+    (goal df13-military-rebuild 1)
+    (building-type-count-total barracks < 1)
+    (wood-amount > 170)
+    (up-pending-objects c: barracks < 1)
+    (can-build barracks)
+=>
+    (build barracks)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (building-type-count-total archery-range < 1)
+    (wood-amount > 190)
+    (up-pending-objects c: archery-range < 1)
+    (can-build archery-range)
+=>
+    (build archery-range)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (building-type-count-total stable < 1)
+    (wood-amount > 190)
+    (up-pending-objects c: stable < 1)
+    (can-build stable)
+=>
+    (build stable)
+)
+
+; Mixed emergency reserve.  These are floors, not a rigid army template.
+; Normal civ strategy and threat counters continue to add appropriate units.
+(defrule
+    (goal df13-military-rebuild 1)
+    (unit-type-count-total militiaman-line < 6)
+    (food-amount > 140)
+    (gold-amount > 60)
+    (can-train militiaman-line)
+=>
+    (train militiaman-line)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (unit-type-count-total spearman-line < 6)
+    (food-amount > 120)
+    (wood-amount > 90)
+    (can-train spearman-line)
+=>
+    (train spearman-line)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (unit-type-count-total archer-line < 6)
+    (wood-amount > 130)
+    (gold-amount > 70)
+    (can-train archer-line)
+=>
+    (train archer-line)
+)
+(defrule
+    (goal df13-military-rebuild 1)
+    (unit-type-count-total knight-line < 4)
+    (food-amount > 180)
+    (gold-amount > 120)
+    (can-train knight-line)
+=>
+    (set-goal df13-knight-request 1)
+)
+
+; ---------------------------------------------------------------------------
 ; Fortress footprint and wall doctrine.
 ;
 ; FIX05 replay finding: on Archipelago, P1 issued 0 wall commands and P3 did
@@ -28326,9 +28504,9 @@
     (current-age == feudal-age)
     (goal df13-wall-bootstrap 1)
 =>
-    (set-strategic-number sn-minimum-town-size 8)
-    (set-strategic-number sn-maximum-town-size 17)
-    (set-strategic-number sn-safe-town-size 14)
+    (set-strategic-number sn-minimum-town-size 6)
+    (set-strategic-number sn-maximum-town-size 13)
+    (set-strategic-number sn-safe-town-size 11)
 )
 (defrule
     (difficulty == hardest)
@@ -28569,7 +28747,7 @@
 (defrule
     (difficulty == hardest)
     (current-age >= castle-age)
-    (goal df13-wall-expansion-stage >= 1)
+    (or (goal df13-wall-expansion-stage 1) (or (goal df13-wall-expansion-stage 2) (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4))))
     (wall-completed-percentage 2 < 95)
     (stone-amount > 280)
     (not (town-under-attack))
@@ -28638,7 +28816,7 @@
 (defrule
     (difficulty == hardest)
     (current-age >= castle-age)
-    (goal df13-wall-expansion-stage >= 2)
+    (or (goal df13-wall-expansion-stage 2) (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4)))
     (building-type-count-total gate < 5)
     (wall-completed-percentage 2 >= 60)
     (not (town-under-attack))
@@ -28649,7 +28827,7 @@
 (defrule
     (difficulty == hardest)
     (current-age == imperial-age)
-    (goal df13-wall-expansion-stage >= 3)
+    (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4))
     (building-type-count-total gate < 6)
     (wall-completed-percentage 2 >= 65)
     (not (town-under-attack))
@@ -28664,8 +28842,8 @@
 ; ---------------------------------------------------------------------------
 
 ; Local observation envelope sits three town-size steps inside the local wall:
-; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 14
-; versus the developed 17-point wall envelope.  Wall rules occur earlier in the
+; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 10
+; versus the compact 13-point inner palisade envelope.  Wall rules occur earlier in the
 ; pass, so the replay-approved wall geometry itself is not enlarged here.
 (defrule
     (difficulty == hardest)
@@ -28681,9 +28859,9 @@
     (current-age == feudal-age)
     (building-type-count-total df13-outpost < 4)
 =>
-    (set-strategic-number sn-minimum-town-size 8)
-    (set-strategic-number sn-maximum-town-size 14)
-    (set-strategic-number sn-safe-town-size 12)
+    (set-strategic-number sn-minimum-town-size 6)
+    (set-strategic-number sn-maximum-town-size 10)
+    (set-strategic-number sn-safe-town-size 8)
 )
 (defrule
     (difficulty == hardest)
@@ -29388,6 +29566,7 @@
     (goal df13-siege-ready 1)
     (goal df13-defense-state 0)
     (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
     (military-population >= 18)
 =>
     (set-goal df13-assault-ready 1)
@@ -29414,6 +29593,7 @@
 (defrule
     (goal df13-defense-state 0)
     (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
     (soldier-count >= 10)
 =>
     (set-goal df13-field-patrol 1)
@@ -29421,7 +29601,8 @@
 (defrule
     (or (goal df13-defense-state 1)
         (or (goal df13-recovery 1)
-            (soldier-count < 10)))
+            (or (goal df13-military-rebuild 1)
+                (soldier-count < 10))))
 =>
     (set-goal df13-field-patrol 0)
 )

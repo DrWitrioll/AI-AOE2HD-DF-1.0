@@ -1,0 +1,56 @@
+name: Generate Dr Fortress V12 FIX07
+
+on:
+  push:
+    branches: [FIX]
+    paths:
+      - 'support/build_v12_fix07.py.z.b64'
+      - '.github/workflows/generate-v12-fix07.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: FIX
+      - name: Decode and generate FIX07 from verified FIX06
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, zlib
+          payload=Path('support/build_v12_fix07.py.z.b64').read_bytes()
+          Path('/tmp/build_v12_fix07.py').write_bytes(zlib.decompress(base64.b64decode(payload)))
+          PY
+          python3 /tmp/build_v12_fix07.py
+      - name: Deep static checks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('Dr_Fortress_AI_V12_FIX07.per')
+          text=p.read_text(encoding='utf-8')
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '523cf6f0866650d9328c8693761b9d95a96a47244e182964d190cae75745c31f'
+          assert text.count('(defrule') == 2744
+          assert text.count('(not (goal g-v12f7-res-eco 1))') >= 276
+          assert text.count('#end-if') == 100
+          assert sum(text.count(x) for x in ['#load-if-defined','#load-if-not-defined']) == 100
+          assert '(set-escrow-percentage stone 0)' in text
+          assert '(defconst g-v12f7-res-eco 124)' in text
+          print('FIX07 deep validation OK')
+          PY
+      - name: Commit FIX07
+        run: |
+          git config user.name "Dr Fortress AI bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add Dr_Fortress_AI_V12_FIX07.per Dr_Fortress_AI_V12_FIX07.ai V12FIX07_static_validation.json
+          if git diff --cached --quiet; then
+            echo "No output changes"
+          else
+            git commit -m "Build Dr Fortress AI V12 FIX07 Resonance economy rewrite"
+            git push origin HEAD:FIX
+          fi

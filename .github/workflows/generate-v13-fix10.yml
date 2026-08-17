@@ -1,0 +1,107 @@
+name: Generate V13 FIX10
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/generate-v13-fix10.yml'
+      - '.fix10.patch.z.b64'
+permissions:
+  contents: write
+jobs:
+  build-and-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and validate V13 FIX10
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Dr_Fortress_AI_V13_FIX09.per Dr_Fortress_AI_V13_FIX10.per
+          python - <<'PY'
+          from pathlib import Path
+          import base64,zlib
+          data=base64.b64decode(Path('.fix10.patch.z.b64').read_text().strip())
+          lines=zlib.decompress(data).decode('utf-8').splitlines(True)
+          # The compact payload was produced from local absolute paths. Retarget
+          # only its two file-header lines to the copied FIX10 file in this repo.
+          lines[0]='--- a/Dr_Fortress_AI_V13_FIX10.per\n'
+          lines[1]='+++ b/Dr_Fortress_AI_V13_FIX10.per\n'
+          Path('/tmp/fix10.patch').write_text(''.join(lines),encoding='utf-8')
+          PY
+          patch -p1 < /tmp/fix10.patch
+          : > Dr_Fortress_AI_V13_FIX10.ai
+          python - <<'PY'
+          from pathlib import Path
+          import re,hashlib
+          p=Path('Dr_Fortress_AI_V13_FIX10.per')
+          s=p.read_text(encoding='utf-8')
+          assert 'DR FORTRESS AI V13 FIX10' in s
+          clean=[]
+          for line in s.splitlines():
+              buf=[]; ins=False
+              for ch in line:
+                  if ch=='"': ins=not ins; buf.append(' '); continue
+                  if ch==';' and not ins: break
+                  buf.append(' ' if ins else ch)
+              clean.append(''.join(buf))
+          c='\n'.join(clean); bal=0
+          for ch in c:
+              if ch=='(': bal+=1
+              elif ch==')': bal-=1
+              assert bal >= 0
+          assert bal == 0
+          assert not re.findall(r'\(goal\s+[^\s()]+\s*(?:>=|<=|>|<)',c)
+          assert not re.findall(r'\(train\s+(?!my-unique-unit-line\b)[a-z0-9-]+-line\)',c)
+          assert '(enable-wall-placement 1)' in c
+          assert '(defconst df13-farm-throttle 207)' in c
+          assert '(defconst df13-farm-timer 46)' in c
+          assert '(can-research-with-escrow ri-paladin)' in c
+          assert '(can-research-with-escrow ri-champion)' in c
+          assert '(can-research-with-escrow ri-illumination)' in c
+          assert '(wall-completed-percentage 1 < 75)' in c
+          assert '(wall-completed-percentage 1 < 35)' not in c
+          assert 'gold-amount >= 200)))' not in s[s.find('Unsupported setup')-500:s.find('Unsupported setup')+500]
+          sha=hashlib.sha256(p.read_bytes()).hexdigest()
+          assert sha == '8f7aab23fe74f09cebb53fea8eefef44eea8adc0e7f09b228a04b72ae1d2986a', sha
+          print('FIX10 validation OK',p.stat().st_size,sha)
+          PY
+          cp Dr_Fortress_AI_V13_FIX10.per /tmp/Dr_Fortress_AI_V13_FIX10.per
+          cp Dr_Fortress_AI_V13_FIX10.ai /tmp/Dr_Fortress_AI_V13_FIX10.ai
+      - name: Commit FIX10 to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f Dr_Fortress_AI_V13_FIX08.per Dr_Fortress_AI_V13_FIX08.ai
+          git add Dr_Fortress_AI_V13_FIX10.per Dr_Fortress_AI_V13_FIX10.ai
+          git add -u Dr_Fortress_AI_V13_FIX08.per Dr_Fortress_AI_V13_FIX08.ai || true
+          git commit -m 'Add V13 FIX10 research wall farm and monk repair'
+          git push origin main
+      - name: Archive FIX10
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          for branch in V13 FIX support; do
+            git switch --detach "origin/$branch"
+            cp /tmp/Dr_Fortress_AI_V13_FIX10.per .
+            cp /tmp/Dr_Fortress_AI_V13_FIX10.ai .
+            git add Dr_Fortress_AI_V13_FIX10.per Dr_Fortress_AI_V13_FIX10.ai
+            git commit -m 'Archive V13 FIX10'
+            git push origin "HEAD:$branch"
+          done
+      - name: Cleanup one-shot generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch -C main origin/main
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f .fix10.patch.z.b64 .github/workflows/generate-v13-fix10.yml
+          git add -u .fix10.patch.z.b64 .github/workflows/generate-v13-fix10.yml
+          git commit -m 'Remove one-shot FIX10 generator'
+          git push origin main

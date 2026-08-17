@@ -1,0 +1,143 @@
+< 1)
++    (can-build watch-tower-line)
++=>
++    (build-forward watch-tower-line)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age >= castle-age)
++    (goal df13-enemy-fortified 1)
++    (building-type-count-total watch-tower-line < 5)
++    (stone-amount > 320)
++    (up-pending-objects c: watch-tower-line < 1)
++    (can-build watch-tower-line)
++=>
++    (build-forward watch-tower-line)
++)
++
++; ---------------------------------------------------------------------------
++; Opportunistic Castles.  No dedicated saving / stone escrow.  'can-build'
++; itself is the affordability test.
++; ---------------------------------------------------------------------------
++(defrule
++    (current-age >= castle-age)
++    (building-type-count-total castle < 1)
++    (goal df13-recovery 0)
++    (not (town-under-attack))
++    (goal df13-aftershock 1)
++    (can-build castle)
++=>
++    (set-goal df13-castle-opportunity 1)
++    (build-forward castle)
++)
++(defrule
++    (current-age >= castle-age)
++    (building-type-count-total castle < 1)
++    (building-type-count-total town-center >= 2)
++    (wall-completed-percentage 1 >= 50)
++    (goal df13-recovery 0)
++    (not (town-under-attack))
++    (can-build castle)
++=>
++    (set-goal df13-castle-opportunity 1)
++    (build castle)
++)
++(defrule
++    (current-age >= castle-age)
++    (building-type-count-total castle >= 1)
++    (building-type-count-total castle < 2)
++    (building-type-count-total town-center >= 2)
++    (goal df13-enemy-fortified 1)
++    (goal df13-recovery 0)
++    (not (town-under-attack))
++    (can-build castle)
++=>
++    (build-forward castle)
++)
++
++; ---------------------------------------------------------------------------
++; Civilization-aware production infrastructure.  ResonanceBot already selects
++; makecavalry/makearchers/makeinfantry/makesiege by civ and strategy, so V13
++; uses those proven goals instead of duplicating a second civ classifier.
++; ---------------------------------------------------------------------------
++(defrule
++    (current-age == feudal-age)
++    (goal makecavalry 1)
++    (building-type-count-total stable < 1)
++    (wood-amount > 150)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++=>
++    (build stable)
++)
++(defrule
++    (current-age == feudal-age)
++    (goal makearchers 1)
++    (building-type-count-total archery-range < 1)
++    (wood-amount > 150)
++    (up-pending-objects c: archery-range < 1)
++    (can-build archery-range)
++=>
++    (build archery-range)
++)
++(defrule
++    (current-age >= feudal-age)
++    (goal makeinfantry 1)
++    (building-type-count-total barracks < 2)
++    (wood-amount > 170)
++    (up-pending-objects c: barracks < 1)
++    (can-build barracks)
++=>
++    (build barracks)
++)
++
++; Scale production for the three main population profiles.
++(defrule
++    (current-age >= castle-age)
++    (goal makecavalry 1)
++    (goal df13-pop-profile 1)
++    (building-type-count-total stable < 2)
++    (wood-amount > 260)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++=>
++    (build stable)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal makecavalry 1)
++    (goal df13-pop-profile 2)
++    (building-type-count-total stable < 3)
++    (wood-amount > 320)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++=>
++    (build stable)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal makecavalry 1)
++    (goal df13-pop-profile 3)
++    (building-type-count-total stable < 4)
++    (wood-amount > 380)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++=>
++    (build stable)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal makearchers 1)
++    (goal df13-pop-profile 1)
++    (building-type-count-total archery-range < 2)
++    (wood-amount > 260)
++    (up-pending-objects c: archery-range < 1)
++    (can-build archery-range)
++=>
++    (build archery-range)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal makearchers 1)
++    (goal df13-pop-profile 2)
++    (building-type-count-total archery

@@ -1,5 +1,19 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX10
+; DR FORTRESS AI V13 FIX12
+; FIX12 HD parser hotfix:
+; - removed unsupported up-reset-placement (ERR2004 in AoE2 HD runtime).
+; - failed farm placement recovery now relies on the existing cooldown/retry path;
+;   no replacement command outside the already parsed FIX10/FIX11 vocabulary is introduced.
+; FIX11 economy/safety/naval recovery:
+; - Farm Manager 2.0 replaces the FIX10 hard 420W gate with a soft 3/4/5-reseed reserve (180/240/300W).
+; - critically low food overrides the reseed reserve so farms can be placed before the reserve is restored.
+; - blocked farm placements are reset after the cooldown instead of permanently locking farm production.
+; - persistent idle-villager signals gently recycle one stone/gold gatherer without direct object-search DUC.
+; - wounded early Scout Cavalry uses recent HD threat data and retreats to a safe/healing anchor instead of continuing exploration.
+; - Dock construction is serialized with pending-object checks and a retry cooldown to stop dock-order floods.
+; - idle naval explorers are periodically reissued water-scout work; enemy water presence releases them back to naval combat logic.
+; - recent enemy threats against civilians temporarily contract economic drop/camp radii and retask a small worker sample.
+; - FIX10 wall placement/geometry rules are intentionally unchanged.
 ; FIX10 research/wall/farm/monk repair:
 ; - military tier unlocks are now systematically researched because the custom DAT keeps all older tiers trainable.
 ; - normal production prefers the best exact tier that is currently affordable; recovery still deliberately buys cheap legacy tiers.
@@ -119,6 +133,30 @@
 (defconst df13-unique-request 206)
 (defconst df13-farm-throttle 207) ;FIX10: serialize replacement-farm orders
 (defconst df13-farm-timer 46) ;FIX10: timer 46 was unused; farm-order cooldown
+
+; FIX11 recovery/state goals.  Goal and timer namespaces are independent.
+(defconst df11-dock-throttle 208)       ;0 ready, 1 cooldown/pending dock
+(defconst df11-miner-recovery 209)      ;0 init, 1 periodic stuck-gatherer sampling
+(defconst df11-scout-recovery 210)      ;0 normal, 1 healing wait, 2 parked safely
+(defconst df11-civilian-danger 211)     ;recent ranged threat against villagers
+(defconst df11-threat-time 212)          ;elapsed ms since latest threat
+(defconst df11-threat-player 213)        ;latest attacking player
+(defconst df11-threat-source 214)        ;latest attacker class
+(defconst df11-threat-target 215)        ;latest target class
+(defconst df11-naval-recovery 217)      ;0 inactive, 1 periodic water scout recovery
+(defconst df11-threat-sample 218)       ;0 init, 1 periodic threat sampling
+
+(defconst df11-dock-timer 25)
+(defconst df11-miner-timer 26)
+(defconst df11-danger-timer 29)
+(defconst df11-scout-timer 33)
+(defconst df11-naval-timer 47)
+(defconst df11-threat-timer 48)
+
+; UserPatch/HD class and group values used without direct object-search DUC.
+(defconst df11-villager-class 904)
+(defconst df11-cavalry-class 912)
+(defconst df11-water-explore-group 103)
 
 (defconst ally-yes 36 ) 
 (defconst allied-attack 31) 
@@ -5831,13 +5869,99 @@
 (disable-self)
 )
 
+
+; ===========================================================================
+; FIX11 explicit state initialization.  HD normally starts goals at zero, but
+; explicit initialization keeps this layer deterministic across compatible
+; parser/runtime variants and prevents a stale throttle from blocking farms.
+; ===========================================================================
+(defrule
+    (game-time < 5)
+=>
+    (set-goal df13-farm-throttle 0)
+    (set-goal df11-dock-throttle 0)
+    (set-goal df11-miner-recovery 0)
+    (set-goal df11-scout-recovery 0)
+    (set-goal df11-civilian-danger 0)
+    (set-goal df11-naval-recovery 0)
+    (set-goal df11-threat-sample 0)
+    (set-goal df11-threat-time 9999)
+    (set-goal df11-threat-player 0)
+    (set-goal df11-threat-source 0)
+    (set-goal df11-threat-target 0)
+    (disable-self)
+)
+
+; ===========================================================================
+; FIX11 FARM MANAGER 2.0
+; 0-10 farms: hold ~3 reseeds (180W), 11-18: 4 (240W), 19+: 5 (300W).
+; This is a SOFT reserve: food below 200 immediately releases the hold.
+; The reserve does not emulate the Mill reseed button; it prevents the AI from
+; consuming its entire wood bank once a healthy farm economy exists.
+; ===========================================================================
+(defrule
+    (goal df13-farm-throttle 0)
+    (food-amount >= 200)
+    (building-type-count-total farm <= 10)
+    (wood-amount < 180)
+=>
+    (set-goal df13-farm-throttle 2)
+)
+(defrule
+    (goal df13-farm-throttle 0)
+    (food-amount >= 200)
+    (building-type-count-total farm >= 11)
+    (building-type-count-total farm <= 18)
+    (wood-amount < 240)
+=>
+    (set-goal df13-farm-throttle 2)
+)
+(defrule
+    (goal df13-farm-throttle 0)
+    (food-amount >= 200)
+    (building-type-count-total farm >= 19)
+    (wood-amount < 300)
+=>
+    (set-goal df13-farm-throttle 2)
+)
+
+; Critical-food override.  Example: 150 food with a nominal 240W reserve still
+; allows farm construction as soon as an inherited farm rule can actually pay.
+(defrule
+    (goal df13-farm-throttle 2)
+    (food-amount < 200)
+=>
+    (set-goal df13-farm-throttle 0)
+)
+(defrule
+    (goal df13-farm-throttle 2)
+    (building-type-count-total farm <= 10)
+    (wood-amount >= 180)
+=>
+    (set-goal df13-farm-throttle 0)
+)
+(defrule
+    (goal df13-farm-throttle 2)
+    (building-type-count-total farm >= 11)
+    (building-type-count-total farm <= 18)
+    (wood-amount >= 240)
+=>
+    (set-goal df13-farm-throttle 0)
+)
+(defrule
+    (goal df13-farm-throttle 2)
+    (building-type-count-total farm >= 19)
+    (wood-amount >= 300)
+=>
+    (set-goal df13-farm-throttle 0)
+)
+
 (defrule 
 (game-time > 3600)
 (building-type-count town-center >= 1)
 (building-type-count farm <= 10)
 (can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 => 
 (build farm)
 (set-goal df13-farm-throttle 1)
@@ -5850,7 +5974,6 @@
 (building-type-count farm <= 10)
 (can-build-with-escrow farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
  =>
 (build farm)
 (set-goal df13-farm-throttle 1)
@@ -8475,9 +8598,13 @@
 (current-age == dark-age)
 (building-type-count-total dock < 1)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -8487,9 +8614,13 @@
 (current-age == dark-age)
 (building-type-count-total dock < 1)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -8501,9 +8632,13 @@
 (building-type-count-total market >= 1)
 (building-type-count-total dock < 3)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -8514,9 +8649,13 @@
 (current-age == dark-age)
 (building-type-count-total dock < 2)
 (can-build-with-escrow dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 (release-escrow wood)
 )
 
@@ -8529,9 +8668,13 @@
 (building-type-count-total market >= 1)
 (building-type-count-total dock < 4)
 (can-build-with-escrow dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 (release-escrow wood)
 )
 
@@ -9190,7 +9333,6 @@
 
 (defrule
 	(current-age == feudal-age)
-	(wood-amount >= 420)
 	(building-type-count-total farm < 15)
 	(idle-farm-count < 3)
 	(can-build farm)
@@ -9210,7 +9352,6 @@
 	(idle-farm-count < 1)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -9737,9 +9878,13 @@
 (current-age == feudal-age)
 (building-type-count-total dock < 2)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -12050,9 +12195,13 @@
 (goal builddock 1)
 (building-type-count dock < 4)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -12181,7 +12330,6 @@
 	(idle-farm-count < 1)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -12608,9 +12756,13 @@
 (goal builddock 1)
 (building-type-count dock < 5)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -12621,9 +12773,13 @@
 (goal builddock 1)
 (building-type-count dock < 6)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -12636,9 +12792,13 @@
 (goal builddock 1)
 (building-type-count dock < 7)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -12662,7 +12822,6 @@
 	(idle-farm-count < 1)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -13015,7 +13174,6 @@
 
 (defrule
 	(game-time > 1320)
-	(wood-amount > 420)
 	(building-type-count-total farm < 17)
 	(can-build farm)
 (goal df13-farm-throttle 0)
@@ -13028,7 +13186,6 @@
 (defrule
 	(game-time < 1740)
 	(game-time > 1500)
-	(wood-amount > 420)
 	(current-age == castle-age)
 	(unit-type-count-total villager > 55)
 	(building-type-count-total farm < 22)
@@ -13042,7 +13199,6 @@
 
 (defrule
 	(game-time > 1740)
-	(wood-amount > 420)
 	(current-age == castle-age)
 	(unit-type-count-total villager > 65)
 	(building-type-count-total farm < 24)
@@ -13059,7 +13215,6 @@
 	(building-type-count-total farm < 12)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -13072,7 +13227,6 @@
 	(building-type-count-total farm < 18)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -13085,7 +13239,6 @@
 	(building-type-count-total farm < 24)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -13098,7 +13251,6 @@
 	(building-type-count-total farm < 40)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -13111,7 +13263,6 @@
 	(building-type-count-total farm < 55)
 	(can-build farm)
 (goal df13-farm-throttle 0)
-(wood-amount > 420)
 =>
 	(build farm)
 	(set-goal df13-farm-throttle 1)
@@ -25891,9 +26042,13 @@
 (building-type-count-total town-center >= 3)
 (building-type-count-total dock < 1)
 (can-build dock)
+(goal df11-dock-throttle 0)
+(up-pending-objects c: dock < 1)
 =>
 (set-goal pausetsa 1)
 (build dock)
+(set-goal df11-dock-throttle 1)
+(enable-timer df11-dock-timer 20)
 )
 
 (defrule
@@ -29475,16 +29630,23 @@
 ; FIX10 ECONOMY / RESEARCH / EXACT-TIER DISPATCHERS
 ; ============================================================================
 
-; Farm replacement cooldown.  The timer may expire while a farm foundation is
-; still pending; in that case the throttle remains locked until the pending
-; foundation clears.
-
-
+; FIX11 farm-order cooldown.  A valid completed placement releases normally.
+; A placement still blocked after the cooldown is cleared from the placement
+; list so one bad tile cannot freeze every future farm order.
 (defrule
     (goal df13-farm-throttle 1)
     (timer-triggered df13-farm-timer)
     (up-pending-objects c: farm < 1)
 =>
+    (set-goal df13-farm-throttle 0)
+    (disable-timer df13-farm-timer)
+)
+(defrule
+    (goal df13-farm-throttle 1)
+    (timer-triggered df13-farm-timer)
+    (up-pending-objects c: farm > 0)
+=>
+    ; FIX12: unsupported up-reset-placement removed; cooldown will allow retry.
     (set-goal df13-farm-throttle 0)
     (disable-timer df13-farm-timer)
 )
@@ -31525,3 +31687,259 @@
 ; ============================================================================
 ; End V13 FIX10 additions.
 ; ============================================================================
+
+
+; ===========================================================================
+; FIX11 SAFE RECOVERY LAYER - HD/UserPatch commands only, no direct search DUC
+; ===========================================================================
+
+; ---- Dock placement cooldown / blocked-placement retry ----
+(defrule
+    (goal df11-dock-throttle 1)
+    (timer-triggered df11-dock-timer)
+    (up-pending-objects c: dock < 1)
+=>
+    (set-goal df11-dock-throttle 0)
+    (disable-timer df11-dock-timer)
+)
+(defrule
+    (goal df11-dock-throttle 1)
+    (timer-triggered df11-dock-timer)
+    (up-pending-objects c: dock > 0)
+=>
+    ; FIX12: unsupported up-reset-placement removed; cooldown will allow retry.
+    (set-goal df11-dock-throttle 0)
+    (disable-timer df11-dock-timer)
+)
+
+; ---- Stuck Gatherer Recovery ----
+; up-idle-unit-count distinguishes broad idle classes only, not miner subtypes.
+; Require the villager-idle signal to survive two samples six seconds apart;
+; only then release one stone and one gold gatherer back to normal allocation.
+; This is intentionally conservative and avoids direct object-search DUC.
+(defrule
+    (game-time > 60)
+    (goal df11-miner-recovery 0)
+=>
+    (set-goal df11-miner-recovery 1)
+    (enable-timer df11-miner-timer 6)
+)
+(defrule
+    (goal df11-miner-recovery 1)
+    (timer-triggered df11-miner-timer)
+    (up-idle-unit-count idle-type-villager > 0)
+=>
+    (set-goal df11-miner-recovery 2)
+    (disable-timer df11-miner-timer)
+    (enable-timer df11-miner-timer 6)
+)
+(defrule
+    (goal df11-miner-recovery 2)
+    (timer-triggered df11-miner-timer)
+    (up-idle-unit-count idle-type-villager > 0)
+=>
+    (up-retask-gatherers stone c: 1)
+    (up-retask-gatherers gold c: 1)
+    (set-goal df11-miner-recovery 1)
+    (disable-timer df11-miner-timer)
+    (enable-timer df11-miner-timer 10)
+)
+(defrule
+    (or (goal df11-miner-recovery 1) (goal df11-miner-recovery 2))
+    (timer-triggered df11-miner-timer)
+    (up-idle-unit-count idle-type-villager == 0)
+=>
+    (set-goal df11-miner-recovery 1)
+    (disable-timer df11-miner-timer)
+    (enable-timer df11-miner-timer 6)
+)
+
+; ---- Threat sampler ----
+; The official HD AI uses up-get-threat-data for elapsed threat time, player,
+; source class, and target class.  Sampling every two seconds keeps this high-
+; information command out of the per-rule hot path.
+(defrule
+    (game-time > 10)
+    (goal df11-threat-sample 0)
+=>
+    (set-goal df11-threat-sample 1)
+    (enable-timer df11-threat-timer 2)
+)
+(defrule
+    (goal df11-threat-sample 1)
+    (timer-triggered df11-threat-timer)
+=>
+    (up-get-threat-data df11-threat-time df11-threat-player df11-threat-source df11-threat-target)
+    (disable-timer df11-threat-timer)
+    (enable-timer df11-threat-timer 2)
+)
+
+; ---- Civilian Danger / ranged-threat exclusion ----
+; Do not touch town-size SNs here: FIX10 wall geometry must remain authoritative.
+(defrule
+    (goal df11-civilian-danger 0)
+    (goal df11-threat-target df11-villager-class)
+    (up-compare-goal df11-threat-time < 3000)
+    (up-compare-goal df11-threat-player >= 1)
+=>
+    (set-goal df11-civilian-danger 1)
+    (enable-timer df11-danger-timer 25)
+    (up-retask-gatherers wood c: 2)
+    (up-retask-gatherers food c: 2)
+    (up-retask-gatherers stone c: 2)
+    (up-retask-gatherers gold c: 2)
+)
+(defrule
+    (goal df11-civilian-danger 1)
+=>
+    (set-strategic-number sn-disable-villager-garrison 0)
+    (set-strategic-number sn-maximum-wood-drop-distance 8)
+    (set-strategic-number sn-maximum-food-drop-distance 8)
+    (set-strategic-number sn-maximum-gold-drop-distance 6)
+    (set-strategic-number sn-maximum-stone-drop-distance 6)
+    (set-strategic-number sn-camp-max-distance 20)
+)
+(defrule
+    (goal df11-civilian-danger 1)
+    (timer-triggered df11-danger-timer)
+=>
+    (set-goal df11-civilian-danger 0)
+    (disable-timer df11-danger-timer)
+)
+
+; ---- Wounded Scout Recovery (HD-safe approximation) ----
+; Exact per-object HP inspection would require direct object-search DUC, which
+; remains deliberately disabled for HD stability.  A recent projectile aimed at
+; cavalry while the force is still scout-sized is therefore the damage trigger.
+; If a Monk exists, one Scout Cavalry is assigned to guard/stay with a Monk for
+; a healing window.  Otherwise it is parked at a Castle when available, or the
+; home TC as the final safe fallback.  It is not sent exploring while recovering.
+(defrule
+    (goal df11-scout-recovery 0)
+    (goal df11-threat-target df11-cavalry-class)
+    (up-compare-goal df11-threat-time < 3000)
+    (up-compare-goal df11-threat-player >= 1)
+    (unit-type-count-total scout-cavalry > 0)
+    (unit-type-count-total knight-line < 2)
+    (unit-type-count-total monk > 0)
+=>
+    (set-goal df11-scout-recovery 1)
+    (set-strategic-number sn-number-explore-groups 0)
+    (up-reset-scouts)
+    (up-guard-unit monk c: scout-cavalry)
+    (enable-timer df11-scout-timer 60)
+)
+(defrule
+    (goal df11-scout-recovery 0)
+    (goal df11-threat-target df11-cavalry-class)
+    (up-compare-goal df11-threat-time < 3000)
+    (up-compare-goal df11-threat-player >= 1)
+    (unit-type-count-total scout-cavalry > 0)
+    (unit-type-count-total knight-line < 2)
+    (unit-type-count-total monk < 1)
+    (building-type-count-total castle > 0)
+=>
+    (set-goal df11-scout-recovery 2)
+    (set-strategic-number sn-number-explore-groups 0)
+    (up-reset-scouts)
+    (up-retreat-to castle c: scout-cavalry)
+)
+(defrule
+    (goal df11-scout-recovery 0)
+    (goal df11-threat-target df11-cavalry-class)
+    (up-compare-goal df11-threat-time < 3000)
+    (up-compare-goal df11-threat-player >= 1)
+    (unit-type-count-total scout-cavalry > 0)
+    (unit-type-count-total knight-line < 2)
+    (unit-type-count-total monk < 1)
+    (building-type-count-total castle < 1)
+=>
+    (set-goal df11-scout-recovery 2)
+    (set-strategic-number sn-number-explore-groups 0)
+    (up-reset-scouts)
+    (up-retreat-to town-center c: scout-cavalry)
+)
+; A parked scout switches to healer escort as soon as a Monk exists.
+(defrule
+    (goal df11-scout-recovery 2)
+    (unit-type-count-total monk > 0)
+=>
+    (set-goal df11-scout-recovery 1)
+    (up-guard-unit monk c: scout-cavalry)
+    (enable-timer df11-scout-timer 60)
+)
+; Without a healer, a later Castle becomes the preferred safe anchor.
+(defrule
+    (goal df11-scout-recovery 2)
+    (unit-type-count-total monk < 1)
+    (building-type-count-total castle > 0)
+=>
+    (up-retreat-to castle c: scout-cavalry)
+)
+(defrule
+    (goal df11-scout-recovery 1)
+    (timer-triggered df11-scout-timer)
+=>
+    (set-goal df11-scout-recovery 0)
+    (disable-timer df11-scout-timer)
+    (set-strategic-number sn-number-explore-groups 1)
+    (up-send-scout group-type-land-explore scout-center)
+)
+; Recovery enforcement wins over inherited scout rules while parked/healing.
+(defrule
+    (or (goal df11-scout-recovery 1) (goal df11-scout-recovery 2))
+=>
+    (set-strategic-number sn-number-explore-groups 0)
+)
+
+; ---- Naval Explorer Recovery ----
+; No direct ship deletion.  With enemy water assets, release boats to inherited
+; attack/defense grouping.  Otherwise keep one periodic water explorer moving.
+(defrule
+    (game-time > 120)
+    (goal df11-naval-recovery 0)
+    (warboat-count > 0)
+=>
+    (set-goal df11-naval-recovery 1)
+    (enable-timer df11-naval-timer 35)
+)
+(defrule
+    (goal df11-naval-recovery 1)
+    (or (players-building-type-count any-enemy dock > 0)
+        (or (players-unit-type-count any-enemy galley-line > 0)
+            (or (players-unit-type-count any-enemy fire-ship-line > 0)
+                (or (players-unit-type-count any-enemy demolition-ship-line > 0)
+                    (players-unit-type-count any-enemy cannon-galleon-line > 0)))))
+=>
+    (set-strategic-number sn-number-boat-explore-groups 0)
+)
+(defrule
+    (goal df11-naval-recovery 1)
+    (timer-triggered df11-naval-timer)
+    (players-building-type-count any-enemy dock < 1)
+    (players-unit-type-count any-enemy galley-line < 1)
+    (players-unit-type-count any-enemy fire-ship-line < 1)
+    (players-unit-type-count any-enemy demolition-ship-line < 1)
+    (players-unit-type-count any-enemy cannon-galleon-line < 1)
+=>
+    (set-strategic-number sn-number-boat-explore-groups 1)
+    (set-strategic-number sn-minimum-boat-explore-group-size 1)
+    (set-strategic-number sn-maximum-boat-explore-group-size 1)
+    (up-send-scout df11-water-explore-group scout-opposite)
+    (disable-timer df11-naval-timer)
+    (enable-timer df11-naval-timer 35)
+)
+(defrule
+    (goal df11-naval-recovery 1)
+    (timer-triggered df11-naval-timer)
+=>
+    (disable-timer df11-naval-timer)
+    (enable-timer df11-naval-timer 35)
+)
+(defrule
+    (goal df11-naval-recovery 1)
+    (warboat-count < 1)
+=>
+    (set-goal df11-naval-recovery 0)
+    (disable-timer df11-naval-timer)
+)

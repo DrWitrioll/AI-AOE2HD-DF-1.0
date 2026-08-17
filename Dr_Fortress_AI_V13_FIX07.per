@@ -1,5 +1,17 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX05
+; DR FORTRESS AI V13 FIX07
+; FIX07 parser repair:
+; - HD legacy parser compatibility: invalid relational goal tests were replaced with exact-stage OR tests.
+; - fixes ERR2011 at former line 28572 and the two equivalent latent errors later in the wall/gate block.
+; FIX06 multiplayer replay repair (Mediterranean / 150 pop / Very Hard):
+; - Fortress walls are permanent strategic infrastructure; inherited wall deletion is disabled.
+; - Castle-age developed walls never downgrade from stone to palisade.
+; - base expansion is additive: old rings stay, larger outer stone envelopes are added.
+; - local Outposts use an envelope three town-size steps inside the planned local wall.
+; - mature fortresses add gates under serious path/resource-walking stress instead of deleting walls.
+; - Scout Cavalry is a separate paid tier: max 6 total on Hardest, max 3 on Moderate.
+; - Scout -> Light Cavalry -> Hussar and Knight -> Cavalier -> Paladin use exact tier-aware production.
+; - common infantry/archer/spear/cavalry/siege/naval upgrades seed the newly researched full-price tier while old models remain.
 ; FIX05 replay repair: mandatory Feudal wall bootstrap, stronger Castle wall continuation,
 ; coherent 10+ land combat groups, and siege-gated wall/gate targeting.
 ; FIX04 communication overhaul:
@@ -53,6 +65,11 @@
 ;also new lumberjacks, etc won't be assigned until huntable object is dead
 
 (defconst military-superiority 190)
+
+; FIX07/FIX06 custom-data tier requests and additive wall expansion state.
+(defconst df13-scout-request 180)
+(defconst df13-knight-request 181)
+(defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
 
 (defconst ally-yes 36 ) 
 (defconst allied-attack 31) 
@@ -1833,7 +1850,7 @@
 (unit-type-count-total knight-line < 30)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -1897,7 +1914,7 @@
 (unit-type-count-total scout-cavalry-line < 10)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -2402,7 +2419,7 @@
 (unit-type-count-total knight-line < 50)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -2470,7 +2487,7 @@
 (unit-type-count-total scout-cavalry-line < 60)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -2963,7 +2980,7 @@
 (unit-type-count-total scout-cavalry-line < 60)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -4322,7 +4339,7 @@
 	(research-completed ri-paladin)
 	(can-train knight-line)
 =>
-	(train knight-line)
+	(set-goal df13-knight-request 1)
 ) 
 
 (defrule
@@ -4383,7 +4400,7 @@
 	(research-completed ri-light-cavalry)
 	(can-train scout-cavalry-line)
 =>
-	(train scout-cavalry-line)
+	(set-goal df13-scout-request 1)
 ) 
 
 (defrule
@@ -9613,7 +9630,7 @@
 (unit-type-count-total scout-cavalry-line < 5)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -9629,7 +9646,7 @@
 (unit-type-count-total scout-cavalry-line < 8)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -9655,7 +9672,7 @@
 (unit-type-count-total scout-cavalry-line < 5)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -9668,7 +9685,7 @@
 (unit-type-count-total scout-cavalry-line < 3)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -9680,7 +9697,7 @@
 (unit-type-count-total scout-cavalry-line < 8)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -9693,7 +9710,7 @@
 (unit-type-count-total scout-cavalry-line < 4)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16594,7 +16611,7 @@
 (unit-type-count-total scout-cavalry-line < 25)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16680,7 +16697,7 @@
 (unit-type-count-total scout-cavalry-line < 30)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16697,7 +16714,7 @@
 (can-train-with-escrow scout-cavalry-line)
 =>
 (release-escrow food)
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16712,7 +16729,7 @@
 (unit-type-count-total scout-cavalry-line < 150)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16729,7 +16746,7 @@
 (unit-type-count-total scout-cavalry-line < 80)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16741,7 +16758,7 @@
 (unit-type-count-total scout-cavalry-line < 10)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16756,7 +16773,7 @@
 (unit-type-count-total scout-cavalry-line < 10)
 (can-train scout-cavalry-line)
 =>
-(train scout-cavalry-line)
+(set-goal df13-scout-request 1)
 )
 
 (defrule
@@ -16798,7 +16815,7 @@
 (unit-type-count-total knight-line < 15)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -16813,7 +16830,7 @@
 (unit-type-count-total knight-line < 15)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -16831,7 +16848,7 @@
 (unit-type-count-total knight-line < 10)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -17312,7 +17329,7 @@
 (unit-type-count-total knight-line < 50)
 (can-train knight-line)
 =>
-(train knight-line)
+(set-goal df13-knight-request 1)
 )
 
 (defrule
@@ -20909,8 +20926,8 @@
 (military-population <= 4)
 (can-train knight-line)
 =>
-(train knight-line)
-(train scout-cavalry-line)
+(set-goal df13-knight-request 1)
+(set-goal df13-scout-request 1)
 (disable-self)
 )
 
@@ -25027,44 +25044,14 @@
 (disable-self) 
 )
 
-;Special thanks for CheeseOnToast for the wall deleting. 
-(defrule
-(or(game-time < 3000)
-(goal deletewalls 1))
-(goal buildwalls 0)
-(or(unit-type-count-total villager >= 65)
-(game-time > 2400))
-(building-type-count-total stone-wall-line >= 5)
-=>
-(delete-building stone-wall)
-(delete-building fortified-wall)
-(delete-building stone-wall-line)
-(delete-building 659)
-(delete-building 661)
-(delete-building 88)
-(delete-building 91)
-(delete-building 667)
-(delete-building 669)
-(delete-building 64)
-(delete-building 78)
-)
 
+; FIX06: Fortress walls are permanent.  ResonanceBot's inherited late-game
+; wall-cleanup routine is intentionally disabled.  Expansion adds another
+; security line instead of removing the old one.
 (defrule
-(game-time < 3000)
-(goal buildwalls 0)
-(or(unit-type-count-total villager >= 60)
-(game-time > 2400))
-(building-type-count-total palisade-wall >= 5)
+    (goal deletewalls 1)
 =>
-(delete-building palisade-wall)
-(delete-building 659)
-(delete-building 661)
-(delete-building 88)
-(delete-building 91)
-(delete-building 667)
-(delete-building 669)
-(delete-building 64)
-(delete-building 78)
+    (set-goal deletewalls 0)
 )
 
 #load-if-defined SAND-BANK-MAP
@@ -26811,7 +26798,7 @@
 =>     
 (enable-timer 24 1)
 (set-goal buildwalls 0)
-(set-goal deletewalls 1)
+(set-goal deletewalls 0)
 (enable-wall-placement 0)
 (acknowledge-taunt this-any-human 115)
 )
@@ -28373,6 +28360,89 @@
     (set-strategic-number sn-safe-town-size 24)
 )
 
+; ---------------------------------------------------------------------------
+; Additive fortress expansion.  The replay-approved first wall geometry stays
+; unchanged.  Only a mature fortress unlocks a larger envelope.  Re-enabling
+; perimeter 2 recalculates it farther out while all existing wall segments stay.
+; ---------------------------------------------------------------------------
+(defrule
+    (difficulty == hardest)
+    (current-age >= castle-age)
+    (goal df13-wall-expansion-stage 0)
+    (building-type-count-total town-center >= 2)
+    (civilian-population >= 55)
+    (wall-completed-percentage 1 >= 80)
+    (wall-completed-percentage 2 >= 65)
+=>
+    (set-goal df13-wall-expansion-stage 1)
+    (enable-wall-placement 2)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age >= castle-age)
+    (goal df13-wall-expansion-stage 1)
+    (civilian-population >= 70)
+    (wall-completed-percentage 2 >= 80)
+=>
+    (set-goal df13-wall-expansion-stage 2)
+    (enable-wall-placement 2)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age == imperial-age)
+    (goal df13-wall-expansion-stage 2)
+    (civilian-population >= 85)
+    (wall-completed-percentage 2 >= 82)
+=>
+    (set-goal df13-wall-expansion-stage 3)
+    (enable-wall-placement 2)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age == imperial-age)
+    (goal df13-wall-expansion-stage 3)
+    (civilian-population >= 100)
+    (wall-completed-percentage 2 >= 85)
+=>
+    (set-goal df13-wall-expansion-stage 4)
+    (enable-wall-placement 2)
+)
+
+; Maintenance rules run after the baseline footprint rules above.  Thus the
+; initial wall stays the approved size, but later expansions can grow outward.
+(defrule
+    (difficulty == hardest)
+    (goal df13-wall-expansion-stage 1)
+=>
+    (set-strategic-number sn-minimum-town-size 10)
+    (set-strategic-number sn-maximum-town-size 31)
+    (set-strategic-number sn-safe-town-size 24)
+)
+(defrule
+    (difficulty == hardest)
+    (goal df13-wall-expansion-stage 2)
+=>
+    (set-strategic-number sn-minimum-town-size 11)
+    (set-strategic-number sn-maximum-town-size 35)
+    (set-strategic-number sn-safe-town-size 28)
+)
+(defrule
+    (difficulty == hardest)
+    (goal df13-wall-expansion-stage 3)
+=>
+    (set-strategic-number sn-minimum-town-size 12)
+    (set-strategic-number sn-maximum-town-size 39)
+    (set-strategic-number sn-safe-town-size 31)
+)
+(defrule
+    (difficulty == hardest)
+    (goal df13-wall-expansion-stage 4)
+=>
+    (set-strategic-number sn-minimum-town-size 13)
+    (set-strategic-number sn-maximum-town-size 43)
+    (set-strategic-number sn-safe-town-size 34)
+)
+
 ; Mandatory safe Feudal bootstrap.  One build-wall command is enough to mark
 ; the wall as started; later rules decide how far the ring should be extended.
 (defrule
@@ -28431,10 +28501,24 @@
 )
 
 ; Castle fallback if terrain/resource timing prevented the Feudal command.
+; Stone is preferred immediately.  Palisade is allowed only as a last emergency
+; if NO wall bootstrap exists and stone is still unavailable; it never replaces
+; or overwrites an existing stone defense.
 (defrule
     (current-age >= castle-age)
     (goal df13-wall-bootstrap 0)
-    (wood-amount > 80)
+    (stone-amount > 120)
+    (up-pending-objects c: stone-wall-line < 1)
+    (can-build-wall 1 stone-wall-line)
+=>
+    (build-wall 1 stone-wall-line)
+    (set-goal df13-wall-bootstrap 1)
+)
+(defrule
+    (current-age >= castle-age)
+    (goal df13-wall-bootstrap 0)
+    (stone-amount <= 120)
+    (wood-amount > 120)
     (up-pending-objects c: palisade-wall < 1)
     (can-build-wall 1 palisade-wall)
 =>
@@ -28442,9 +28526,8 @@
     (set-goal df13-wall-bootstrap 1)
 )
 
-; In Castle Age the inner barrier becomes a real fortress line.  Stone is
-; preferred when available; palisade remains a valid fallback so walling never
-; simply stops because stone is temporarily low.
+; In Castle Age the developed inner barrier is stone-only.  Low stone delays
+; further construction rather than downgrading a stone wall to palisade.
 (defrule
     (difficulty == hardest)
     (current-age >= castle-age)
@@ -28454,17 +28537,6 @@
     (can-build-wall 1 stone-wall-line)
 =>
     (build-wall 1 stone-wall-line)
-)
-(defrule
-    (difficulty == hardest)
-    (current-age >= castle-age)
-    (wall-completed-percentage 1 < 85)
-    (stone-amount <= 180)
-    (wood-amount > 170)
-    (not (town-under-attack))
-    (can-build-wall 1 palisade-wall)
-=>
-    (build-wall 1 palisade-wall)
 )
 
 ; Finish the inner line later when spare resources exist.
@@ -28480,30 +28552,33 @@
     (build-wall 1 stone-wall-line)
 )
 
-; Outer ring.  Start earlier than FIX04 and allow a wood fallback on maps where
-; stone or island geometry makes a full double-stone enclosure impractical.
+; Outer ring / expansion security.  The original inner wall is never removed.
+; Once Castle Age is established, placement 2 is another stone security line.
 (defrule
     (difficulty == hardest)
     (current-age >= castle-age)
     (wall-completed-percentage 1 >= 55)
-    (wall-completed-percentage 2 < 75)
-    (stone-amount > 250)
+    (wall-completed-percentage 2 < 85)
+    (stone-amount > 220)
     (not (town-under-attack))
     (can-build-wall 2 stone-wall-line)
 =>
     (build-wall 2 stone-wall-line)
 )
+
+; Enlarged perimeter 2 closes the next additive stone layer.  Because the old
+; perimeter is never deleted, repeated mature expansions produce double/triple
+; and, on very large late bases, deeper defensive rings.
 (defrule
     (difficulty == hardest)
     (current-age >= castle-age)
-    (wall-completed-percentage 1 >= 60)
-    (wall-completed-percentage 2 < 60)
-    (stone-amount <= 250)
-    (wood-amount > 260)
+    (or (goal df13-wall-expansion-stage 1) (or (goal df13-wall-expansion-stage 2) (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4))))
+    (wall-completed-percentage 2 < 95)
+    (stone-amount > 280)
     (not (town-under-attack))
-    (can-build-wall 2 palisade-wall)
+    (can-build-wall 2 stone-wall-line)
 =>
-    (build-wall 2 palisade-wall)
+    (build-wall 2 stone-wall-line)
 )
 
 ; Controlled gates appear as soon as a useful section of wall exists.
@@ -28526,10 +28601,93 @@
     (build-gate 2)
 )
 
+
+; Serious path/access stress.  We deliberately ignore small detours.  Resource
+; walking distances must be far above the normal dropsite targets before an
+; extra gate is allowed.  This is a cheap legacy-HD proxy for a blocked/very
+; indirect villager route and avoids running expensive pathfinding every pass.
+(defrule
+    (difficulty == hardest)
+    (current-age >= castle-age)
+    (civilian-population >= 50)
+    (wall-completed-percentage 1 >= 70)
+    (building-type-count-total gate < 3)
+    (or (dropsite-min-distance wood > 9)
+        (or (dropsite-min-distance gold > 7)
+            (dropsite-min-distance stone > 7)))
+    (not (town-under-attack))
+    (can-build-gate 1)
+=>
+    (build-gate 1)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age >= castle-age)
+    (civilian-population >= 65)
+    (wall-completed-percentage 2 >= 55)
+    (building-type-count-total gate < 4)
+    (or (dropsite-min-distance wood > 11)
+        (or (dropsite-min-distance gold > 8)
+            (dropsite-min-distance stone > 8)))
+    (not (town-under-attack))
+    (can-build-gate 2)
+=>
+    (build-gate 2)
+)
+
+; Large additive layers receive more controlled access points even when no
+; wall segment is removed.  This prevents a huge late ring from forcing a
+; villager to walk across half the fortress to the only gate.
+(defrule
+    (difficulty == hardest)
+    (current-age >= castle-age)
+    (or (goal df13-wall-expansion-stage 2) (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4)))
+    (building-type-count-total gate < 5)
+    (wall-completed-percentage 2 >= 60)
+    (not (town-under-attack))
+    (can-build-gate 2)
+=>
+    (build-gate 2)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age == imperial-age)
+    (or (goal df13-wall-expansion-stage 3) (goal df13-wall-expansion-stage 4))
+    (building-type-count-total gate < 6)
+    (wall-completed-percentage 2 >= 65)
+    (not (town-under-attack))
+    (can-build-gate 2)
+=>
+    (build-gate 2)
+)
+
 ; ---------------------------------------------------------------------------
 ; Observation network.  Local eyes first, forward eyes only after the economy
 ; is developed.  Targets: 2 Dark, 4 Feudal, 8 Castle, 15 Imperial on Hardest.
 ; ---------------------------------------------------------------------------
+
+; Local observation envelope sits three town-size steps inside the local wall:
+; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 14
+; versus the developed 17-point wall envelope.  Wall rules occur earlier in the
+; pass, so the replay-approved wall geometry itself is not enlarged here.
+(defrule
+    (difficulty == hardest)
+    (current-age == dark-age)
+    (building-type-count-total df13-outpost < 2)
+=>
+    (set-strategic-number sn-minimum-town-size 5)
+    (set-strategic-number sn-maximum-town-size 9)
+    (set-strategic-number sn-safe-town-size 7)
+)
+(defrule
+    (difficulty == hardest)
+    (current-age == feudal-age)
+    (building-type-count-total df13-outpost < 4)
+=>
+    (set-strategic-number sn-minimum-town-size 8)
+    (set-strategic-number sn-maximum-town-size 14)
+    (set-strategic-number sn-safe-town-size 12)
+)
 (defrule
     (difficulty == hardest)
     (current-age == dark-age)
@@ -28560,7 +28718,7 @@
     (up-pending-objects c: df13-outpost < 1)
     (can-build df13-outpost)
 =>
-    (build-forward df13-outpost)
+    (build df13-outpost)
 )
 (defrule
     (difficulty == hardest)
@@ -28794,7 +28952,7 @@
     (food-amount > 120)
     (can-train scout-cavalry-line)
 =>
-    (train scout-cavalry-line)
+    (set-goal df13-scout-request 1)
 )
 (defrule
     (current-age >= castle-age)
@@ -28804,7 +28962,300 @@
     (gold-amount > 160)
     (can-train knight-line)
 =>
-    (train knight-line)
+    (set-goal df13-knight-request 1)
+)
+
+; ---------------------------------------------------------------------------
+; FIX06 NON-CONVERTING UPGRADE DOCTRINE
+; Research unlocks a new full-price model.  Units already on the field remain
+; their old model and are never deleted merely because a better tier exists.
+; Small exact-tier floors prevent a line-total full of old units from blocking
+; all production of the newly researched model.
+; ---------------------------------------------------------------------------
+(defrule
+    (goal makeinfantry 1)
+    (research-completed ri-man-at-arms)
+    (not (research-completed ri-long-swordsman))
+    (unit-type-count-total man-at-arms < 4)
+    (can-train man-at-arms)
+=>
+    (train man-at-arms)
+)
+(defrule
+    (goal makeinfantry 1)
+    (research-completed ri-long-swordsman)
+    (not (research-completed ri-two-handed-swordsman))
+    (unit-type-count-total long-swordsman < 4)
+    (can-train long-swordsman)
+=>
+    (train long-swordsman)
+)
+(defrule
+    (goal makeinfantry 1)
+    (research-completed ri-two-handed-swordsman)
+    (not (research-completed ri-champion))
+    (unit-type-count-total two-handed-swordsman < 6)
+    (can-train two-handed-swordsman)
+=>
+    (train two-handed-swordsman)
+)
+(defrule
+    (goal makeinfantry 1)
+    (research-completed ri-champion)
+    (unit-type-count-total champion < 8)
+    (can-train champion)
+=>
+    (train champion)
+)
+(defrule
+    (or (goal makeinfantry 1) (goal df13-threat-cavalry 1))
+    (research-completed ri-pikeman)
+    (not (research-completed ri-halberdier))
+    (unit-type-count-total pikeman < 5)
+    (can-train pikeman)
+=>
+    (train pikeman)
+)
+(defrule
+    (or (goal makeinfantry 1) (goal df13-threat-cavalry 1))
+    (research-completed ri-halberdier)
+    (unit-type-count-total halberdier < 8)
+    (can-train halberdier)
+=>
+    (train halberdier)
+)
+(defrule
+    (goal makearchers 1)
+    (research-completed ri-crossbow)
+    (not (research-completed ri-arbalest))
+    (unit-type-count-total crossbowman < 5)
+    (can-train crossbowman)
+=>
+    (train crossbowman)
+)
+(defrule
+    (goal makearchers 1)
+    (research-completed ri-arbalest)
+    (unit-type-count-total arbalest < 8)
+    (can-train arbalest)
+=>
+    (train arbalest)
+)
+(defrule
+    (goal df13-threat-archer 1)
+    (research-completed ri-elite-skirmisher)
+    (unit-type-count-total elite-skirmisher < 6)
+    (can-train elite-skirmisher)
+=>
+    (train elite-skirmisher)
+)
+(defrule
+    (goal makearchers 1)
+    (research-completed ri-heavy-cavalry-archer)
+    (unit-type-count-total heavy-cavalry-archer < 6)
+    (can-train heavy-cavalry-archer)
+=>
+    (train heavy-cavalry-archer)
+)
+(defrule
+    (goal makecavalry 1)
+    (research-completed ri-heavy-camel)
+    (unit-type-count-total heavy-camel < 6)
+    (can-train heavy-camel)
+=>
+    (train heavy-camel)
+)
+(defrule
+    (goal makesiege 1)
+    (research-completed ri-capped-ram)
+    (not (research-completed ri-siege-ram))
+    (unit-type-count-total capped-ram < 3)
+    (can-train capped-ram)
+=>
+    (train capped-ram)
+)
+(defrule
+    (goal makesiege 1)
+    (research-completed ri-siege-ram)
+    (unit-type-count-total siege-ram < 4)
+    (can-train siege-ram)
+=>
+    (train siege-ram)
+)
+(defrule
+    (goal makesiege 1)
+    (research-completed ri-onager)
+    (not (research-completed ri-siege-onager))
+    (unit-type-count-total onager < 3)
+    (can-train onager)
+=>
+    (train onager)
+)
+(defrule
+    (goal makesiege 1)
+    (research-completed ri-siege-onager)
+    (unit-type-count-total siege-onager < 4)
+    (can-train siege-onager)
+=>
+    (train siege-onager)
+)
+(defrule
+    (goal makesiege 1)
+    (research-completed ri-heavy-scorpion)
+    (unit-type-count-total heavy-scorpion < 4)
+    (can-train heavy-scorpion)
+=>
+    (train heavy-scorpion)
+)
+
+; Naval families follow the same rule: old ships remain, the researched model
+; is bought separately at full cost.
+(defrule
+    (goal createnavy 1)
+    (research-completed ri-war-galley)
+    (not (research-completed ri-galleon))
+    (unit-type-count-total war-galley < 5)
+    (can-train war-galley)
+=>
+    (train war-galley)
+)
+(defrule
+    (goal createnavy 1)
+    (research-completed ri-galleon)
+    (unit-type-count-total galleon < 8)
+    (can-train galleon)
+=>
+    (train galleon)
+)
+(defrule
+    (goal createnavy 1)
+    (research-completed ri-fast-fire-ship)
+    (unit-type-count-total fast-fire-ship < 6)
+    (can-train fast-fire-ship)
+=>
+    (train fast-fire-ship)
+)
+(defrule
+    (goal createnavy 1)
+    (research-completed ri-heavy-demolition-ship)
+    (unit-type-count-total heavy-demolition-ship < 4)
+    (can-train heavy-demolition-ship)
+=>
+    (train heavy-demolition-ship)
+)
+(defrule
+    (goal createnavy 1)
+    (research-completed ri-deck-guns)
+    (unit-type-count-total elite-cannon-galleon < 3)
+    (can-train elite-cannon-galleon)
+=>
+    (train elite-cannon-galleon)
+)
+
+; Knight family: Paladin > Cavalier > Knight.  Existing older models remain.
+(defrule
+    (goal df13-knight-request 1)
+    (research-completed ri-paladin)
+    (can-train paladin)
+=>
+    (train paladin)
+    (set-goal df13-knight-request 0)
+)
+(defrule
+    (goal df13-knight-request 1)
+    (not (research-completed ri-paladin))
+    (research-completed ri-cavalier)
+    (can-train cavalier)
+=>
+    (train cavalier)
+    (set-goal df13-knight-request 0)
+)
+(defrule
+    (goal df13-knight-request 1)
+    (not (research-completed ri-cavalier))
+    (can-train knight)
+=>
+    (train knight)
+    (set-goal df13-knight-request 0)
+)
+
+; Scout family: Hussar > Light Cavalry > Scout Cavalry.  Scout Cavalry is a
+; separate paid reconnaissance tier, not a stockpile waiting for free conversion.
+(defrule
+    (goal df13-scout-request 1)
+    (research-completed ri-hussar)
+    (can-train hussar)
+=>
+    (train hussar)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-hussar))
+    (research-completed ri-light-cavalry)
+    (can-train light-cavalry)
+=>
+    (train light-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == hardest)
+    (unit-type-count-total scout-cavalry < 6)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == hard)
+    (unit-type-count-total scout-cavalry < 5)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == moderate)
+    (unit-type-count-total scout-cavalry < 3)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty > hard)
+    (unit-type-count-total scout-cavalry < 2)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+; Clear stale Scout requests at caps.  Legacy tactical rules may request again
+; next cycle, but cannot bypass the difficulty cap.
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == hardest)
+    (unit-type-count-total scout-cavalry >= 6)
+=>
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (not (research-completed ri-light-cavalry))
+    (difficulty == moderate)
+    (unit-type-count-total scout-cavalry >= 3)
+=>
+    (set-goal df13-scout-request 0)
 )
 (defrule
     (current-age >= feudal-age)

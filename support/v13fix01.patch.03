@@ -1,0 +1,124 @@
+ 100)
++    (set-strategic-number sn-enemy-sighted-response-distance 45)
++    (set-strategic-number sn-number-civilian-militia 0)
++    (set-strategic-number sn-disable-villager-garrison 0)
++)
++
++; Concentrated counterattack after a defended assault.  Two coherent groups,
++; not one-unit trickles.
++(defrule
++    (goal df13-counterattack 1)
++    (goal df13-recovery 0)
++    (military-population >= 12)
++=>
++    (set-strategic-number sn-number-attack-groups 2)
++    (set-strategic-number sn-percent-attack-soldiers 70)
++    (set-strategic-number sn-minimum-attack-group-size 12)
++    (set-strategic-number sn-maximum-attack-group-size 28)
++    (set-strategic-number sn-number-defend-groups 1)
++    (set-strategic-number sn-minimum-defend-group-size 4)
++    (set-strategic-number sn-maximum-defend-group-size 16)
++    (set-strategic-number sn-percent-enemy-sighted-response 65)
++    (set-strategic-number sn-enemy-sighted-response-distance 30)
++)
++
++; ---------------------------------------------------------------------------
++; Recovery mode.  Economy still remains Resonance-owned; this layer only stops
++; suicidal attacks and reconstructs indispensable infrastructure when possible.
++; ---------------------------------------------------------------------------
++(defrule
++    (game-time > 900)
++    (current-age >= castle-age)
++    (or (building-type-count-total town-center < 1)
++        (unit-type-count-total villager < 24))
++=>
++    (set-goal df13-recovery 1)
++)
++(defrule
++    (goal df13-recovery 1)
++    (building-type-count-total town-center >= 1)
++    (unit-type-count-total villager >= 32)
++=>
++    (set-goal df13-recovery 0)
++)
++(defrule
++    (goal df13-recovery 1)
++=>
++    (set-strategic-number sn-number-attack-groups 0)
++    (set-strategic-number sn-percent-attack-soldiers 0)
++    (set-strategic-number sn-number-defend-groups 1)
++    (set-strategic-number sn-minimum-defend-group-size 4)
++    (set-strategic-number sn-maximum-defend-group-size 20)
++)
++(defrule
++    (goal df13-recovery 1)
++    (building-type-count-total town-center < 1)
++    (up-pending-objects c: town-center < 1)
++    (can-build town-center)
++=>
++    (build town-center)
++)
++(defrule
++    (goal df13-recovery 1)
++    (housing-headroom < 4)
++    (up-pending-objects c: house < 1)
++    (can-build house)
++=>
++    (build house)
++)
++(defrule
++    (goal df13-recovery 1)
++    (building-type-count-total lumber-camp < 1)
++    (up-pending-objects c: lumber-camp < 1)
++    (can-build lumber-camp)
++=>
++    (build lumber-camp)
++)
++(defrule
++    (goal df13-recovery 1)
++    (building-type-count-total mill < 1)
++    (up-pending-objects c: mill < 1)
++    (can-build mill)
++=>
++    (build mill)
++)
++
++; ---------------------------------------------------------------------------
++; Fortress footprint.  Larger than Resonance default so nearby resources are
++; more likely to end up inside the defensive perimeter.
++; ---------------------------------------------------------------------------
++(defrule
++    (difficulty == hardest)
++    (current-age == feudal-age)
++=>
++    (set-strategic-number sn-minimum-town-size 8)
++    (set-strategic-number sn-maximum-town-size 17)
++    (set-strategic-number sn-safe-town-size 14)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == castle-age)
++    (building-type-count-total town-center < 2)
++=>
++    (set-strategic-number sn-minimum-town-size 9)
++    (set-strategic-number sn-maximum-town-size 21)
++    (set-strategic-number sn-safe-town-size 17)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == castle-age)
++    (building-type-count-total town-center >= 2)
++=>
++    (set-strategic-number sn-minimum-town-size 10)
++    (set-strategic-number sn-maximum-town-size 27)
++    (set-strategic-number sn-safe-town-size 21)
++)
++(defrule
++    (difficulty == hardest)
++    (current-age == imperial-age)
++=>
++    (set-strategic-number sn-minimum-town-size 10)
++    (set-strategic-number sn-maximum-town-size 31)
++    (set-strategic-number sn-safe-town-size 24)
++)
++

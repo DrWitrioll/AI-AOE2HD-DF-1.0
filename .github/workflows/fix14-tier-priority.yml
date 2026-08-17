@@ -1,0 +1,121 @@
+name: Generate V13 FIX14 tier-priority hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix14-tier-priority.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-publish-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact FIX13 and FIX14 from known-good FIX12
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '90b9ec7e335d9027e14565e1e09309678e460cb7b4d0c5bdf89dab3a981d8d9e  Dr_Fortress_AI_V13_FIX12.per' | sha256sum -c -
+          cp Dr_Fortress_AI_V13_FIX12.per work.per
+          python - <<'PY2'
+          import base64,zlib
+          open('p13.patch','wb').write(zlib.decompress(base64.b64decode('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')))
+          open('p14.patch','wb').write(zlib.decompress(base64.b64decode('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')))
+          PY2
+          patch --batch -p0 < p13.patch
+          cp work.per Dr_Fortress_AI_V13_FIX13.per
+          : > Dr_Fortress_AI_V13_FIX13.ai
+          echo 'fe6c4643bc5b49028a251beaf4e99df7a4813c2f5be2864ef0447b779c52dd34  Dr_Fortress_AI_V13_FIX13.per' | sha256sum -c -
+          patch --batch -p0 < p14.patch
+          cp work.per Dr_Fortress_AI_V13_FIX14.per
+          : > Dr_Fortress_AI_V13_FIX14.ai
+          echo 'bf794aa507e143117aa834f151a1dd850346e3a5140bf3d3147407dbcf99c803  Dr_Fortress_AI_V13_FIX14.per' | sha256sum -c -
+          rm -f work.per p13.patch p14.patch
+
+      - name: Parser-safety validation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, hashlib
+          p=Path('Dr_Fortress_AI_V13_FIX14.per')
+          s=p.read_text(encoding='utf-8')
+          bad=['up-reset-placement','up-idle-unit-count','up-get-threat-data','up-compare-goal','up-guard-unit','up-reset-scouts','up-retreat-to']
+          for token in bad:
+              if re.search(r'^\s*\('+re.escape(token)+r'\b',s,re.M):
+                  raise SystemExit('active rejected token: '+token)
+          if re.search(r'\(goal\s+[^\s()]+\s*(?:>=|<=|>|<)',s):
+              raise SystemExit('HD relational goal parser trap')
+          bal=0
+          for n,line in enumerate(s.splitlines(),1):
+              out=[]; quoted=False; esc=False
+              for ch in line:
+                  if ch=='"' and not esc: quoted=not quoted
+                  if ch==';' and not quoted: break
+                  out.append(ch)
+                  esc=(ch=='\\' and not esc)
+                  if ch!='\\': esc=False
+              c=''.join(out)
+              bal += c.count('(')-c.count(')')
+              if bal<0: raise SystemExit(f'paren underflow at {n}')
+          if bal: raise SystemExit(f'paren imbalance {bal}')
+          print('FIX14 parser-safety OK',p.stat().st_size,hashlib.sha256(p.read_bytes()).hexdigest())
+
+      - name: Publish main latest-two policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp Dr_Fortress_AI_V13_FIX13.per /tmp/FIX13.per
+          cp Dr_Fortress_AI_V13_FIX13.ai /tmp/FIX13.ai
+          cp Dr_Fortress_AI_V13_FIX14.per /tmp/FIX14.per
+          cp Dr_Fortress_AI_V13_FIX14.ai /tmp/FIX14.ai
+          git add Dr_Fortress_AI_V13_FIX13.per Dr_Fortress_AI_V13_FIX13.ai Dr_Fortress_AI_V13_FIX14.per Dr_Fortress_AI_V13_FIX14.ai
+          git rm -f Dr_Fortress_AI_V13_FIX11.per Dr_Fortress_AI_V13_FIX11.ai Dr_Fortress_AI_V13_FIX12.per Dr_Fortress_AI_V13_FIX12.ai
+          git commit -m "Add V13 FIX14 researched-tier production priority"
+          git push origin HEAD:main
+
+      - name: Archive FIX13 and FIX14
+        shell: bash
+        run: |
+          set -euo pipefail
+          for br in V13 FIX support; do
+            git checkout -B "$br" "origin/$br"
+            cp /tmp/FIX13.per Dr_Fortress_AI_V13_FIX13.per
+            cp /tmp/FIX13.ai Dr_Fortress_AI_V13_FIX13.ai
+            cp /tmp/FIX14.per Dr_Fortress_AI_V13_FIX14.per
+            cp /tmp/FIX14.ai Dr_Fortress_AI_V13_FIX14.ai
+            git add Dr_Fortress_AI_V13_FIX13.per Dr_Fortress_AI_V13_FIX13.ai Dr_Fortress_AI_V13_FIX14.per Dr_Fortress_AI_V13_FIX14.ai
+            if ! git diff --cached --quiet; then
+              git commit -m "Archive V13 FIX13 and FIX14"
+              git push origin HEAD:"$br"
+            fi
+          done
+
+      - name: Verify branch blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for br in main V13 FIX support; do
+            git fetch -q origin "$br"
+            b13=$(git show "origin/$br:Dr_Fortress_AI_V13_FIX13.per" | sha256sum | cut -d' ' -f1)
+            b14=$(git show "origin/$br:Dr_Fortress_AI_V13_FIX14.per" | sha256sum | cut -d' ' -f1)
+            test "$b13" = "fe6c4643bc5b49028a251beaf4e99df7a4813c2f5be2864ef0447b779c52dd34"
+            test "$b14" = "bf794aa507e143117aa834f151a1dd850346e3a5140bf3d3147407dbcf99c803"
+            echo "$br OK"
+          done
+
+      - name: Cleanup one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -B main origin/main
+          git rm -f .github/workflows/fix14-tier-priority.yml
+          git commit -m "Remove one-shot FIX14 generator"
+          git push origin HEAD:main

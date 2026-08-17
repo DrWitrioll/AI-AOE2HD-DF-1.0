@@ -1,0 +1,73 @@
+Mangonels against ranged masses.
++(defrule
++    (current-age >= castle-age)
++    (goal df13-threat-archer 1)
++    (unit-type-count-total mangonel-line < 3)
++    (wood-amount > 220)
++    (gold-amount > 150)
++    (can-train mangonel-line)
++=>
++    (train mangonel-line)
++)
++; Scorpions against massed infantry.
++(defrule
++    (current-age >= castle-age)
++    (goal df13-threat-infantry 1)
++    (unit-type-count-total scorpion-line < 4)
++    (wood-amount > 220)
++    (gold-amount > 120)
++    (can-train scorpion-line)
++=>
++    (train scorpion-line)
++)
++
++; Siege package readiness.
++(defrule
++    (current-age >= castle-age)
++    (or (unit-type-count-total battering-ram-line >= 2)
++        (or (unit-type-count-total mangonel-line >= 2)
++            (unit-type-count-total scorpion-line >= 3)))
++=>
++    (set-goal df13-siege-ready 1)
++)
++(defrule
++    (current-age >= castle-age)
++    (unit-type-count-total battering-ram-line < 2)
++    (unit-type-count-total mangonel-line < 2)
++    (unit-type-count-total scorpion-line < 3)
++=>
++    (set-goal df13-siege-ready 0)
++)
++
++; Do not throw ordinary troops alone into a fortified enemy.  When a siege
++; package exists, form a heavier assault group.
++(defrule
++    (goal df13-enemy-fortified 1)
++    (goal df13-siege-ready 0)
++    (goal df13-defense-state 0)
++=>
++    (set-strategic-number sn-number-attack-groups 0)
++    (set-strategic-number sn-percent-attack-soldiers 0)
++)
++(defrule
++    (goal df13-enemy-fortified 1)
++    (goal df13-siege-ready 1)
++    (goal df13-defense-state 0)
++    (goal df13-recovery 0)
++    (military-population >= 18)
++=>
++    (set-goal df13-assault-ready 1)
++    (set-strategic-number sn-minimum-attack-group-size 14)
++    (set-strategic-number sn-maximum-attack-group-size 32)
++    (set-strategic-number sn-number-attack-groups 2)
++    (set-strategic-number sn-percent-attack-soldiers 75)
++)
++(defrule
++    (goal df13-enemy-fortified 0)
++=>
++    (set-goal df13-assault-ready 0)
++)
++
++; ---------------------------------------------------------------------------
++; End V13 Fortress doctrine.
++; ---------------------------------------------------------------------------

@@ -1,5 +1,18 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX13
+; DR FORTRESS AI V13 FIX15
+; FIX15 situational mixed-tier / wall reliability repair:
+; - replay 2026-08-18 01:53 (HD 5.8) contains ZERO WALL actions from FIX14 despite long Feudal/Castle play.
+; - Feudal palisade bootstrap now retries a direct parser-safe build-wall command on a cooldown until real wall segments exist.
+; - wall state/progression is confirmed by actual wall segment counts; issuing a command alone never marks the fortress as started.
+; - Feudal Watch Tower floor on Hardest is four towers (FIX14 replay produced only two per Fortress AI).
+; - normal military production no longer saves exclusively for the strongest researched tier.
+; - tier posture is situational: cheap mass/rebuild/pressure, balanced middle tiers, and elite power tiers for a funded assault.
+; - every normal dispatcher can fall back to a cheaper researched tier when the preferred tier is temporarily unaffordable.
+; - family requests still come from civ strategy/threat counters, so tier choice and unit-role choice remain separate decisions.
+; - no new executable identifier is introduced; FIX10/FIX13 parser-safe vocabulary is retained.
+; FIX14 researched-tier production priority (superseded by FIX15 situational selection):
+; - replay 004756 confirmed that upgraded tiers were researched while normal production kept buying legacy tiers.
+; - FIX14 gave exclusive priority to the strongest researched tier; FIX15 deliberately replaces that behaviour.
 ; FIX13 AoE2 HD parser compatibility hotfix:
 ; - removes all active FIX11-only executable identifiers not present in known-good FIX10.
 ; - directly fixes ERR2004 on up-idle-unit-count and pre-empts the same class of parser failure.
@@ -111,6 +124,9 @@
 (defconst df13-scout-request 180)
 (defconst df13-knight-request 181)
 (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
+(defconst df15-tier-posture 220)       ;1=cheap mass, 2=balanced, 3=power/elite assault
+(defconst df15-wall-retry 222)         ;0=ready, 1=wall command cooldown
+(defconst df15-wall-timer 49)          ;FIX15 retry timer; timer 49 was unused in FIX14
 
 ; FIX09 exact-tier family production requests.
 (defconst df13-militia-request 185)
@@ -28593,6 +28609,7 @@
     (current-age >= castle-age)
     (goal df13-wall-expansion-stage 0)
     (building-type-count-total town-center >= 2)
+    (building-type-count-total stone-wall-line >= 8)
     (civilian-population >= 55)
     (wall-completed-percentage 1 >= 80)
     (wall-completed-percentage 2 >= 65)
@@ -28604,6 +28621,7 @@
     (difficulty == hardest)
     (current-age >= castle-age)
     (goal df13-wall-expansion-stage 1)
+    (building-type-count-total stone-wall-line >= 14)
     (civilian-population >= 70)
     (wall-completed-percentage 2 >= 80)
 =>
@@ -28614,6 +28632,7 @@
     (difficulty == hardest)
     (current-age == imperial-age)
     (goal df13-wall-expansion-stage 2)
+    (building-type-count-total stone-wall-line >= 20)
     (civilian-population >= 85)
     (wall-completed-percentage 2 >= 82)
 =>
@@ -28624,6 +28643,7 @@
     (difficulty == hardest)
     (current-age == imperial-age)
     (goal df13-wall-expansion-stage 3)
+    (building-type-count-total stone-wall-line >= 28)
     (civilian-population >= 100)
     (wall-completed-percentage 2 >= 85)
 =>
@@ -28666,8 +28686,96 @@
     (set-strategic-number sn-safe-town-size 34)
 )
 
-; Mandatory safe Feudal bootstrap.  One build-wall command is enough to mark
-; the wall as started; later rules decide how far the ring should be extended.
+; FIX15 WALL RELIABILITY LAYER
+; The attached FIX14 replay reached Feudal/Castle with three Fortress AIs but
+; recorded no WALL action at all.  can-build-wall therefore cannot be the only
+; gateway to the first wall command.  Retry build-wall directly every 25 seconds
+; until completed wall segments prove that the planner actually started.
+(defrule
+    (goal df15-wall-retry 1)
+    (timer-triggered df15-wall-timer)
+=>
+    (set-goal df15-wall-retry 0)
+    (disable-timer df15-wall-timer)
+)
+
+; A real completed segment, not an issued command or a default 100% planner
+; value, confirms that the fortress wall bootstrap exists.
+(defrule
+    (goal df13-wall-bootstrap 0)
+    (building-type-count-total palisade-wall >= 1)
+=>
+    (set-goal df13-wall-bootstrap 1)
+)
+(defrule
+    (goal df13-wall-bootstrap 0)
+    (building-type-count-total stone-wall-line >= 1)
+=>
+    (set-goal df13-wall-bootstrap 1)
+)
+
+; Give the first palisade enough radius to sit outside the compact economic
+; core.  This also avoids the FIX14 6..12 ring being trapped inside buildings.
+(defrule
+    (current-age == feudal-age)
+    (goal df13-wall-bootstrap 0)
+=>
+    (set-strategic-number sn-minimum-town-size 8)
+    (set-strategic-number sn-maximum-town-size 18)
+    (set-strategic-number sn-safe-town-size 14)
+)
+
+; Direct Feudal palisade attempt.  No can-build-wall predicate here: FIX14's
+; replay demonstrated that predicate can remain false forever before the first
+; planner action.  The action itself is parser-safe and already used in FIX10.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 35)
+    (goal df13-wall-bootstrap 0)
+    (goal df15-wall-retry 0)
+    (wood-amount > 70)
+    (up-pending-objects c: palisade-wall < 1)
+=>
+    (enable-wall-placement 1)
+    (build-wall 1 palisade-wall)
+    (set-goal df15-wall-retry 1)
+    (enable-timer df15-wall-timer 25)
+)
+
+; Larger-perimeter fallback for coast/island/blocked inner geometry.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 110)
+    (goal df13-wall-bootstrap 0)
+    (goal df15-wall-retry 0)
+    (wood-amount > 70)
+    (up-pending-objects c: palisade-wall < 1)
+=>
+    (set-strategic-number sn-minimum-town-size 9)
+    (set-strategic-number sn-maximum-town-size 22)
+    (enable-wall-placement 2)
+    (build-wall 2 palisade-wall)
+    (set-goal df15-wall-retry 1)
+    (enable-timer df15-wall-timer 25)
+)
+
+; Castle fallback also retries directly.  It never claims success until a real
+; stone/palisade segment is counted by one of the confirmation rules above.
+(defrule
+    (current-age >= castle-age)
+    (goal df13-wall-bootstrap 0)
+    (goal df15-wall-retry 0)
+    (stone-amount > 100)
+    (up-pending-objects c: stone-wall-line < 1)
+=>
+    (enable-wall-placement 1)
+    (build-wall 1 stone-wall-line)
+    (set-goal df15-wall-retry 1)
+    (enable-timer df15-wall-timer 25)
+)
+
+; Mandatory safe Feudal bootstrap.  FIX15 keeps the old affordability-aware
+; paths as secondary helpers, but they no longer mark success by themselves.
 (defrule
     (current-age == feudal-age)
     (current-age-time >= 45)
@@ -28678,7 +28786,6 @@
     (can-build-wall 1 palisade-wall)
 =>
     (build-wall 1 palisade-wall)
-    (set-goal df13-wall-bootstrap 1)
 )
 
 ; If the safe attempt had no window, retry after two Feudal minutes even under
@@ -28692,7 +28799,6 @@
     (can-build-wall 1 palisade-wall)
 =>
     (build-wall 1 palisade-wall)
-    (set-goal df13-wall-bootstrap 1)
 )
 
 ; Island/coast fallback: if wall placement 1 cannot find a legal segment, try
@@ -28706,7 +28812,6 @@
     (can-build-wall 2 palisade-wall)
 =>
     (build-wall 2 palisade-wall)
-    (set-goal df13-wall-bootstrap 1)
 )
 
 ; A limited Feudal continuation: enough to create a meaningful partial barrier
@@ -28751,7 +28856,6 @@
     (can-build-wall 1 stone-wall-line)
 =>
     (build-wall 1 stone-wall-line)
-    (set-goal df13-wall-bootstrap 1)
 )
 (defrule
     (current-age >= castle-age)
@@ -28762,7 +28866,6 @@
     (can-build-wall 1 palisade-wall)
 =>
     (build-wall 1 palisade-wall)
-    (set-goal df13-wall-bootstrap 1)
 )
 
 ; In Castle Age the developed inner barrier is stone-only.  Low stone delays
@@ -28823,6 +28926,8 @@
 ; Controlled gates appear as soon as a useful section of wall exists.
 (defrule
     (current-age >= feudal-age)
+    (or (building-type-count-total palisade-wall >= 4)
+        (building-type-count-total stone-wall-line >= 4))
     (wall-completed-percentage 1 >= 15)
     (building-type-count-total gate < 1)
     (not (town-under-attack))
@@ -28832,6 +28937,7 @@
 )
 (defrule
     (current-age >= castle-age)
+    (building-type-count-total stone-wall-line >= 8)
     (wall-completed-percentage 2 >= 35)
     (building-type-count-total gate < 2)
     (not (town-under-attack))
@@ -28904,6 +29010,21 @@
 ; Observation network.  Local eyes first, forward eyes only after the economy
 ; is developed.  Targets: 2 Dark, 4 Feudal, 8 Castle, 15 Imperial on Hardest.
 ; ---------------------------------------------------------------------------
+
+; FIX15: the replay produced exactly two Watch Towers for every Fortress AI.
+; Enforce the intended four-tower Feudal defensive floor independently of
+; whether the town is already under attack.
+(defrule
+    (difficulty == hardest)
+    (current-age == feudal-age)
+    (current-age-time >= 75)
+    (building-type-count-total watch-tower-line < 4)
+    (stone-amount > 100)
+    (up-pending-objects c: watch-tower-line < 1)
+    (can-build watch-tower-line)
+=>
+    (build watch-tower-line)
+)
 
 ; Local observation envelope sits three town-size steps inside the local wall:
 ; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 10
@@ -30246,7 +30367,398 @@
 )
 
 
-; df13-knight-request: recovery = cheapest; normal = best currently affordable tier.
+; ============================================================================
+; FIX15 SITUATIONAL TIER POSTURE
+; ============================================================================
+; Family selection remains threat/civ driven.  This layer only decides how much
+; of the available technology budget to spend on the requested role.
+; 1 = cheap mass / emergency / early rebuilding
+; 2 = balanced middle tier / mixed standing army
+; 3 = power tier for a funded prepared assault
+(defrule
+    (true)
+=>
+    (set-goal df15-tier-posture 2)
+)
+(defrule
+    (or (goal df13-recovery 1)
+        (or (goal df13-military-rebuild 1) (goal df13-defense-state 1)))
+=>
+    (set-goal df15-tier-posture 1)
+)
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal df13-defense-state 0)
+    (military-population < 18)
+=>
+    (set-goal df15-tier-posture 1)
+)
+(defrule
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (goal df13-defense-state 0)
+    (military-population >= 18)
+    (or (goal df13-assault-ready 1) (goal df13-siege-ready 1))
+    (food-amount > 700)
+    (gold-amount > 350)
+=>
+    (set-goal df15-tier-posture 3)
+)
+
+; CHEAP POSTURE: consume a normal request with the base model when available.
+; Existing recovery rules below already do the same during explicit recovery;
+; these rules extend the idea to pressure/low-field-army situations.
+(defrule
+    (goal df13-knight-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train knight)
+=>
+    (train knight)
+    (set-goal df13-knight-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-militia-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train militiaman)
+=>
+    (train militiaman)
+    (set-goal df13-militia-request 0)
+)
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train spearman)
+=>
+    (train spearman)
+    (set-goal df13-spearman-request 0)
+)
+(defrule
+    (goal df13-archer-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train archer)
+=>
+    (train archer)
+    (set-goal df13-archer-request 0)
+)
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train skirmisher)
+=>
+    (train skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+(defrule
+    (goal df13-cavarcher-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cavalry-archer)
+=>
+    (train cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+(defrule
+    (goal df13-camel-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train camel)
+=>
+    (train camel)
+    (set-goal df13-camel-request 0)
+)
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train eagle-warrior)
+=>
+    (train eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+(defrule
+    (goal df13-ram-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train battering-ram)
+=>
+    (train battering-ram)
+    (set-goal df13-ram-request 0)
+)
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train mangonel)
+=>
+    (train mangonel)
+    (set-goal df13-mangonel-request 0)
+)
+(defrule
+    (goal df13-scorpion-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train scorpion)
+=>
+    (train scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+(defrule
+    (goal df13-galley-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train galley)
+=>
+    (train galley)
+    (set-goal df13-galley-request 0)
+)
+(defrule
+    (goal df13-fire-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train fire-galley)
+=>
+    (train fire-galley)
+    (set-goal df13-fire-request 0)
+)
+(defrule
+    (goal df13-demo-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train demo-raft)
+=>
+    (train demo-raft)
+    (set-goal df13-demo-request 0)
+)
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cannon-galleon)
+=>
+    (train cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+(defrule
+    (goal df13-steppe-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train steppe-lancer)
+=>
+    (train steppe-lancer)
+    (set-goal df13-steppe-request 0)
+)
+(defrule
+    (goal df13-elephant-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train battle-elephant)
+=>
+    (train battle-elephant)
+    (set-goal df13-elephant-request 0)
+)
+(defrule
+    (goal df13-genitour-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train genitour)
+=>
+    (train genitour)
+    (set-goal df13-genitour-request 0)
+)
+(defrule
+    (goal df13-longboat-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train longboat)
+=>
+    (train longboat)
+    (set-goal df13-longboat-request 0)
+)
+(defrule
+    (goal df13-turtle-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train turtle-ship)
+=>
+    (train turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+(defrule
+    (goal df13-magyar-huszar-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train magyar-huszar)
+=>
+    (train magyar-huszar)
+    (set-goal df13-magyar-huszar-request 0)
+)
+(defrule
+    (goal df13-unique-request 1)
+    (goal df15-tier-posture 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train my-unique-unit)
+=>
+    (train my-unique-unit)
+    (set-goal df13-unique-request 0)
+)
+
+; BALANCED POSTURE: on 3+ tier lines deliberately use the middle model rather
+; than treating the newest research as a mandatory replacement.  If the chosen
+; middle model is unaffordable, the normal dispatcher below falls through to any
+; cheaper trainable tier instead of waiting forever for the top tier.
+(defrule
+    (goal df13-knight-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train cavalier)
+=>
+    (train cavalier)
+    (set-goal df13-knight-request 0)
+)
+(defrule
+    (goal df13-scout-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train light-cavalry)
+=>
+    (train light-cavalry)
+    (set-goal df13-scout-request 0)
+)
+(defrule
+    (goal df13-militia-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train two-handed-swordsman)
+=>
+    (train two-handed-swordsman)
+    (set-goal df13-militia-request 0)
+)
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train pikeman)
+=>
+    (train pikeman)
+    (set-goal df13-spearman-request 0)
+)
+(defrule
+    (goal df13-archer-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train crossbowman)
+=>
+    (train crossbowman)
+    (set-goal df13-archer-request 0)
+)
+(defrule
+    (goal df13-ram-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train capped-ram)
+=>
+    (train capped-ram)
+    (set-goal df13-ram-request 0)
+)
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train onager)
+=>
+    (train onager)
+    (set-goal df13-mangonel-request 0)
+)
+(defrule
+    (goal df13-galley-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train war-galley)
+=>
+    (train war-galley)
+    (set-goal df13-galley-request 0)
+)
+(defrule
+    (goal df13-fire-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train fire-ship)
+=>
+    (train fire-ship)
+    (set-goal df13-fire-request 0)
+)
+(defrule
+    (goal df13-demo-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train demolition-ship)
+=>
+    (train demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+; Militia-line Castle fallback: if Two-Handed Swordsman is not unlocked, Long
+; Swordsman is the balanced choice before the normal dispatcher considers top/base.
+(defrule
+    (goal df13-militia-request 1)
+    (goal df15-tier-posture 2)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (can-train long-swordsman)
+=>
+    (train long-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+; df13-knight-request: FIX15 situational tier selection; FIX14 dispatcher retained as power/fallback path.
 
 (defrule
     (goal df13-knight-request 1)
@@ -30259,8 +30771,16 @@
 
 (defrule
     (goal df13-knight-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
+    (can-train cavalier)
+=>
+    (train cavalier)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
     (can-train paladin)
 =>
     (train paladin)
@@ -30271,6 +30791,19 @@
     (goal df13-knight-request 1)
     (goal df13-recovery 0)
     (goal df13-military-rebuild 0)
+    (research-completed ri-paladin)
+    (can-train paladin)
+=>
+    (train paladin)
+    (set-goal df13-knight-request 0)
+)
+
+(defrule
+    (goal df13-knight-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-paladin))
+    (research-completed ri-cavalier)
     (can-train cavalier)
 =>
     (train cavalier)
@@ -30281,6 +30814,8 @@
     (goal df13-knight-request 1)
     (goal df13-recovery 0)
     (goal df13-military-rebuild 0)
+    (not (research-completed ri-paladin))
+    (not (research-completed ri-cavalier))
     (can-train knight)
 =>
     (train knight)
@@ -30289,67 +30824,18 @@
 
 (defrule
     (goal df13-knight-request 1)
-    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train cavalier)
-=>
-    (train cavalier)
-    (set-goal df13-knight-request 0)
-)
-
-(defrule
-    (goal df13-knight-request 1)
-    (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train paladin)
-=>
-    (train paladin)
-    (set-goal df13-knight-request 0)
-)
-
-(defrule
-    (goal df13-knight-request 1)
-    (and(not(can-train knight))
-        (and(not(can-train cavalier))
-        (not(can-train paladin))))
+    (and (not (can-train knight))
+        (and (not (can-train cavalier))
+        (not (can-train paladin))))
 =>
     (set-goal df13-knight-request 0)
 )
 
-
-; df13-scout-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-scout-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-scout-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train scout-cavalry)
-=>
-    (train scout-cavalry)
-    (set-goal df13-scout-request 0)
-)
-
-(defrule
-    (goal df13-scout-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train hussar)
-=>
-    (train hussar)
-    (set-goal df13-scout-request 0)
-)
-
-(defrule
-    (goal df13-scout-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train light-cavalry)
-=>
-    (train light-cavalry)
-    (set-goal df13-scout-request 0)
-)
-
-(defrule
-    (goal df13-scout-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train scout-cavalry)
 =>
     (train scout-cavalry)
@@ -30376,69 +30862,53 @@
 
 (defrule
     (goal df13-scout-request 1)
-    (and(not(can-train scout-cavalry))
-        (and(not(can-train light-cavalry))
-        (not(can-train hussar))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-hussar)
+    (can-train hussar)
+=>
+    (train hussar)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-hussar))
+    (research-completed ri-light-cavalry)
+    (can-train light-cavalry)
+=>
+    (train light-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-hussar))
+    (not (research-completed ri-light-cavalry))
+    (can-train scout-cavalry)
+=>
+    (train scout-cavalry)
+    (set-goal df13-scout-request 0)
+)
+
+(defrule
+    (goal df13-scout-request 1)
+    (and (not (can-train scout-cavalry))
+        (and (not (can-train light-cavalry))
+        (not (can-train hussar))))
 =>
     (set-goal df13-scout-request 0)
 )
 
-
-; df13-militia-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-militia-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-militia-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train militiaman)
-=>
-    (train militiaman)
-    (set-goal df13-militia-request 0)
-)
-
-(defrule
-    (goal df13-militia-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train champion)
-=>
-    (train champion)
-    (set-goal df13-militia-request 0)
-)
-
-(defrule
-    (goal df13-militia-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train two-handed-swordsman)
-=>
-    (train two-handed-swordsman)
-    (set-goal df13-militia-request 0)
-)
-
-(defrule
-    (goal df13-militia-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train long-swordsman)
-=>
-    (train long-swordsman)
-    (set-goal df13-militia-request 0)
-)
-
-(defrule
-    (goal df13-militia-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train man-at-arms)
-=>
-    (train man-at-arms)
-    (set-goal df13-militia-request 0)
-)
-
-(defrule
-    (goal df13-militia-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train militiaman)
 =>
     (train militiaman)
@@ -30483,51 +30953,84 @@
 
 (defrule
     (goal df13-militia-request 1)
-    (and(not(can-train militiaman))
-        (and(not(can-train man-at-arms))
-        (and(not(can-train long-swordsman))
-        (and(not(can-train two-handed-swordsman))
-        (not(can-train champion))))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-champion)
+    (can-train champion)
+=>
+    (train champion)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-champion))
+    (research-completed ri-two-handed-swordsman)
+    (can-train two-handed-swordsman)
+=>
+    (train two-handed-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-champion))
+    (not (research-completed ri-two-handed-swordsman))
+    (research-completed ri-long-swordsman)
+    (can-train long-swordsman)
+=>
+    (train long-swordsman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-champion))
+    (not (research-completed ri-two-handed-swordsman))
+    (not (research-completed ri-long-swordsman))
+    (research-completed ri-man-at-arms)
+    (can-train man-at-arms)
+=>
+    (train man-at-arms)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-champion))
+    (not (research-completed ri-two-handed-swordsman))
+    (not (research-completed ri-long-swordsman))
+    (not (research-completed ri-man-at-arms))
+    (can-train militiaman)
+=>
+    (train militiaman)
+    (set-goal df13-militia-request 0)
+)
+
+(defrule
+    (goal df13-militia-request 1)
+    (and (not (can-train militiaman))
+        (and (not (can-train man-at-arms))
+        (and (not (can-train long-swordsman))
+        (and (not (can-train two-handed-swordsman))
+        (not (can-train champion))))))
 =>
     (set-goal df13-militia-request 0)
 )
 
-
-; df13-spearman-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-spearman-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-spearman-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train spearman)
-=>
-    (train spearman)
-    (set-goal df13-spearman-request 0)
-)
-
-(defrule
-    (goal df13-spearman-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train halberdier)
-=>
-    (train halberdier)
-    (set-goal df13-spearman-request 0)
-)
-
-(defrule
-    (goal df13-spearman-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train pikeman)
-=>
-    (train pikeman)
-    (set-goal df13-spearman-request 0)
-)
-
-(defrule
-    (goal df13-spearman-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train spearman)
 =>
     (train spearman)
@@ -30554,49 +31057,53 @@
 
 (defrule
     (goal df13-spearman-request 1)
-    (and(not(can-train spearman))
-        (and(not(can-train pikeman))
-        (not(can-train halberdier))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-halberdier)
+    (can-train halberdier)
+=>
+    (train halberdier)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-halberdier))
+    (research-completed ri-pikeman)
+    (can-train pikeman)
+=>
+    (train pikeman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-halberdier))
+    (not (research-completed ri-pikeman))
+    (can-train spearman)
+=>
+    (train spearman)
+    (set-goal df13-spearman-request 0)
+)
+
+(defrule
+    (goal df13-spearman-request 1)
+    (and (not (can-train spearman))
+        (and (not (can-train pikeman))
+        (not (can-train halberdier))))
 =>
     (set-goal df13-spearman-request 0)
 )
 
-
-; df13-archer-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-archer-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-archer-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train archer)
-=>
-    (train archer)
-    (set-goal df13-archer-request 0)
-)
-
-(defrule
-    (goal df13-archer-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train arbalest)
-=>
-    (train arbalest)
-    (set-goal df13-archer-request 0)
-)
-
-(defrule
-    (goal df13-archer-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train crossbowman)
-=>
-    (train crossbowman)
-    (set-goal df13-archer-request 0)
-)
-
-(defrule
-    (goal df13-archer-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train archer)
 =>
     (train archer)
@@ -30623,49 +31130,53 @@
 
 (defrule
     (goal df13-archer-request 1)
-    (and(not(can-train archer))
-        (and(not(can-train crossbowman))
-        (not(can-train arbalest))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-arbalest)
+    (can-train arbalest)
+=>
+    (train arbalest)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-arbalest))
+    (research-completed ri-crossbow)
+    (can-train crossbowman)
+=>
+    (train crossbowman)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-arbalest))
+    (not (research-completed ri-crossbow))
+    (can-train archer)
+=>
+    (train archer)
+    (set-goal df13-archer-request 0)
+)
+
+(defrule
+    (goal df13-archer-request 1)
+    (and (not (can-train archer))
+        (and (not (can-train crossbowman))
+        (not (can-train arbalest))))
 =>
     (set-goal df13-archer-request 0)
 )
 
-
-; df13-skirmisher-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-skirmisher-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-skirmisher-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train skirmisher)
-=>
-    (train skirmisher)
-    (set-goal df13-skirmisher-request 0)
-)
-
-(defrule
-    (goal df13-skirmisher-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train imperial-skirmisher)
-=>
-    (train imperial-skirmisher)
-    (set-goal df13-skirmisher-request 0)
-)
-
-(defrule
-    (goal df13-skirmisher-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train elite-skirmisher)
-=>
-    (train elite-skirmisher)
-    (set-goal df13-skirmisher-request 0)
-)
-
-(defrule
-    (goal df13-skirmisher-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train skirmisher)
 =>
     (train skirmisher)
@@ -30692,39 +31203,53 @@
 
 (defrule
     (goal df13-skirmisher-request 1)
-    (and(not(can-train skirmisher))
-        (and(not(can-train elite-skirmisher))
-        (not(can-train imperial-skirmisher))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-imperial-skirmisher)
+    (can-train imperial-skirmisher)
+=>
+    (train imperial-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-imperial-skirmisher))
+    (research-completed ri-elite-skirmisher)
+    (can-train elite-skirmisher)
+=>
+    (train elite-skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-imperial-skirmisher))
+    (not (research-completed ri-elite-skirmisher))
+    (can-train skirmisher)
+=>
+    (train skirmisher)
+    (set-goal df13-skirmisher-request 0)
+)
+
+(defrule
+    (goal df13-skirmisher-request 1)
+    (and (not (can-train skirmisher))
+        (and (not (can-train elite-skirmisher))
+        (not (can-train imperial-skirmisher))))
 =>
     (set-goal df13-skirmisher-request 0)
 )
 
-
-; df13-cavarcher-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-cavarcher-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-cavarcher-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train cavalry-archer)
-=>
-    (train cavalry-archer)
-    (set-goal df13-cavarcher-request 0)
-)
-
-(defrule
-    (goal df13-cavarcher-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train heavy-cavalry-archer)
-=>
-    (train heavy-cavalry-archer)
-    (set-goal df13-cavarcher-request 0)
-)
-
-(defrule
-    (goal df13-cavarcher-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train cavalry-archer)
 =>
     (train cavalry-archer)
@@ -30742,48 +31267,39 @@
 
 (defrule
     (goal df13-cavarcher-request 1)
-    (and(not(can-train cavalry-archer))
-        (not(can-train heavy-cavalry-archer)))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-heavy-cavalry-archer)
+    (can-train heavy-cavalry-archer)
+=>
+    (train heavy-cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-heavy-cavalry-archer))
+    (can-train cavalry-archer)
+=>
+    (train cavalry-archer)
+    (set-goal df13-cavarcher-request 0)
+)
+
+(defrule
+    (goal df13-cavarcher-request 1)
+    (and (not (can-train cavalry-archer))
+        (not (can-train heavy-cavalry-archer)))
 =>
     (set-goal df13-cavarcher-request 0)
 )
 
-
-; df13-camel-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-camel-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-camel-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train camel)
-=>
-    (train camel)
-    (set-goal df13-camel-request 0)
-)
-
-(defrule
-    (goal df13-camel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train imperial-camel)
-=>
-    (train imperial-camel)
-    (set-goal df13-camel-request 0)
-)
-
-(defrule
-    (goal df13-camel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train heavy-camel)
-=>
-    (train heavy-camel)
-    (set-goal df13-camel-request 0)
-)
-
-(defrule
-    (goal df13-camel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train camel)
 =>
     (train camel)
@@ -30810,49 +31326,53 @@
 
 (defrule
     (goal df13-camel-request 1)
-    (and(not(can-train camel))
-        (and(not(can-train heavy-camel))
-        (not(can-train imperial-camel))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-imperial-camel)
+    (can-train imperial-camel)
+=>
+    (train imperial-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-imperial-camel))
+    (research-completed ri-heavy-camel)
+    (can-train heavy-camel)
+=>
+    (train heavy-camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-imperial-camel))
+    (not (research-completed ri-heavy-camel))
+    (can-train camel)
+=>
+    (train camel)
+    (set-goal df13-camel-request 0)
+)
+
+(defrule
+    (goal df13-camel-request 1)
+    (and (not (can-train camel))
+        (and (not (can-train heavy-camel))
+        (not (can-train imperial-camel))))
 =>
     (set-goal df13-camel-request 0)
 )
 
-
-; df13-eagle-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-eagle-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-eagle-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train eagle-scout)
-=>
-    (train eagle-scout)
-    (set-goal df13-eagle-request 0)
-)
-
-(defrule
-    (goal df13-eagle-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train heavy-eagle-warrior)
-=>
-    (train heavy-eagle-warrior)
-    (set-goal df13-eagle-request 0)
-)
-
-(defrule
-    (goal df13-eagle-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train eagle-warrior)
-=>
-    (train eagle-warrior)
-    (set-goal df13-eagle-request 0)
-)
-
-(defrule
-    (goal df13-eagle-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train eagle-scout)
 =>
     (train eagle-scout)
@@ -30879,49 +31399,53 @@
 
 (defrule
     (goal df13-eagle-request 1)
-    (and(not(can-train eagle-scout))
-        (and(not(can-train eagle-warrior))
-        (not(can-train heavy-eagle-warrior))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-elite-eagle-warrior)
+    (can-train heavy-eagle-warrior)
+=>
+    (train heavy-eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-elite-eagle-warrior))
+    (research-completed ri-eagle-warrior)
+    (can-train eagle-warrior)
+=>
+    (train eagle-warrior)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-elite-eagle-warrior))
+    (not (research-completed ri-eagle-warrior))
+    (can-train eagle-scout)
+=>
+    (train eagle-scout)
+    (set-goal df13-eagle-request 0)
+)
+
+(defrule
+    (goal df13-eagle-request 1)
+    (and (not (can-train eagle-scout))
+        (and (not (can-train eagle-warrior))
+        (not (can-train heavy-eagle-warrior))))
 =>
     (set-goal df13-eagle-request 0)
 )
 
-
-; df13-ram-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-ram-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-ram-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train battering-ram)
-=>
-    (train battering-ram)
-    (set-goal df13-ram-request 0)
-)
-
-(defrule
-    (goal df13-ram-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train siege-ram)
-=>
-    (train siege-ram)
-    (set-goal df13-ram-request 0)
-)
-
-(defrule
-    (goal df13-ram-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train capped-ram)
-=>
-    (train capped-ram)
-    (set-goal df13-ram-request 0)
-)
-
-(defrule
-    (goal df13-ram-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train battering-ram)
 =>
     (train battering-ram)
@@ -30948,49 +31472,53 @@
 
 (defrule
     (goal df13-ram-request 1)
-    (and(not(can-train battering-ram))
-        (and(not(can-train capped-ram))
-        (not(can-train siege-ram))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-siege-ram)
+    (can-train siege-ram)
+=>
+    (train siege-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-siege-ram))
+    (research-completed ri-capped-ram)
+    (can-train capped-ram)
+=>
+    (train capped-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-siege-ram))
+    (not (research-completed ri-capped-ram))
+    (can-train battering-ram)
+=>
+    (train battering-ram)
+    (set-goal df13-ram-request 0)
+)
+
+(defrule
+    (goal df13-ram-request 1)
+    (and (not (can-train battering-ram))
+        (and (not (can-train capped-ram))
+        (not (can-train siege-ram))))
 =>
     (set-goal df13-ram-request 0)
 )
 
-
-; df13-mangonel-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-mangonel-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-mangonel-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train mangonel)
-=>
-    (train mangonel)
-    (set-goal df13-mangonel-request 0)
-)
-
-(defrule
-    (goal df13-mangonel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train siege-onager)
-=>
-    (train siege-onager)
-    (set-goal df13-mangonel-request 0)
-)
-
-(defrule
-    (goal df13-mangonel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train onager)
-=>
-    (train onager)
-    (set-goal df13-mangonel-request 0)
-)
-
-(defrule
-    (goal df13-mangonel-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train mangonel)
 =>
     (train mangonel)
@@ -31017,39 +31545,53 @@
 
 (defrule
     (goal df13-mangonel-request 1)
-    (and(not(can-train mangonel))
-        (and(not(can-train onager))
-        (not(can-train siege-onager))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-siege-onager)
+    (can-train siege-onager)
+=>
+    (train siege-onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-siege-onager))
+    (research-completed ri-onager)
+    (can-train onager)
+=>
+    (train onager)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-siege-onager))
+    (not (research-completed ri-onager))
+    (can-train mangonel)
+=>
+    (train mangonel)
+    (set-goal df13-mangonel-request 0)
+)
+
+(defrule
+    (goal df13-mangonel-request 1)
+    (and (not (can-train mangonel))
+        (and (not (can-train onager))
+        (not (can-train siege-onager))))
 =>
     (set-goal df13-mangonel-request 0)
 )
 
-
-; df13-scorpion-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-scorpion-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-scorpion-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train scorpion)
-=>
-    (train scorpion)
-    (set-goal df13-scorpion-request 0)
-)
-
-(defrule
-    (goal df13-scorpion-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train heavy-scorpion)
-=>
-    (train heavy-scorpion)
-    (set-goal df13-scorpion-request 0)
-)
-
-(defrule
-    (goal df13-scorpion-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train scorpion)
 =>
     (train scorpion)
@@ -31067,48 +31609,39 @@
 
 (defrule
     (goal df13-scorpion-request 1)
-    (and(not(can-train scorpion))
-        (not(can-train heavy-scorpion)))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-heavy-scorpion)
+    (can-train heavy-scorpion)
+=>
+    (train heavy-scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-heavy-scorpion))
+    (can-train scorpion)
+=>
+    (train scorpion)
+    (set-goal df13-scorpion-request 0)
+)
+
+(defrule
+    (goal df13-scorpion-request 1)
+    (and (not (can-train scorpion))
+        (not (can-train heavy-scorpion)))
 =>
     (set-goal df13-scorpion-request 0)
 )
 
-
-; df13-galley-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-galley-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-galley-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train galley)
-=>
-    (train galley)
-    (set-goal df13-galley-request 0)
-)
-
-(defrule
-    (goal df13-galley-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train galleon)
-=>
-    (train galleon)
-    (set-goal df13-galley-request 0)
-)
-
-(defrule
-    (goal df13-galley-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train war-galley)
-=>
-    (train war-galley)
-    (set-goal df13-galley-request 0)
-)
-
-(defrule
-    (goal df13-galley-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train galley)
 =>
     (train galley)
@@ -31135,49 +31668,53 @@
 
 (defrule
     (goal df13-galley-request 1)
-    (and(not(can-train galley))
-        (and(not(can-train war-galley))
-        (not(can-train galleon))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-galleon)
+    (can-train galleon)
+=>
+    (train galleon)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-galleon))
+    (research-completed ri-war-galley)
+    (can-train war-galley)
+=>
+    (train war-galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-galleon))
+    (not (research-completed ri-war-galley))
+    (can-train galley)
+=>
+    (train galley)
+    (set-goal df13-galley-request 0)
+)
+
+(defrule
+    (goal df13-galley-request 1)
+    (and (not (can-train galley))
+        (and (not (can-train war-galley))
+        (not (can-train galleon))))
 =>
     (set-goal df13-galley-request 0)
 )
 
-
-; df13-fire-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-fire-request: FIX14 age/research-aware normal priority; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-fire-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train fire-galley)
-=>
-    (train fire-galley)
-    (set-goal df13-fire-request 0)
-)
-
-(defrule
-    (goal df13-fire-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train fast-fire-ship)
-=>
-    (train fast-fire-ship)
-    (set-goal df13-fire-request 0)
-)
-
-(defrule
-    (goal df13-fire-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train fire-ship)
-=>
-    (train fire-ship)
-    (set-goal df13-fire-request 0)
-)
-
-(defrule
-    (goal df13-fire-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train fire-galley)
 =>
     (train fire-galley)
@@ -31204,49 +31741,52 @@
 
 (defrule
     (goal df13-fire-request 1)
-    (and(not(can-train fire-galley))
-        (and(not(can-train fire-ship))
-        (not(can-train fast-fire-ship))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-fast-fire-ship)
+    (can-train fast-fire-ship)
+=>
+    (train fast-fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-fast-fire-ship))
+    (current-age >= castle-age)
+    (can-train fire-ship)
+=>
+    (train fire-ship)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (current-age < castle-age)
+    (can-train fire-galley)
+=>
+    (train fire-galley)
+    (set-goal df13-fire-request 0)
+)
+
+(defrule
+    (goal df13-fire-request 1)
+    (and (not (can-train fire-galley))
+        (and (not (can-train fire-ship))
+        (not (can-train fast-fire-ship))))
 =>
     (set-goal df13-fire-request 0)
 )
 
-
-; df13-demo-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-demo-request: FIX14 age/research-aware normal priority; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-demo-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train demo-raft)
-=>
-    (train demo-raft)
-    (set-goal df13-demo-request 0)
-)
-
-(defrule
-    (goal df13-demo-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train heavy-demolition-ship)
-=>
-    (train heavy-demolition-ship)
-    (set-goal df13-demo-request 0)
-)
-
-(defrule
-    (goal df13-demo-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train demolition-ship)
-=>
-    (train demolition-ship)
-    (set-goal df13-demo-request 0)
-)
-
-(defrule
-    (goal df13-demo-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train demo-raft)
 =>
     (train demo-raft)
@@ -31273,39 +31813,52 @@
 
 (defrule
     (goal df13-demo-request 1)
-    (and(not(can-train demo-raft))
-        (and(not(can-train demolition-ship))
-        (not(can-train heavy-demolition-ship))))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-heavy-demolition-ship)
+    (can-train heavy-demolition-ship)
+=>
+    (train heavy-demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-heavy-demolition-ship))
+    (current-age >= castle-age)
+    (can-train demolition-ship)
+=>
+    (train demolition-ship)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (current-age < castle-age)
+    (can-train demo-raft)
+=>
+    (train demo-raft)
+    (set-goal df13-demo-request 0)
+)
+
+(defrule
+    (goal df13-demo-request 1)
+    (and (not (can-train demo-raft))
+        (and (not (can-train demolition-ship))
+        (not (can-train heavy-demolition-ship))))
 =>
     (set-goal df13-demo-request 0)
 )
 
-
-; df13-cannon-galleon-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-cannon-galleon-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-cannon-galleon-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train cannon-galleon)
-=>
-    (train cannon-galleon)
-    (set-goal df13-cannon-galleon-request 0)
-)
-
-(defrule
-    (goal df13-cannon-galleon-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train elite-cannon-galleon)
-=>
-    (train elite-cannon-galleon)
-    (set-goal df13-cannon-galleon-request 0)
-)
-
-(defrule
-    (goal df13-cannon-galleon-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train cannon-galleon)
 =>
     (train cannon-galleon)
@@ -31323,12 +31876,33 @@
 
 (defrule
     (goal df13-cannon-galleon-request 1)
-    (and(not(can-train cannon-galleon))
-        (not(can-train elite-cannon-galleon)))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-cannon-galleon)
+    (can-train elite-cannon-galleon)
 =>
+    (train elite-cannon-galleon)
     (set-goal df13-cannon-galleon-request 0)
 )
 
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-cannon-galleon))
+    (can-train cannon-galleon)
+=>
+    (train cannon-galleon)
+    (set-goal df13-cannon-galleon-request 0)
+)
+
+(defrule
+    (goal df13-cannon-galleon-request 1)
+    (and (not (can-train cannon-galleon))
+        (not (can-train elite-cannon-galleon)))
+=>
+    (set-goal df13-cannon-galleon-request 0)
+)
 
 ; df13-steppe-request: recovery = cheapest; normal = best currently affordable tier.
 
@@ -31477,31 +32051,11 @@
 )
 
 
-; df13-longboat-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-longboat-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-longboat-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train longboat)
-=>
-    (train longboat)
-    (set-goal df13-longboat-request 0)
-)
-
-(defrule
-    (goal df13-longboat-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train elite-longboat)
-=>
-    (train elite-longboat)
-    (set-goal df13-longboat-request 0)
-)
-
-(defrule
-    (goal df13-longboat-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train longboat)
 =>
     (train longboat)
@@ -31519,38 +32073,39 @@
 
 (defrule
     (goal df13-longboat-request 1)
-    (and(not(can-train longboat))
-        (not(can-train elite-longboat)))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-elite-longboat)
+    (can-train elite-longboat)
+=>
+    (train elite-longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-elite-longboat))
+    (can-train longboat)
+=>
+    (train longboat)
+    (set-goal df13-longboat-request 0)
+)
+
+(defrule
+    (goal df13-longboat-request 1)
+    (and (not (can-train longboat))
+        (not (can-train elite-longboat)))
 =>
     (set-goal df13-longboat-request 0)
 )
 
-
-; df13-turtle-request: recovery = cheapest; normal = best currently affordable tier.
+; df13-turtle-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
 
 (defrule
     (goal df13-turtle-request 1)
     (or (goal df13-recovery 1) (goal df13-military-rebuild 1))
-    (can-train turtle-ship)
-=>
-    (train turtle-ship)
-    (set-goal df13-turtle-request 0)
-)
-
-(defrule
-    (goal df13-turtle-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
-    (can-train elite-turtle-ship)
-=>
-    (train elite-turtle-ship)
-    (set-goal df13-turtle-request 0)
-)
-
-(defrule
-    (goal df13-turtle-request 1)
-    (goal df13-recovery 0)
-    (goal df13-military-rebuild 0)
     (can-train turtle-ship)
 =>
     (train turtle-ship)
@@ -31568,12 +32123,33 @@
 
 (defrule
     (goal df13-turtle-request 1)
-    (and(not(can-train turtle-ship))
-        (not(can-train elite-turtle-ship)))
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (research-completed ri-elite-turtle-ship)
+    (can-train elite-turtle-ship)
 =>
+    (train elite-turtle-ship)
     (set-goal df13-turtle-request 0)
 )
 
+(defrule
+    (goal df13-turtle-request 1)
+    (goal df13-recovery 0)
+    (goal df13-military-rebuild 0)
+    (not (research-completed ri-elite-turtle-ship))
+    (can-train turtle-ship)
+=>
+    (train turtle-ship)
+    (set-goal df13-turtle-request 0)
+)
+
+(defrule
+    (goal df13-turtle-request 1)
+    (and (not (can-train turtle-ship))
+        (not (can-train elite-turtle-ship)))
+=>
+    (set-goal df13-turtle-request 0)
+)
 
 ; df13-magyar-huszar-request: recovery = cheapest; normal = best currently affordable tier.
 

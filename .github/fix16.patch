@@ -1,0 +1,340 @@
+--- Dr_Fortress_AI_V13_FIX15.per
++++ Dr_Fortress_AI_V13_FIX16.per
+@@ -1,5 +1,15 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX15
++; DR FORTRESS AI V13 FIX16
++; FIX16 crash-safety / wall planner / Standard-tempo repair:
++; - crash replay 2026-08-18 02:43 ends abruptly at 22:28.45 with no resign/postgame while the record stream itself parses cleanly to EOF.
++; - all three FIX15 players produced ZERO WALL actions; the only four WALL actions in the replay belong to the human player.
++; - removes FIX15's repeated 25-second build-wall calls that bypassed can-build-wall and retires timer 49 from the wall layer.
++; - Fortress explicitly enables the inherited wall goals; new wall actions are guarded by can-build-wall or can-afford-complete-wall.
++; - Feudal wall geometry escalates through a few one-way stages instead of repeatedly hammering the wall planner.
++; - the first/inner defensive line is difficulty-independent; Hardest alone keeps the additional outer/deep fortress rings.
++; - Standard/Moderate keeps the same wall capability but forms fewer, larger offensive groups and waits for a larger field army.
++; - mixed-tier posture no longer writes the balanced goal unconditionally every rule pass.
++; - no new executable identifier is introduced; only FIX10/FIX13-proven facts/actions are used.
+ ; FIX15 situational mixed-tier / wall reliability repair:
+ ; - replay 2026-08-18 01:53 (HD 5.8) contains ZERO WALL actions from FIX14 despite long Feudal/Castle play.
+ ; - Feudal palisade bootstrap now retries a direct parser-safe build-wall command on a cooldown until real wall segments exist.
+@@ -125,8 +135,7 @@
+ (defconst df13-knight-request 181)
+ (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
+ (defconst df15-tier-posture 220)       ;1=cheap mass, 2=balanced, 3=power/elite assault
+-(defconst df15-wall-retry 222)         ;0=ready, 1=wall command cooldown
+-(defconst df15-wall-timer 49)          ;FIX15 retry timer; timer 49 was unused in FIX14
++(defconst df16-wall-stage 222)         ;0=unplanned, 1/2/3=Feudal geometry, 4=Castle fallback
+ 
+ ; FIX09 exact-tier family production requests.
+ (defconst df13-militia-request 185)
+@@ -28547,6 +28556,8 @@
+ =>
+     (enable-wall-placement 1)
+     (enable-wall-placement 2)
++    (set-goal wall BUILD-WALL)
++    (set-goal buildwalls 1)
+     (disable-self)
+ )
+ 
+@@ -28686,21 +28697,15 @@
+     (set-strategic-number sn-safe-town-size 34)
+ )
+ 
+-; FIX15 WALL RELIABILITY LAYER
+-; The attached FIX14 replay reached Feudal/Castle with three Fortress AIs but
+-; recorded no WALL action at all.  can-build-wall therefore cannot be the only
+-; gateway to the first wall command.  Retry build-wall directly every 25 seconds
+-; until completed wall segments prove that the planner actually started.
+-(defrule
+-    (goal df15-wall-retry 1)
+-    (timer-triggered df15-wall-timer)
+-=>
+-    (set-goal df15-wall-retry 0)
+-    (disable-timer df15-wall-timer)
+-)
+-
+-; A real completed segment, not an issued command or a default 100% planner
+-; value, confirms that the fortress wall bootstrap exists.
++; FIX16 CRASH-SAFE WALL PLANNER
++; The crash replay is structurally intact but ends abruptly at 22:28.45.  It
++; contains no Fortress WALL action at all.  FIX15's direct 25-second retries
++; could therefore keep entering the HD wall planner without a successful plan.
++; FIX16 never calls build-wall blindly: every new call is guarded by a planner
++; predicate, and geometry changes are one-way stages rather than a tight timer.
++;
++; A real completed segment, not an issued command or a default planner
++; percentage, confirms that the fortress wall bootstrap exists.
+ (defrule
+     (goal df13-wall-bootstrap 0)
+     (building-type-count-total palisade-wall >= 1)
+@@ -28714,68 +28719,135 @@
+     (set-goal df13-wall-bootstrap 1)
+ )
+ 
+-; Give the first palisade enough radius to sit outside the compact economic
+-; core.  This also avoids the FIX14 6..12 ring being trapped inside buildings.
++; Stage 1: compact but useful Feudal envelope.  This is difficulty-independent:
++; Standard/Moderate keeps the same ability to establish a defensive wall.
+ (defrule
+     (current-age == feudal-age)
++    (current-age-time >= 25)
+     (goal df13-wall-bootstrap 0)
++    (goal df16-wall-stage 0)
+ =>
+     (set-strategic-number sn-minimum-town-size 8)
+     (set-strategic-number sn-maximum-town-size 18)
+     (set-strategic-number sn-safe-town-size 14)
+-)
+-
+-; Direct Feudal palisade attempt.  No can-build-wall predicate here: FIX14's
+-; replay demonstrated that predicate can remain false forever before the first
+-; planner action.  The action itself is parser-safe and already used in FIX10.
++    (enable-wall-placement 1)
++    (set-goal df16-wall-stage 1)
++)
++
++; Stage 2: if the compact envelope still has no segment, widen it once.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 100)
++    (goal df13-wall-bootstrap 0)
++    (goal df16-wall-stage 1)
++=>
++    (set-strategic-number sn-minimum-town-size 9)
++    (set-strategic-number sn-maximum-town-size 22)
++    (set-strategic-number sn-safe-town-size 17)
++    (enable-wall-placement 2)
++    (set-goal df16-wall-stage 2)
++)
++
++; Stage 3: final Feudal geometry fallback for blocked/coastal/large starts.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 180)
++    (goal df13-wall-bootstrap 0)
++    (goal df16-wall-stage 2)
++=>
++    (set-strategic-number sn-minimum-town-size 10)
++    (set-strategic-number sn-maximum-town-size 26)
++    (set-strategic-number sn-safe-town-size 20)
++    (enable-wall-placement 1)
++    (enable-wall-placement 2)
++    (set-goal df16-wall-stage 3)
++)
++
++; Castle transition gets one safe planner refresh and a wider stone envelope.
++; Exact-stage OR tests are used because relational goal tests broke the HD
++; parser in FIX07.
++(defrule
++    (current-age >= castle-age)
++    (goal df13-wall-bootstrap 0)
++    (or (goal df16-wall-stage 0) (goal df16-wall-stage 1))
++=>
++    (set-strategic-number sn-minimum-town-size 10)
++    (set-strategic-number sn-maximum-town-size 27)
++    (set-strategic-number sn-safe-town-size 21)
++    (enable-wall-placement 1)
++    (enable-wall-placement 2)
++    (set-goal wall BUILD-WALL)
++    (set-goal buildwalls 1)
++    (set-goal df16-wall-stage 4)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df13-wall-bootstrap 0)
++    (or (goal df16-wall-stage 2) (goal df16-wall-stage 3))
++=>
++    (set-strategic-number sn-minimum-town-size 10)
++    (set-strategic-number sn-maximum-town-size 27)
++    (set-strategic-number sn-safe-town-size 21)
++    (enable-wall-placement 1)
++    (enable-wall-placement 2)
++    (set-goal wall BUILD-WALL)
++    (set-goal buildwalls 1)
++    (set-goal df16-wall-stage 4)
++)
++
++; Planner-guarded Feudal attempts.  Placement 1 is the normal inner line;
++; placement 2 is a fallback only after the geometry has widened.
+ (defrule
+     (current-age == feudal-age)
+     (current-age-time >= 35)
+     (goal df13-wall-bootstrap 0)
+-    (goal df15-wall-retry 0)
+     (wood-amount > 70)
+     (up-pending-objects c: palisade-wall < 1)
+-=>
+-    (enable-wall-placement 1)
++    (can-build-wall 1 palisade-wall)
++=>
+     (build-wall 1 palisade-wall)
+-    (set-goal df15-wall-retry 1)
+-    (enable-timer df15-wall-timer 25)
+-)
+-
+-; Larger-perimeter fallback for coast/island/blocked inner geometry.
++)
+ (defrule
+     (current-age == feudal-age)
+     (current-age-time >= 110)
+     (goal df13-wall-bootstrap 0)
+-    (goal df15-wall-retry 0)
++    (or (goal df16-wall-stage 2) (goal df16-wall-stage 3))
+     (wood-amount > 70)
+     (up-pending-objects c: palisade-wall < 1)
+-=>
+-    (set-strategic-number sn-minimum-town-size 9)
+-    (set-strategic-number sn-maximum-town-size 22)
+-    (enable-wall-placement 2)
++    (can-build-wall 2 palisade-wall)
++=>
+     (build-wall 2 palisade-wall)
+-    (set-goal df15-wall-retry 1)
+-    (enable-timer df15-wall-timer 25)
+-)
+-
+-; Castle fallback also retries directly.  It never claims success until a real
+-; stone/palisade segment is counted by one of the confirmation rules above.
++)
++
++; Stable Resonance-style affordability fact is a late Feudal fallback.  Unlike
++; FIX15's direct retry, this asks the planner for a complete affordable line
++; before build-wall is issued.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 210)
++    (goal df13-wall-bootstrap 0)
++    (goal df16-wall-stage 3)
++    (wood-amount > 120)
++    (up-pending-objects c: palisade-wall < 1)
++    (can-afford-complete-wall 1 palisade-wall)
++=>
++    (build-wall 1 palisade-wall)
++)
++
++; Castle stone fallback remains planner-gated.  The inherited wall/buildwalls
++; goals are also active now, providing the proven Resonance stone-wall path.
+ (defrule
+     (current-age >= castle-age)
+     (goal df13-wall-bootstrap 0)
+-    (goal df15-wall-retry 0)
+-    (stone-amount > 100)
++    (stone-amount > 120)
+     (up-pending-objects c: stone-wall-line < 1)
+-=>
+-    (enable-wall-placement 1)
++    (can-build-wall 1 stone-wall-line)
++=>
+     (build-wall 1 stone-wall-line)
+-    (set-goal df15-wall-retry 1)
+-    (enable-timer df15-wall-timer 25)
+-)
+-
+-; Mandatory safe Feudal bootstrap.  FIX15 keeps the old affordability-aware
+-; paths as secondary helpers, but they no longer mark success by themselves.
++)
++
++; Mandatory safe Feudal bootstrap.  FIX16 keeps the affordability-aware
++; paths as secondary helpers; success still requires a real wall segment.
+ (defrule
+     (current-age == feudal-age)
+     (current-age-time >= 45)
+@@ -28871,7 +28943,6 @@
+ ; In Castle Age the developed inner barrier is stone-only.  Low stone delays
+ ; further construction rather than downgrading a stone wall to palisade.
+ (defrule
+-    (difficulty == hardest)
+     (current-age >= castle-age)
+     (wall-completed-percentage 1 < 85)
+     (stone-amount > 180)
+@@ -28883,7 +28954,6 @@
+ 
+ ; Finish the inner line later when spare resources exist.
+ (defrule
+-    (difficulty == hardest)
+     (current-age >= castle-age)
+     (game-time > 1200)
+     (wall-completed-percentage 1 < 100)
+@@ -30375,8 +30445,33 @@
+ ; 1 = cheap mass / emergency / early rebuilding
+ ; 2 = balanced middle tier / mixed standing army
+ ; 3 = power tier for a funded prepared assault
+-(defrule
+-    (true)
++; Healthy armies return to balanced posture only when elite-power conditions
++; are not satisfied.  This avoids rewriting posture=2 on every rule pass.
++(defrule
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (goal df13-defense-state 0)
++    (military-population >= 18)
++    (goal df13-assault-ready 0)
++    (goal df13-siege-ready 0)
++=>
++    (set-goal df15-tier-posture 2)
++)
++(defrule
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (goal df13-defense-state 0)
++    (military-population >= 18)
++    (food-amount <= 700)
++=>
++    (set-goal df15-tier-posture 2)
++)
++(defrule
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (goal df13-defense-state 0)
++    (military-population >= 18)
++    (gold-amount <= 350)
+ =>
+     (set-goal df15-tier-posture 2)
+ )
+@@ -32350,3 +32445,46 @@
+     (set-goal df11-naval-recovery 0)
+     (disable-timer df11-naval-timer)
+ )
++
++; ============================================================================
++; FIX16 STANDARD / MODERATE FORTRESS TEMPO
++; ============================================================================
++; Standard is intentionally closer to ResonanceBot's relaxed pace.  It keeps
++; the same inner-wall capability, but waits for a larger field army and sends
++; fewer soldiers forward.  Hard/Hardest are untouched.
++(defrule
++    (difficulty == moderate)
++    (goal df13-defense-state 0)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (soldier-count < 16)
++=>
++    (set-strategic-number sn-number-attack-groups 0)
++    (set-strategic-number sn-percent-attack-soldiers 0)
++)
++(defrule
++    (difficulty == moderate)
++    (goal df13-defense-state 0)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (soldier-count >= 16)
++    (soldier-count < 32)
++=>
++    (set-strategic-number sn-minimum-attack-group-size 14)
++    (set-strategic-number sn-maximum-attack-group-size 20)
++    (set-strategic-number sn-number-attack-groups 1)
++    (set-strategic-number sn-percent-attack-soldiers 55)
++)
++(defrule
++    (difficulty == moderate)
++    (goal df13-defense-state 0)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (soldier-count >= 32)
++=>
++    (set-strategic-number sn-minimum-attack-group-size 16)
++    (set-strategic-number sn-maximum-attack-group-size 28)
++    (set-strategic-number sn-number-attack-groups 1)
++    (set-strategic-number sn-percent-attack-soldiers 60)
++)
++

@@ -1,0 +1,82 @@
+name: Publish exact V13 FIX16
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/fix16.patch'
+      - '.github/workflows/publish-fix16.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build exact FIX16 from FIX15
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Dr_Fortress_AI_V13_FIX15.per
+          test -f .github/fix16.patch
+          patch -o Dr_Fortress_AI_V13_FIX16.per Dr_Fortress_AI_V13_FIX15.per < .github/fix16.patch
+          : > Dr_Fortress_AI_V13_FIX16.ai
+          echo '71c66cc27524253847ee0cbd4ba0c7923bc6f369f2904c75e9674c9e252dfeb5  Dr_Fortress_AI_V13_FIX16.per' | sha256sum -c -
+          test "$(wc -c < Dr_Fortress_AI_V13_FIX16.per)" -eq 833744
+          test "$(wc -c < Dr_Fortress_AI_V13_FIX16.ai)" -eq 0
+
+      - name: Static parser-safety checks
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('Dr_Fortress_AI_V13_FIX16.per')
+          text = p.read_text(encoding='utf-8')
+          assert text.startswith('; ============================================================================\n; DR FORTRESS AI V13 FIX16\n')
+          assert 'df15-wall-retry' not in text
+          assert 'df15-wall-timer' not in text
+          assert '(enable-timer 49' not in text
+          assert '(timer-triggered 49' not in text
+
+          def code(line):
+              out=[]; string=False; esc=False
+              for ch in line:
+                  if string:
+                      if esc: esc=False
+                      elif ch == '\\': esc=True
+                      elif ch == '"': string=False
+                      continue
+                  if ch == '"': string=True; continue
+                  if ch == ';': break
+                  out.append(ch)
+              return ''.join(out)
+
+          bal=0; low=0
+          for line in text.splitlines():
+              s=code(line)
+              bal += s.count('(')-s.count(')')
+              low=min(low,bal)
+          assert bal == 0 and low == 0
+
+          forbidden = [
+              'up-idle-unit-count','up-get-threat-data','up-compare-goal',
+              'up-guard-unit','up-reset-scouts','up-retreat-to','up-reset-placement'
+          ]
+          active='\n'.join(code(line) for line in text.splitlines())
+          for token in forbidden:
+              assert token not in active, token
+
+      - name: Commit FIX16 and clean staging files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f Dr_Fortress_AI_V13_FIX14.per Dr_Fortress_AI_V13_FIX14.ai
+          git rm -f .github/fix16.patch .github/workflows/publish-fix16.yml
+          git add Dr_Fortress_AI_V13_FIX16.per Dr_Fortress_AI_V13_FIX16.ai
+          git commit -m 'Publish Dr Fortress AI V13 FIX16 crash-safe walls'
+          git push origin main

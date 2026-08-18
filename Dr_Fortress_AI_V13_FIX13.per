@@ -1,5 +1,12 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX11
+; DR FORTRESS AI V13 FIX13
+; FIX13 AoE2 HD parser compatibility hotfix:
+; - removes all active FIX11-only executable identifiers not present in known-good FIX10.
+; - directly fixes ERR2004 on up-idle-unit-count and pre-empts the same class of parser failure.
+; FIX12 HD parser hotfix:
+; - removed unsupported up-reset-placement (ERR2004 in AoE2 HD runtime).
+; - failed farm placement recovery now relies on the existing cooldown/retry path;
+;   no replacement command outside the already parsed FIX10/FIX11 vocabulary is introduced.
 ; FIX11 economy/safety/naval recovery:
 ; - Farm Manager 2.0 replaces the FIX10 hard 420W gate with a soft 3/4/5-reseed reserve (180/240/300W).
 ; - critically low food overrides the reseed reserve so farms can be placed before the reserve is restored.
@@ -29642,7 +29649,7 @@
     (timer-triggered df13-farm-timer)
     (up-pending-objects c: farm > 0)
 =>
-    (up-reset-placement c: farm)
+    ; FIX12: unsupported up-reset-placement removed; cooldown will allow retry.
     (set-goal df13-farm-throttle 0)
     (disable-timer df13-farm-timer)
 )
@@ -31703,190 +31710,18 @@
     (timer-triggered df11-dock-timer)
     (up-pending-objects c: dock > 0)
 =>
-    (up-reset-placement c: dock)
+    ; FIX12: unsupported up-reset-placement removed; cooldown will allow retry.
     (set-goal df11-dock-throttle 0)
     (disable-timer df11-dock-timer)
 )
 
-; ---- Stuck Gatherer Recovery ----
-; up-idle-unit-count distinguishes broad idle classes only, not miner subtypes.
-; Require the villager-idle signal to survive two samples six seconds apart;
-; only then release one stone and one gold gatherer back to normal allocation.
-; This is intentionally conservative and avoids direct object-search DUC.
-(defrule
-    (game-time > 60)
-    (goal df11-miner-recovery 0)
-=>
-    (set-goal df11-miner-recovery 1)
-    (enable-timer df11-miner-timer 6)
-)
-(defrule
-    (goal df11-miner-recovery 1)
-    (timer-triggered df11-miner-timer)
-    (up-idle-unit-count idle-type-villager > 0)
-=>
-    (set-goal df11-miner-recovery 2)
-    (disable-timer df11-miner-timer)
-    (enable-timer df11-miner-timer 6)
-)
-(defrule
-    (goal df11-miner-recovery 2)
-    (timer-triggered df11-miner-timer)
-    (up-idle-unit-count idle-type-villager > 0)
-=>
-    (up-retask-gatherers stone c: 1)
-    (up-retask-gatherers gold c: 1)
-    (set-goal df11-miner-recovery 1)
-    (disable-timer df11-miner-timer)
-    (enable-timer df11-miner-timer 10)
-)
-(defrule
-    (or (goal df11-miner-recovery 1) (goal df11-miner-recovery 2))
-    (timer-triggered df11-miner-timer)
-    (up-idle-unit-count idle-type-villager == 0)
-=>
-    (set-goal df11-miner-recovery 1)
-    (disable-timer df11-miner-timer)
-    (enable-timer df11-miner-timer 6)
-)
-
-; ---- Threat sampler ----
-; The official HD AI uses up-get-threat-data for elapsed threat time, player,
-; source class, and target class.  Sampling every two seconds keeps this high-
-; information command out of the per-rule hot path.
-(defrule
-    (game-time > 10)
-    (goal df11-threat-sample 0)
-=>
-    (set-goal df11-threat-sample 1)
-    (enable-timer df11-threat-timer 2)
-)
-(defrule
-    (goal df11-threat-sample 1)
-    (timer-triggered df11-threat-timer)
-=>
-    (up-get-threat-data df11-threat-time df11-threat-player df11-threat-source df11-threat-target)
-    (disable-timer df11-threat-timer)
-    (enable-timer df11-threat-timer 2)
-)
-
-; ---- Civilian Danger / ranged-threat exclusion ----
-; Do not touch town-size SNs here: FIX10 wall geometry must remain authoritative.
-(defrule
-    (goal df11-civilian-danger 0)
-    (goal df11-threat-target df11-villager-class)
-    (up-compare-goal df11-threat-time < 3000)
-    (up-compare-goal df11-threat-player >= 1)
-=>
-    (set-goal df11-civilian-danger 1)
-    (enable-timer df11-danger-timer 25)
-    (up-retask-gatherers wood c: 2)
-    (up-retask-gatherers food c: 2)
-    (up-retask-gatherers stone c: 2)
-    (up-retask-gatherers gold c: 2)
-)
-(defrule
-    (goal df11-civilian-danger 1)
-=>
-    (set-strategic-number sn-disable-villager-garrison 0)
-    (set-strategic-number sn-maximum-wood-drop-distance 8)
-    (set-strategic-number sn-maximum-food-drop-distance 8)
-    (set-strategic-number sn-maximum-gold-drop-distance 6)
-    (set-strategic-number sn-maximum-stone-drop-distance 6)
-    (set-strategic-number sn-camp-max-distance 20)
-)
-(defrule
-    (goal df11-civilian-danger 1)
-    (timer-triggered df11-danger-timer)
-=>
-    (set-goal df11-civilian-danger 0)
-    (disable-timer df11-danger-timer)
-)
-
-; ---- Wounded Scout Recovery (HD-safe approximation) ----
-; Exact per-object HP inspection would require direct object-search DUC, which
-; remains deliberately disabled for HD stability.  A recent projectile aimed at
-; cavalry while the force is still scout-sized is therefore the damage trigger.
-; If a Monk exists, one Scout Cavalry is assigned to guard/stay with a Monk for
-; a healing window.  Otherwise it is parked at a Castle when available, or the
-; home TC as the final safe fallback.  It is not sent exploring while recovering.
-(defrule
-    (goal df11-scout-recovery 0)
-    (goal df11-threat-target df11-cavalry-class)
-    (up-compare-goal df11-threat-time < 3000)
-    (up-compare-goal df11-threat-player >= 1)
-    (unit-type-count-total scout-cavalry > 0)
-    (unit-type-count-total knight-line < 2)
-    (unit-type-count-total monk > 0)
-=>
-    (set-goal df11-scout-recovery 1)
-    (set-strategic-number sn-number-explore-groups 0)
-    (up-reset-scouts)
-    (up-guard-unit monk c: scout-cavalry)
-    (enable-timer df11-scout-timer 60)
-)
-(defrule
-    (goal df11-scout-recovery 0)
-    (goal df11-threat-target df11-cavalry-class)
-    (up-compare-goal df11-threat-time < 3000)
-    (up-compare-goal df11-threat-player >= 1)
-    (unit-type-count-total scout-cavalry > 0)
-    (unit-type-count-total knight-line < 2)
-    (unit-type-count-total monk < 1)
-    (building-type-count-total castle > 0)
-=>
-    (set-goal df11-scout-recovery 2)
-    (set-strategic-number sn-number-explore-groups 0)
-    (up-reset-scouts)
-    (up-retreat-to castle c: scout-cavalry)
-)
-(defrule
-    (goal df11-scout-recovery 0)
-    (goal df11-threat-target df11-cavalry-class)
-    (up-compare-goal df11-threat-time < 3000)
-    (up-compare-goal df11-threat-player >= 1)
-    (unit-type-count-total scout-cavalry > 0)
-    (unit-type-count-total knight-line < 2)
-    (unit-type-count-total monk < 1)
-    (building-type-count-total castle < 1)
-=>
-    (set-goal df11-scout-recovery 2)
-    (set-strategic-number sn-number-explore-groups 0)
-    (up-reset-scouts)
-    (up-retreat-to town-center c: scout-cavalry)
-)
-; A parked scout switches to healer escort as soon as a Monk exists.
-(defrule
-    (goal df11-scout-recovery 2)
-    (unit-type-count-total monk > 0)
-=>
-    (set-goal df11-scout-recovery 1)
-    (up-guard-unit monk c: scout-cavalry)
-    (enable-timer df11-scout-timer 60)
-)
-; Without a healer, a later Castle becomes the preferred safe anchor.
-(defrule
-    (goal df11-scout-recovery 2)
-    (unit-type-count-total monk < 1)
-    (building-type-count-total castle > 0)
-=>
-    (up-retreat-to castle c: scout-cavalry)
-)
-(defrule
-    (goal df11-scout-recovery 1)
-    (timer-triggered df11-scout-timer)
-=>
-    (set-goal df11-scout-recovery 0)
-    (disable-timer df11-scout-timer)
-    (set-strategic-number sn-number-explore-groups 1)
-    (up-send-scout group-type-land-explore scout-center)
-)
-; Recovery enforcement wins over inherited scout rules while parked/healing.
-(defrule
-    (or (goal df11-scout-recovery 1) (goal df11-scout-recovery 2))
-=>
-    (set-strategic-number sn-number-explore-groups 0)
-)
+; ---- FIX13 HD compatibility rollback ----
+; The actual AoE2 HD parser rejected up-idle-unit-count (ERR2004).
+; To avoid serial parser failures, every executable identifier introduced by FIX11
+; that was absent from the known-good FIX10 vocabulary is disabled here as one
+; compatibility unit: stuck-gatherer sampling, threat sampling, civilian-danger
+; sampling, and wounded-scout recovery.  Core FIX10 systems and the safe FIX11
+; additions that use only FIX10-proven identifiers remain active.
 
 ; ---- Naval Explorer Recovery ----
 ; No direct ship deletion.  With enemy water assets, release boats to inherited

@@ -1,0 +1,220 @@
+--- Dr_Fortress_AI_V13_FIX15.per
++++ Dr_Fortress_AI_V13_FIX15.per
+@@ -1,11 +1,18 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX14
+-; FIX14 researched-tier production priority:
+-; - replay 004756 confirms that upgraded tiers were researched while normal production kept buying legacy tiers.
+-; - normal production now gives exclusive priority to the strongest unlocked/researched tier and saves for it.
+-; - cheap legacy tiers remain intentionally available during df13-recovery / df13-military-rebuild.
+-; - age-unlocked Fire/Demolition ship tiers receive the same priority once Castle Age is reached.
+-; - no new executable identifiers are introduced; only the FIX10/FIX13 parser-safe vocabulary is used.
++; DR FORTRESS AI V13 FIX15
++; FIX15 situational mixed-tier / wall reliability repair:
++; - replay 2026-08-18 01:53 (HD 5.8) contains ZERO WALL actions from FIX14 despite long Feudal/Castle play.
++; - Feudal palisade bootstrap now retries a direct parser-safe build-wall command on a cooldown until real wall segments exist.
++; - wall state/progression is confirmed by actual wall segment counts; issuing a command alone never marks the fortress as started.
++; - Feudal Watch Tower floor on Hardest is four towers (FIX14 replay produced only two per Fortress AI).
++; - normal military production no longer saves exclusively for the strongest researched tier.
++; - tier posture is situational: cheap mass/rebuild/pressure, balanced middle tiers, and elite power tiers for a funded assault.
++; - every normal dispatcher can fall back to a cheaper researched tier when the preferred tier is temporarily unaffordable.
++; - family requests still come from civ strategy/threat counters, so tier choice and unit-role choice remain separate decisions.
++; - no new executable identifier is introduced; FIX10/FIX13 parser-safe vocabulary is retained.
++; FIX14 researched-tier production priority (superseded by FIX15 situational selection):
++; - replay 004756 confirmed that upgraded tiers were researched while normal production kept buying legacy tiers.
++; - FIX14 gave exclusive priority to the strongest researched tier; FIX15 deliberately replaces that behaviour.
+ ; FIX13 AoE2 HD parser compatibility hotfix:
+ ; - removes all active FIX11-only executable identifiers not present in known-good FIX10.
+ ; - directly fixes ERR2004 on up-idle-unit-count and pre-empts the same class of parser failure.
+@@ -117,6 +124,9 @@
+ (defconst df13-scout-request 180)
+ (defconst df13-knight-request 181)
+ (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
++(defconst df15-tier-posture 220)       ;1=cheap mass, 2=balanced, 3=power/elite assault
++(defconst df15-wall-retry 222)         ;0=ready, 1=wall command cooldown
++(defconst df15-wall-timer 49)          ;FIX15 retry timer; timer 49 was unused in FIX14
+ 
+ ; FIX09 exact-tier family production requests.
+ (defconst df13-militia-request 185)
+@@ -28599,6 +28609,7 @@
+     (current-age >= castle-age)
+     (goal df13-wall-expansion-stage 0)
+     (building-type-count-total town-center >= 2)
++    (building-type-count-total stone-wall-line >= 8)
+     (civilian-population >= 55)
+     (wall-completed-percentage 1 >= 80)
+     (wall-completed-percentage 2 >= 65)
+@@ -28610,6 +28621,7 @@
+     (difficulty == hardest)
+     (current-age >= castle-age)
+     (goal df13-wall-expansion-stage 1)
++    (building-type-count-total stone-wall-line >= 14)
+     (civilian-population >= 70)
+     (wall-completed-percentage 2 >= 80)
+ =>
+@@ -28620,6 +28632,7 @@
+     (difficulty == hardest)
+     (current-age == imperial-age)
+     (goal df13-wall-expansion-stage 2)
++    (building-type-count-total stone-wall-line >= 20)
+     (civilian-population >= 85)
+     (wall-completed-percentage 2 >= 82)
+ =>
+@@ -28630,6 +28643,7 @@
+     (difficulty == hardest)
+     (current-age == imperial-age)
+     (goal df13-wall-expansion-stage 3)
++    (building-type-count-total stone-wall-line >= 28)
+     (civilian-population >= 100)
+     (wall-completed-percentage 2 >= 85)
+ =>
+@@ -28672,8 +28686,96 @@
+     (set-strategic-number sn-safe-town-size 34)
+ )
+ 
+-; Mandatory safe Feudal bootstrap.  One build-wall command is enough to mark
+-; the wall as started; later rules decide how far the ring should be extended.
++; FIX15 WALL RELIABILITY LAYER
++; The attached FIX14 replay reached Feudal/Castle with three Fortress AIs but
++; recorded no WALL action at all.  can-build-wall therefore cannot be the only
++; gateway to the first wall command.  Retry build-wall directly every 25 seconds
++; until completed wall segments prove that the planner actually started.
++(defrule
++    (goal df15-wall-retry 1)
++    (timer-triggered df15-wall-timer)
++=>
++    (set-goal df15-wall-retry 0)
++    (disable-timer df15-wall-timer)
++)
++
++; A real completed segment, not an issued command or a default 100% planner
++; value, confirms that the fortress wall bootstrap exists.
++(defrule
++    (goal df13-wall-bootstrap 0)
++    (building-type-count-total palisade-wall >= 1)
++=>
++    (set-goal df13-wall-bootstrap 1)
++)
++(defrule
++    (goal df13-wall-bootstrap 0)
++    (building-type-count-total stone-wall-line >= 1)
++=>
++    (set-goal df13-wall-bootstrap 1)
++)
++
++; Give the first palisade enough radius to sit outside the compact economic
++; core.  This also avoids the FIX14 6..12 ring being trapped inside buildings.
++(defrule
++    (current-age == feudal-age)
++    (goal df13-wall-bootstrap 0)
++=>
++    (set-strategic-number sn-minimum-town-size 8)
++    (set-strategic-number sn-maximum-town-size 18)
++    (set-strategic-number sn-safe-town-size 14)
++)
++
++; Direct Feudal palisade attempt.  No can-build-wall predicate here: FIX14's
++; replay demonstrated that predicate can remain false forever before the first
++; planner action.  The action itself is parser-safe and already used in FIX10.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 35)
++    (goal df13-wall-bootstrap 0)
++    (goal df15-wall-retry 0)
++    (wood-amount > 70)
++    (up-pending-objects c: palisade-wall < 1)
++=>
++    (enable-wall-placement 1)
++    (build-wall 1 palisade-wall)
++    (set-goal df15-wall-retry 1)
++    (enable-timer df15-wall-timer 25)
++)
++
++; Larger-perimeter fallback for coast/island/blocked inner geometry.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 110)
++    (goal df13-wall-bootstrap 0)
++    (goal df15-wall-retry 0)
++    (wood-amount > 70)
++    (up-pending-objects c: palisade-wall < 1)
++=>
++    (set-strategic-number sn-minimum-town-size 9)
++    (set-strategic-number sn-maximum-town-size 22)
++    (enable-wall-placement 2)
++    (build-wall 2 palisade-wall)
++    (set-goal df15-wall-retry 1)
++    (enable-timer df15-wall-timer 25)
++)
++
++; Castle fallback also retries directly.  It never claims success until a real
++; stone/palisade segment is counted by one of the confirmation rules above.
++(defrule
++    (current-age >= castle-age)
++    (goal df13-wall-bootstrap 0)
++    (goal df15-wall-retry 0)
++    (stone-amount > 100)
++    (up-pending-objects c: stone-wall-line < 1)
++=>
++    (enable-wall-placement 1)
++    (build-wall 1 stone-wall-line)
++    (set-goal df15-wall-retry 1)
++    (enable-timer df15-wall-timer 25)
++)
++
++; Mandatory safe Feudal bootstrap.  FIX15 keeps the old affordability-aware
++; paths as secondary helpers, but they no longer mark success by themselves.
+ (defrule
+     (current-age == feudal-age)
+     (current-age-time >= 45)
+@@ -28684,7 +28786,6 @@
+     (can-build-wall 1 palisade-wall)
+ =>
+     (build-wall 1 palisade-wall)
+-    (set-goal df13-wall-bootstrap 1)
+ )
+ 
+ ; If the safe attempt had no window, retry after two Feudal minutes even under
+@@ -28698,7 +28799,6 @@
+     (can-build-wall 1 palisade-wall)
+ =>
+     (build-wall 1 palisade-wall)
+-    (set-goal df13-wall-bootstrap 1)
+ )
+ 
+ ; Island/coast fallback: if wall placement 1 cannot find a legal segment, try
+@@ -28712,7 +28812,6 @@
+     (can-build-wall 2 palisade-wall)
+ =>
+     (build-wall 2 palisade-wall)
+-    (set-goal df13-wall-bootstrap 1)
+ )
+ 
+ ; A limited Feudal continuation: enough to create a meaningful partial barrier
+@@ -28757,7 +28856,6 @@
+     (can-build-wall 1 stone-wall-line)
+ =>
+     (build-wall 1 stone-wall-line)
+-    (set-goal df13-wall-bootstrap 1)
+ )
+ (defrule
+     (current-age >= castle-age)
+@@ -28768,7 +28866,6 @@
+     (can-build-wall 1 palisade-wall)
+ =>
+     (build-wall 1 palisade-wall)
+-    (set-goal df13-wall-bootstrap 1)
+ )
+ 
+ ; In Castle Age the developed inner barrier is stone-only.  Low stone delays
+@@ -28829,6 +28926,8 @@
+ ; Controlled gates appear as soon as a useful section of wall exists.
+ (defrule
+     (current-age >= feudal-age)
++    (or (building-type-count-total palisade-wall >= 4)
++        (building-type-count-total stone-wall-line >= 4))
+     (wall-completed-percentage 1 >= 15)
+     (building-type-count-total gate < 1)
+     (not (town-under-attack))
+@@ -28838,6 +28937,7 @@
+ )

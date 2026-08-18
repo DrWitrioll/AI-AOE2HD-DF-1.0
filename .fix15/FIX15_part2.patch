@@ -1,0 +1,220 @@
+ (defrule
+     (current-age >= castle-age)
++    (building-type-count-total stone-wall-line >= 8)
+     (wall-completed-percentage 2 >= 35)
+     (building-type-count-total gate < 2)
+     (not (town-under-attack))
+@@ -28911,6 +29011,21 @@
+ ; is developed.  Targets: 2 Dark, 4 Feudal, 8 Castle, 15 Imperial on Hardest.
+ ; ---------------------------------------------------------------------------
+ 
++; FIX15: the replay produced exactly two Watch Towers for every Fortress AI.
++; Enforce the intended four-tower Feudal defensive floor independently of
++; whether the town is already under attack.
++(defrule
++    (difficulty == hardest)
++    (current-age == feudal-age)
++    (current-age-time >= 75)
++    (building-type-count-total watch-tower-line < 4)
++    (stone-amount > 100)
++    (up-pending-objects c: watch-tower-line < 1)
++    (can-build watch-tower-line)
++=>
++    (build watch-tower-line)
++)
++
+ ; Local observation envelope sits three town-size steps inside the local wall:
+ ; Dark Outposts 9 versus the 12-point bootstrap wall, Feudal local Outposts 10
+ ; versus the compact 13-point inner palisade envelope.  Wall rules occur earlier in the
+@@ -30252,7 +30367,398 @@
+ )
+ 
+ 
+-; df13-knight-request: FIX14 strongest researched tier in normal state; cheapest affordable tier in recovery.
++; ============================================================================
++; FIX15 SITUATIONAL TIER POSTURE
++; ============================================================================
++; Family selection remains threat/civ driven.  This layer only decides how much
++; of the available technology budget to spend on the requested role.
++; 1 = cheap mass / emergency / early rebuilding
++; 2 = balanced middle tier / mixed standing army
++; 3 = power tier for a funded prepared assault
++(defrule
++    (true)
++=>
++    (set-goal df15-tier-posture 2)
++)
++(defrule
++    (or (goal df13-recovery 1)
++        (or (goal df13-military-rebuild 1) (goal df13-defense-state 1)))
++=>
++    (set-goal df15-tier-posture 1)
++)
++(defrule
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (goal df13-defense-state 0)
++    (military-population < 18)
++=>
++    (set-goal df15-tier-posture 1)
++)
++(defrule
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (goal df13-defense-state 0)
++    (military-population >= 18)
++    (or (goal df13-assault-ready 1) (goal df13-siege-ready 1))
++    (food-amount > 700)
++    (gold-amount > 350)
++=>
++    (set-goal df15-tier-posture 3)
++)
++
++; CHEAP POSTURE: consume a normal request with the base model when available.
++; Existing recovery rules below already do the same during explicit recovery;
++; these rules extend the idea to pressure/low-field-army situations.
++(defrule
++    (goal df13-knight-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train knight)
++=>
++    (train knight)
++    (set-goal df13-knight-request 0)
++)
++(defrule
++    (goal df13-scout-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train scout-cavalry)
++=>
++    (train scout-cavalry)
++    (set-goal df13-scout-request 0)
++)
++(defrule
++    (goal df13-militia-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train militiaman)
++=>
++    (train militiaman)
++    (set-goal df13-militia-request 0)
++)
++(defrule
++    (goal df13-spearman-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train spearman)
++=>
++    (train spearman)
++    (set-goal df13-spearman-request 0)
++)
++(defrule
++    (goal df13-archer-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train archer)
++=>
++    (train archer)
++    (set-goal df13-archer-request 0)
++)
++(defrule
++    (goal df13-skirmisher-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train skirmisher)
++=>
++    (train skirmisher)
++    (set-goal df13-skirmisher-request 0)
++)
++(defrule
++    (goal df13-cavarcher-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train cavalry-archer)
++=>
++    (train cavalry-archer)
++    (set-goal df13-cavarcher-request 0)
++)
++(defrule
++    (goal df13-camel-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train camel)
++=>
++    (train camel)
++    (set-goal df13-camel-request 0)
++)
++(defrule
++    (goal df13-eagle-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train eagle-warrior)
++=>
++    (train eagle-warrior)
++    (set-goal df13-eagle-request 0)
++)
++(defrule
++    (goal df13-ram-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train battering-ram)
++=>
++    (train battering-ram)
++    (set-goal df13-ram-request 0)
++)
++(defrule
++    (goal df13-mangonel-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train mangonel)
++=>
++    (train mangonel)
++    (set-goal df13-mangonel-request 0)
++)
++(defrule
++    (goal df13-scorpion-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train scorpion)
++=>
++    (train scorpion)
++    (set-goal df13-scorpion-request 0)
++)
++(defrule
++    (goal df13-galley-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train galley)
++=>
++    (train galley)
++    (set-goal df13-galley-request 0)
++)
++(defrule
++    (goal df13-fire-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (can-train fire-galley)
++=>
++    (train fire-galley)
++    (set-goal df13-fire-request 0)
++)
++(defrule
++    (goal df13-demo-request 1)
++    (goal df15-tier-posture 1)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)

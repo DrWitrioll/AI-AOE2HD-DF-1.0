@@ -1,0 +1,29 @@
+--- Dr_Fortress_AI_V13_FIX22.per
++++ Dr_Fortress_AI_V13_FIX23.per
+@@ -1,5 +1,9 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX22
++; DR FORTRESS AI V13 FIX23
++; FIX23 HD parser forward-reference hotfix:
++; - fixes ERR2004 on df13-defense-state by declaring the goal before its first executable use.
++; - adds no gameplay rebalance versus FIX22; ally rescue, single attack owner, peace-pressure, elite guarantee and FIX21 Economy Governor are unchanged.
++; - static validation now explicitly rejects every defconst that is first used before its declaration.
+ ; FIX22 unified attack owner / real ally rescue / peace-pressure / elite guarantee:
+ ; - makes the final Fortress layer the sole writer of createarmy, sn-number-attack-groups, sn-percent-attack-soldiers and attack-now.
+ ; - retires inherited Resonance/Fortress attack-state writers instead of merely overriding them later in the rule pass.
+@@ -193,6 +197,7 @@
+ (defconst df13-scout-request 180)
+ (defconst df13-knight-request 181)
+ (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
++(defconst df13-defense-state 164)      ;FIX23: declared early; 0=safe, 1=confirmed pressure
+ (defconst df15-tier-posture 220)       ;FIX17: 1=cheap-biased MIX, 2=middle-backbone MIX, 3=elite-biased MIX
+ (defconst df16-wall-stage 222)         ;0=unplanned, 1/2/3=Feudal geometry, 4=Castle fallback
+ (defconst df17-wall-assault-phase 223) ;0=ready, 1=breach walls, 2=exploit opening
+@@ -25486,7 +25491,6 @@
+ 
+ (defconst df13-core 162)
+ (defconst df13-pop-profile 163)        ;1=125, 2=150, 3=200+
+-(defconst df13-defense-state 164)      ;0=safe, 1=confirmed pressure
+ (defconst df13-counterattack 165)      ;0=off, 1=reform/counter window
+ (defconst df13-threat-archer 166)
+ (defconst df13-threat-cavalry 167)

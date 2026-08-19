@@ -1,0 +1,115 @@
+name: Publish Dr Fortress V13 FIX22
+
+on:
+  push:
+    branches: [fix22-exact-trigger]
+    paths:
+      - 'support/fix22.patch.gz.b64'
+      - 'support/Dr_Fortress_AI_V13_FIX22_AUDIT.txt'
+      - '.github/workflows/publish-v13-fix22.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix22-exact-trigger
+          fetch-depth: 0
+
+      - name: Decode exact FIX22 inputs
+        run: |
+          mkdir -p /tmp/fix22-build
+          base64 -d support/fix22.patch.gz.b64 | gzip -d > /tmp/fix22.diff
+          cp support/Dr_Fortress_AI_V13_FIX22_AUDIT.txt /tmp/FIX22_AUDIT.txt
+          git fetch origin main V13 FIX support
+          git show origin/main:Dr_Fortress_AI_V13_FIX21.per > /tmp/fix22-build/Dr_Fortress_AI_V13_FIX21.per
+          git show origin/main:Dr_Fortress_AI_V13_FIX20.per > /tmp/Dr_Fortress_AI_V13_FIX20.per
+          git show origin/main:Dr_Fortress_AI_V13_FIX20.ai > /tmp/Dr_Fortress_AI_V13_FIX20.ai
+          git show origin/main:Dr_Fortress_AI_V13_FIX21.per > /tmp/Dr_Fortress_AI_V13_FIX21.per
+          git show origin/main:Dr_Fortress_AI_V13_FIX21.ai > /tmp/Dr_Fortress_AI_V13_FIX21.ai
+
+      - name: Build and deep-check FIX22
+        run: |
+          cd /tmp/fix22-build
+          echo '62367685fd1e8bd79e9680564e10e911b474553ef2d932fbfc891cf5c7e691f9  Dr_Fortress_AI_V13_FIX21.per' | sha256sum -c -
+          patch --batch -p0 < /tmp/fix22.diff
+          mv Dr_Fortress_AI_V13_FIX21.per Dr_Fortress_AI_V13_FIX22.per
+          : > Dr_Fortress_AI_V13_FIX22.ai
+          echo '170959c50bd0fabe7be8fa5f3c8e3278bded0ec65a4a8c5fd3b941dc68204e27  Dr_Fortress_AI_V13_FIX22.per' | sha256sum -c -
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('Dr_Fortress_AI_V13_FIX22.per')
+          t = p.read_text(encoding='utf-8')
+          lines = t.splitlines()
+          active_lines = [x.split(';', 1)[0] for x in lines]
+          assert sum(1 for x in active_lines if x.lstrip().startswith('(defrule')) == 2837
+          mi = next(i for i, x in enumerate(lines) if 'FIX22 FINAL ATTACK OWNER / ALLY RESCUE / PEACE PRESSURE / ELITE GUARANTEE' in x)
+          pre = '\n'.join(active_lines[:mi])
+          active = '\n'.join(active_lines)
+          for token in [
+              '(set-goal createarmy',
+              '(set-strategic-number sn-number-attack-groups',
+              '(set-strategic-number sn-percent-attack-soldiers',
+              '(attack-now)']:
+              assert token not in pre, token
+          for bad in [
+              '(cc-add-resource', '(up-idle-unit-count', '(up-get-threat-data',
+              '(up-compare-goal', '(up-guard-unit', '(up-reset-scouts',
+              '(up-retreat-to', '(up-reset-placement']:
+              assert bad not in active, bad
+          assert active.count('(set-goal createarmy') == 8
+          assert active.count('(set-strategic-number sn-number-attack-groups') == 8
+          assert active.count('(set-strategic-number sn-percent-attack-soldiers') == 8
+          assert active.count('(attack-now)') == 3
+          print('FIX22 deep static checks OK')
+          PY
+
+      - name: Configure git
+        run: |
+          git config user.name 'Dr Fortress AI bot'
+          git config user.email 'actions@users.noreply.github.com'
+
+      - name: Archive prior releases
+        run: |
+          for branch in FIX support; do
+            git checkout -B "$branch" "origin/$branch"
+            cp /tmp/Dr_Fortress_AI_V13_FIX20.per .
+            cp /tmp/Dr_Fortress_AI_V13_FIX20.ai .
+            cp /tmp/Dr_Fortress_AI_V13_FIX21.per .
+            cp /tmp/Dr_Fortress_AI_V13_FIX21.ai .
+            git add Dr_Fortress_AI_V13_FIX20.per Dr_Fortress_AI_V13_FIX20.ai Dr_Fortress_AI_V13_FIX21.per Dr_Fortress_AI_V13_FIX21.ai
+            if ! git diff --cached --quiet; then
+              git commit -m 'Archive V13 FIX20 and FIX21 before FIX22'
+              git push origin "HEAD:$branch"
+            fi
+          done
+
+      - name: Add FIX22 to complete V13 history
+        run: |
+          git checkout -B V13 origin/V13
+          cp /tmp/fix22-build/Dr_Fortress_AI_V13_FIX22.per .
+          cp /tmp/fix22-build/Dr_Fortress_AI_V13_FIX22.ai .
+          cp /tmp/fix22.diff Dr_Fortress_AI_V13_FIX21_to_FIX22.diff
+          cp /tmp/FIX22_AUDIT.txt Dr_Fortress_AI_V13_FIX22_AUDIT.txt
+          git add Dr_Fortress_AI_V13_FIX22.per Dr_Fortress_AI_V13_FIX22.ai Dr_Fortress_AI_V13_FIX21_to_FIX22.diff Dr_Fortress_AI_V13_FIX22_AUDIT.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add Dr Fortress AI V13 FIX22'
+            git push origin HEAD:V13
+          fi
+
+      - name: Publish main with latest two Fortress versions
+        run: |
+          git checkout -B main origin/main
+          cp /tmp/fix22-build/Dr_Fortress_AI_V13_FIX22.per .
+          cp /tmp/fix22-build/Dr_Fortress_AI_V13_FIX22.ai .
+          rm -f Dr_Fortress_AI_V13_FIX20.per Dr_Fortress_AI_V13_FIX20.ai
+          git add -A -- Dr_Fortress_AI_V13_FIX20.per Dr_Fortress_AI_V13_FIX20.ai Dr_Fortress_AI_V13_FIX22.per Dr_Fortress_AI_V13_FIX22.ai
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Dr Fortress AI V13 FIX22'
+            git push origin HEAD:main
+          fi

@@ -1,0 +1,70 @@
+name: Publish FIX18
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-fix18.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild exact FIX18
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="Dr_Fortress_AI_V13_FIX17.per"
+          TARGET="Dr_Fortress_AI_V13_FIX18.per"
+          EXPECT_SOURCE="ddf43940d8b32c61619464e7a547e434b5cfa289abad8186c928a0301b3fabe3"
+          EXPECT_TARGET="3c6e62cb33122129c99b8d42670ab272b06aaf7a532e7b8470d610e4a791a1d5"
+          test "$(sha256sum "$SOURCE" | awk '{print $1}')" = "$EXPECT_SOURCE"
+          mkdir -p /tmp/fix18-build
+          cp "$SOURCE" /tmp/fix18-build/
+          python3 - <<'PY'
+          import base64, bz2, pathlib
+          src = pathlib.Path('.github/fix18.patch.bz2.b64')
+          pathlib.Path('/tmp/fix18.patch').write_bytes(
+              bz2.decompress(base64.b64decode(src.read_text().strip()))
+          )
+          PY
+          (cd /tmp/fix18-build && patch -p0 < /tmp/fix18.patch)
+          mv "/tmp/fix18-build/$SOURCE" "$TARGET"
+          : > Dr_Fortress_AI_V13_FIX18.ai
+          test "$(sha256sum "$TARGET" | awk '{print $1}')" = "$EXPECT_TARGET"
+
+      - name: Publish main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f --ignore-unmatch Dr_Fortress_AI_V13_FIX16.per Dr_Fortress_AI_V13_FIX16.ai
+          git add Dr_Fortress_AI_V13_FIX18.per Dr_Fortress_AI_V13_FIX18.ai
+          git rm -f --ignore-unmatch .github/fix18.patch.bz2.b64 .github/workflows/publish-fix18.yml
+          git commit -m "Publish Dr Fortress AI V13 FIX18 stable no-cheat fortress repair"
+          git push origin HEAD:main
+
+      - name: Archive FIX18
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp Dr_Fortress_AI_V13_FIX18.per /tmp/Dr_Fortress_AI_V13_FIX18.per
+          cp Dr_Fortress_AI_V13_FIX18.ai /tmp/Dr_Fortress_AI_V13_FIX18.ai
+          for BR in V13 FIX support; do
+            git checkout -B "$BR" "origin/$BR"
+            cp /tmp/Dr_Fortress_AI_V13_FIX18.per .
+            cp /tmp/Dr_Fortress_AI_V13_FIX18.ai .
+            git add Dr_Fortress_AI_V13_FIX18.per Dr_Fortress_AI_V13_FIX18.ai
+            if ! git diff --cached --quiet; then
+              git commit -m "Archive Dr Fortress AI V13 FIX18"
+              git push origin "$BR"
+            fi
+          done

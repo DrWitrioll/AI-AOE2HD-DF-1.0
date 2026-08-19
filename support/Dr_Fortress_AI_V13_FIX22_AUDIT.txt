@@ -1,0 +1,96 @@
+DR FORTRESS AI V13 FIX22 - STATIC AUDIT
+==========================================
+File: Dr_Fortress_AI_V13_FIX22.per
+Size: 1011379 bytes
+SHA-256: 170959c50bd0fabe7be8fa5f3c8e3278bded0ec65a4a8c5fd3b941dc68204e27
+Lines: 37836
+Defrules: 2837
+
+FIX22 priority scope
+--------------------
+1. Real Ally Rescue
+   - Explicit ally requests: taunts 12 / 31 / 222.
+   - Automatic emergency triggers: allied TC collapse, critical villager collapse,
+     or low allied military + damaged allied economy while enemy military remains strong.
+   - Rescue mode commits 40% of existing soldiers in 2 attack groups.
+   - sn-target-evaluation-ally-proximity = 300 and coop-share-attacking = 1 direct
+     target selection toward enemies threatening allied space.
+   - Rescue overrides own DEFENSE / RECOVERY but leaves one local defend group.
+   - Rescue window: normally 180 seconds, 210 seconds for emergency taunt 222.
+   - After the timer expires, rescue state is released and the final attack owner
+     returns to the economy-governed mode.
+   - HD limitation handled deliberately: town-under-attack reports self pressure only,
+     therefore automatic allied "strong pressure" uses allied military/economic collapse
+     as a parser-safe proxy rather than pretending to read an unavailable ally flag.
+
+2. One Attack-State Owner
+-------------------------
+Legacy writer actions retired: 241
+Legacy writer-only rules kept parser-safe with harmless sink action: 11
+Final owner starts at line: 37393
+createarmy: total 8, before FIX22 owner 0, inside owner 8
+sn-number-attack-groups: total 8, before FIX22 owner 0, inside owner 8
+sn-percent-attack-soldiers: total 8, before FIX22 owner 0, inside owner 8
+attack-now: total 3, before FIX22 owner 0, inside owner 3
+
+Result: no active legacy writer remains for createarmy, attack-group count,
+attack-soldier percentage or attack-now. Every active write is inside FIX22 final owner.
+
+3. Peace -> Pressure
+--------------------
+- Calm STABLE / ASSAULT window: 240 seconds.
+- If military population >= 16, starts 90-second pressure window.
+- STABLE pressure commits 60% of soldiers in 2 groups.
+- ASSAULT remains the stronger posture and receives a one-shot attack pulse.
+- DEFENSE / RECOVERY / active rescue cancels pressure timers.
+
+4. Elite production guarantee
+-----------------------------
+Compact four-slot rotor, one attempt every 24 seconds:
+  0 Champion, cap 18
+  1 Arbalest, cap 20
+  2 Paladin, cap 14
+  3 Siege Onager, cap 5
+Enabled in ASSAULT and in rich Imperial STABLE economy.
+Existing FIX20/21 posture-weighted middle-tier pools remain the backbone.
+No additional large weighted-rule system was introduced.
+
+5. Economy Governor tuning
+--------------------------
+FIX21 five-state Governor retained.
+Castle ASSAULT entry reserve: 400F / 330W / 250G (was 430 / 360 / 280).
+Imperial ASSAULT entry reserve: 560F / 460W / 360G (was 620 / 520 / 420).
+Castle ASSAULT exit floor: 240F / 190W / 120G.
+Imperial ASSAULT exit floor: 330F / 270W / 190G.
+Feudal GROWTH gather profile: 50F / 32W / 10G / 8S.
+Dark GROWTH final attack owner keeps createarmy disabled, preserving resources for
+opening civilian growth; Feudal+ military production is enabled normally.
+
+Parser / structural checks
+--------------------------
+Active-code parenthesis balance (comments/strings removed): 0, minimum depth 0.
+New executable first-token identifiers versus FIX21: 0.
+Maximum active non-comment lines in one new FIX22 defrule: 14.
+Active cc-add-resource: 0.
+Active up-idle-unit-count: 0.
+Active up-get-threat-data: 0.
+Active up-compare-goal: 0.
+Active up-guard-unit: 0.
+Active up-reset-scouts: 0.
+Active up-retreat-to: 0.
+Active up-reset-placement: 0.
+Active Market buy/sell actions remain: 5.
+
+Diff verification
+-----------------
+Dr_Fortress_AI_V13_FIX21_to_FIX22.diff dry-runs cleanly against the exact FIX21
+source (SHA-256 62367685fd1e8bd79e9680564e10e911b474553ef2d932fbfc891cf5c7e691f9).
+Applying the diff produces a file with the exact FIX22 SHA-256 shown above.
+
+Non-goals preserved by design
+-----------------------------
+- No new wall system.
+- No new formation system.
+- No new civilization bonus system.
+- No resource creation / resource cheats.
+- FIX21 Economy Governor architecture retained rather than replaced.

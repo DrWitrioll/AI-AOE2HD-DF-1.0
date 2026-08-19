@@ -1,1 +1,0 @@
-Trigger exact Dr Fortress AI V13 FIX21 publisher. Retry after builder payload verification.

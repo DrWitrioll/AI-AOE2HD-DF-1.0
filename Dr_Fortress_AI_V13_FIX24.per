@@ -1,5 +1,20 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX22
+; DR FORTRESS AI V13 FIX24
+; FIX24 early mobilization / stronger targeted rescue / gate-throttle repair:
+; - Feudal GROWTH now guarantees an early cheap defensive field core instead of waiting until minute 21-25.
+; - RECOVERY actively refreshes cheap+middle family requests; weakness means mobilize, not military paralysis.
+; - Rescue has its own lower executable group minimum: roughly 40 percent normal / 60 percent critical in one coherent group.
+; - Rescue stores a concrete allied player ID when an ally is visibly collapsing and focuses the intervention on that player.
+; - automatic Rescue starts earlier from TC/villager/military collapse; critical collapse escalates the committed share.
+; - legacy "insufficient army" gating cannot suppress Rescue/Peace Pressure and no longer expects a 40-pop field army.
+; - ASSAULT and Peace Pressure group sizes are reduced to values that can actually form from realistic Fortress armies.
+; - gate construction is pending-aware and receives a 150-second failed-placement lock to eliminate repeated gate command storms.
+; - FIX21 Economy Governor, FIX22 single Attack Owner architecture, FIX23 ERR2004 ordering repair and no-cheat policy are retained.
+; - elite guarantee is intentionally unchanged; FIX24 repairs the basic military motor first.
+; FIX23 HD parser forward-reference hotfix:
+; - fixes ERR2004 on df13-defense-state by declaring the goal before its first executable use.
+; - adds no gameplay rebalance versus FIX22; ally rescue, single attack owner, peace-pressure, elite guarantee and FIX21 Economy Governor are unchanged.
+; - static validation now explicitly rejects every defconst that is first used before its declaration.
 ; FIX22 unified attack owner / real ally rescue / peace-pressure / elite guarantee:
 ; - makes the final Fortress layer the sole writer of createarmy, sn-number-attack-groups, sn-percent-attack-soldiers and attack-now.
 ; - retires inherited Resonance/Fortress attack-state writers instead of merely overriding them later in the rule pass.
@@ -193,6 +208,7 @@
 (defconst df13-scout-request 180)
 (defconst df13-knight-request 181)
 (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
+(defconst df13-defense-state 164)      ;FIX23: declared early; 0=safe, 1=confirmed pressure
 (defconst df15-tier-posture 220)       ;FIX17: 1=cheap-biased MIX, 2=middle-backbone MIX, 3=elite-biased MIX
 (defconst df16-wall-stage 222)         ;0=unplanned, 1/2/3=Feudal geometry, 4=Castle fallback
 (defconst df17-wall-assault-phase 223) ;0=ready, 1=breach walls, 2=exploit opening
@@ -233,6 +249,10 @@
 (defconst df22-assault-pulse 267) ;one attack-now pulse per ASSAULT entry
 (defconst df22-rescue-pulse 268) ;one attack-now pulse per rescue request/window
 (defconst df22-pressure-pulse 269) ;one attack-now pulse per peace-pressure window
+; FIX24 targeted rescue / mobilization / gate-throttle state.
+(defconst df24-rescue-player 270) ;0=unresolved, 1..8 concrete allied player to support
+(defconst df24-rescue-level 271) ;0=off, 1=normal support, 2=critical rescue
+(defconst df24-gate-lock 272) ;0=gate planner ready, 1=long failed-placement/pending cooldown
 
 ; FIX09 exact-tier family production requests.
 (defconst df13-militia-request 185)
@@ -285,6 +305,8 @@
 (defconst df22-peace-timer 54) ;FIX22 calm-time detector
 (defconst df22-pressure-timer 55) ;FIX22 autonomous pressure duration
 (defconst df22-elite-timer 56) ;FIX22 compact elite guarantee throttle
+(defconst df24-mobilize-timer 57) ;FIX24 Feudal/RECOVERY family-request refresh
+(defconst df24-gate-timer 58) ;FIX24 long gate-attempt cooldown
 
 ; UserPatch/HD class and group values used without direct object-search DUC.
 (defconst df11-villager-class 904)
@@ -20042,11 +20064,13 @@
 (timer-triggered  5)
 (or(goal aiteammate 1)
 (goal teamplay 1))
+(goal df22-rescue-state 0)
+(goal df22-pressure-state 0)
 (or(game-time > 2400) ;late game attack
 (or(difficulty <= hardest)
 (or(difficulty == hard)
 (difficulty == moderate))))
-(military-population >= 40)
+(military-population >= 18)
 =>     
 (set-strategic-number sn-minimum-attack-group-size 10)
 (set-strategic-number sn-maximum-attack-group-size 20)
@@ -20063,11 +20087,13 @@
 (timer-triggered  5)
 (or(goal aiteammate 1)
 (goal teamplay 1))
+(goal df22-rescue-state 0)
+(goal df22-pressure-state 0)
 (or(game-time > 2400)
 (or(difficulty <= hardest)
 (or(difficulty == hard)
 (difficulty == moderate))))
-(military-population < 40)
+(military-population < 18)
 =>     
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
@@ -25486,7 +25512,6 @@
 
 (defconst df13-core 162)
 (defconst df13-pop-profile 163)        ;1=125, 2=150, 3=200+
-(defconst df13-defense-state 164)      ;0=safe, 1=confirmed pressure
 (defconst df13-counterattack 165)      ;0=off, 1=reform/counter window
 (defconst df13-threat-archer 166)
 (defconst df13-threat-cavalry 167)
@@ -36624,6 +36649,12 @@
 =>
     (disable-timer df18-wall-build-timer)
 )
+(defrule
+    (timer-triggered df24-gate-timer)
+=>
+    (disable-timer df24-gate-timer)
+    (set-goal df24-gate-lock 0)
+)
 
 ; One wall/gate owner. Legacy Resonance wall goals remain inert; final Fortress
 ; rules below issue all wall commands on every difficulty.
@@ -36704,10 +36735,14 @@
     (current-age == feudal-age)
     (building-type-count-total palisade-wall >= 4)
     (building-type-count-total gate < 2)
+    (goal df24-gate-lock 0)
+    (up-pending-objects c: gate < 1)
     (up-timer-status df18-wall-build-timer == timer-disabled)
     (can-build-gate 1)
 =>
     (build-gate 1)
+    (set-goal df24-gate-lock 1)
+    (enable-timer df24-gate-timer 150)
     (enable-timer df18-wall-build-timer 20)
 )
 
@@ -36740,20 +36775,28 @@
     (current-age >= castle-age)
     (building-type-count-total stone-wall-line >= 6)
     (building-type-count-total gate < 4)
+    (goal df24-gate-lock 0)
+    (up-pending-objects c: gate < 1)
     (up-timer-status df18-wall-build-timer == timer-disabled)
     (can-build-gate 1)
 =>
     (build-gate 1)
+    (set-goal df24-gate-lock 1)
+    (enable-timer df24-gate-timer 150)
     (enable-timer df18-wall-build-timer 24)
 )
 (defrule
     (current-age >= castle-age)
     (building-type-count-total stone-wall-line >= 12)
     (building-type-count-total gate < 8)
+    (goal df24-gate-lock 0)
+    (up-pending-objects c: gate < 1)
     (up-timer-status df18-wall-build-timer == timer-disabled)
     (can-build-gate 2)
 =>
     (build-gate 2)
+    (set-goal df24-gate-lock 1)
+    (enable-timer df24-gate-timer 150)
     (enable-timer df18-wall-build-timer 24)
 )
 
@@ -37405,9 +37448,11 @@
 (defrule
     (player-valid any-ally)
     (goal df22-rescue-state 0)
-    (military-population >= 8)
+    (military-population >= 4)
     (taunt-detected any-ally 12)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 1)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37416,9 +37461,11 @@
 (defrule
     (player-valid any-ally)
     (goal df22-rescue-state 0)
-    (military-population >= 10)
+    (military-population >= 6)
     (taunt-detected any-ally 31)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 1)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37427,9 +37474,11 @@
 (defrule
     (player-valid any-ally)
     (goal df22-rescue-state 0)
-    (military-population >= 6)
+    (military-population >= 3)
     (taunt-detected any-ally 222)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 2)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 210)
@@ -37441,9 +37490,11 @@
     (player-valid any-ally)
     (game-time > 900)
     (goal df22-rescue-state 0)
-    (military-population >= 10)
+    (military-population >= 4)
     (players-building-type-count any-ally town-center < 1)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 2)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37456,10 +37507,12 @@
     (cc-players-building-count any-computer-ally >= 1)
     (game-time > 900)
     (goal df22-rescue-state 0)
-    (military-population >= 10)
-    (cc-players-unit-type-count any-computer-ally villager < 10)
-    (players-military-population any-enemy >= 15)
+    (military-population >= 5)
+    (cc-players-unit-type-count any-computer-ally villager < 14)
+    (players-military-population any-enemy >= 12)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 2)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37468,10 +37521,12 @@
     (cc-players-building-count any-human-ally >= 1)
     (game-time > 900)
     (goal df22-rescue-state 0)
-    (military-population >= 10)
-    (cc-players-unit-type-count any-human-ally villager < 10)
-    (players-military-population any-enemy >= 15)
+    (military-population >= 5)
+    (cc-players-unit-type-count any-human-ally villager < 14)
+    (players-military-population any-enemy >= 12)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 2)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37482,13 +37537,15 @@
 ; for allied "under strong pressure" because town-under-attack is self-only.
 (defrule
     (player-valid any-ally)
-    (game-time > 1200)
+    (game-time > 900)
     (goal df22-rescue-state 0)
-    (military-population >= 12)
-    (players-military-population any-ally < 8)
-    (cc-players-unit-type-count any-ally villager < 25)
-    (players-military-population any-enemy >= 24)
+    (military-population >= 6)
+    (players-military-population any-ally < 10)
+    (cc-players-unit-type-count any-ally villager < 40)
+    (players-military-population any-enemy >= 6)
 =>
+    (set-goal df24-rescue-player 0)
+    (set-goal df24-rescue-level 1)
     (set-goal df22-rescue-state 1)
     (set-goal df22-rescue-pulse 1)
     (enable-timer df22-rescue-timer 180)
@@ -37499,8 +37556,184 @@
     (timer-triggered df22-rescue-timer)
 =>
     (set-goal df22-rescue-state 0)
+    (set-goal df24-rescue-level 0)
+    (set-goal df24-rescue-player 0)
     (disable-timer df22-rescue-timer)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
+    (set-strategic-number sn-focus-player-number 0)
+)
+
+; --- FIX24 concrete ally target selection ----------------------------------
+; HD exposes no safe sender-ID accessor for a generic taunt.  We therefore lock
+; the intervention to the first allied player whose visible TC/villager/military
+; state is collapsing; if none qualifies, a stable first-allied fallback is used.
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 1 ally)
+    (not (player-number 1))
+    (players-building-count 1 >= 1)
+    (or (players-building-type-count 1 town-center < 1) (or (players-unit-type-count 1 villager < 18) (players-military-population 1 < 10)))
+=>
+    (set-goal df24-rescue-player 1)
+    (set-strategic-number sn-focus-player-number 1)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 2 ally)
+    (not (player-number 2))
+    (players-building-count 2 >= 1)
+    (or (players-building-type-count 2 town-center < 1) (or (players-unit-type-count 2 villager < 18) (players-military-population 2 < 10)))
+=>
+    (set-goal df24-rescue-player 2)
+    (set-strategic-number sn-focus-player-number 2)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 3 ally)
+    (not (player-number 3))
+    (players-building-count 3 >= 1)
+    (or (players-building-type-count 3 town-center < 1) (or (players-unit-type-count 3 villager < 18) (players-military-population 3 < 10)))
+=>
+    (set-goal df24-rescue-player 3)
+    (set-strategic-number sn-focus-player-number 3)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 4 ally)
+    (not (player-number 4))
+    (players-building-count 4 >= 1)
+    (or (players-building-type-count 4 town-center < 1) (or (players-unit-type-count 4 villager < 18) (players-military-population 4 < 10)))
+=>
+    (set-goal df24-rescue-player 4)
+    (set-strategic-number sn-focus-player-number 4)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 5 ally)
+    (not (player-number 5))
+    (players-building-count 5 >= 1)
+    (or (players-building-type-count 5 town-center < 1) (or (players-unit-type-count 5 villager < 18) (players-military-population 5 < 10)))
+=>
+    (set-goal df24-rescue-player 5)
+    (set-strategic-number sn-focus-player-number 5)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 6 ally)
+    (not (player-number 6))
+    (players-building-count 6 >= 1)
+    (or (players-building-type-count 6 town-center < 1) (or (players-unit-type-count 6 villager < 18) (players-military-population 6 < 10)))
+=>
+    (set-goal df24-rescue-player 6)
+    (set-strategic-number sn-focus-player-number 6)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 7 ally)
+    (not (player-number 7))
+    (players-building-count 7 >= 1)
+    (or (players-building-type-count 7 town-center < 1) (or (players-unit-type-count 7 villager < 18) (players-military-population 7 < 10)))
+=>
+    (set-goal df24-rescue-player 7)
+    (set-strategic-number sn-focus-player-number 7)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 8 ally)
+    (not (player-number 8))
+    (players-building-count 8 >= 1)
+    (or (players-building-type-count 8 town-center < 1) (or (players-unit-type-count 8 villager < 18) (players-military-population 8 < 10)))
+=>
+    (set-goal df24-rescue-player 8)
+    (set-strategic-number sn-focus-player-number 8)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 1 ally)
+    (not (player-number 1))
+    (players-building-count 1 >= 1)
+=>
+    (set-goal df24-rescue-player 1)
+    (set-strategic-number sn-focus-player-number 1)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 2 ally)
+    (not (player-number 2))
+    (players-building-count 2 >= 1)
+=>
+    (set-goal df24-rescue-player 2)
+    (set-strategic-number sn-focus-player-number 2)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 3 ally)
+    (not (player-number 3))
+    (players-building-count 3 >= 1)
+=>
+    (set-goal df24-rescue-player 3)
+    (set-strategic-number sn-focus-player-number 3)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 4 ally)
+    (not (player-number 4))
+    (players-building-count 4 >= 1)
+=>
+    (set-goal df24-rescue-player 4)
+    (set-strategic-number sn-focus-player-number 4)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 5 ally)
+    (not (player-number 5))
+    (players-building-count 5 >= 1)
+=>
+    (set-goal df24-rescue-player 5)
+    (set-strategic-number sn-focus-player-number 5)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 6 ally)
+    (not (player-number 6))
+    (players-building-count 6 >= 1)
+=>
+    (set-goal df24-rescue-player 6)
+    (set-strategic-number sn-focus-player-number 6)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 7 ally)
+    (not (player-number 7))
+    (players-building-count 7 >= 1)
+=>
+    (set-goal df24-rescue-player 7)
+    (set-strategic-number sn-focus-player-number 7)
+)
+(defrule
+    (goal df22-rescue-state 1)
+    (goal df24-rescue-player 0)
+    (stance-toward 8 ally)
+    (not (player-number 8))
+    (players-building-count 8 >= 1)
+=>
+    (set-goal df24-rescue-player 8)
+    (set-strategic-number sn-focus-player-number 8)
 )
 
 ; --- Peace -> pressure -------------------------------------------------------
@@ -37532,7 +37765,7 @@
     (timer-triggered df22-peace-timer)
     (or (goal df21-economy-state 2) (goal df21-economy-state 5))
     (goal df22-rescue-state 0)
-    (military-population >= 16)
+    (military-population >= 10)
 =>
     (set-goal df22-pressure-state 1)
     (set-goal df22-pressure-pulse 1)
@@ -37541,10 +37774,10 @@
 )
 (defrule
     (timer-triggered df22-peace-timer)
-    (military-population < 16)
+    (military-population < 10)
 =>
     (disable-timer df22-peace-timer)
-    (enable-timer df22-peace-timer 120)
+    (enable-timer df22-peace-timer 90)
 )
 (defrule
     (goal df22-pressure-state 1)
@@ -37605,10 +37838,10 @@
     (difficulty == easy)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 10)
-    (set-strategic-number sn-maximum-attack-group-size 22)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 62)
+    (set-strategic-number sn-minimum-attack-group-size 6)
+    (set-strategic-number sn-maximum-attack-group-size 16)
+    (set-strategic-number sn-number-attack-groups 1)
+    (set-strategic-number sn-percent-attack-soldiers 55)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
 )
 (defrule
@@ -37616,10 +37849,10 @@
     (difficulty == moderate)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 12)
-    (set-strategic-number sn-maximum-attack-group-size 26)
+    (set-strategic-number sn-minimum-attack-group-size 7)
+    (set-strategic-number sn-maximum-attack-group-size 18)
     (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 70)
+    (set-strategic-number sn-percent-attack-soldiers 65)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
 )
 (defrule
@@ -37627,10 +37860,10 @@
     (difficulty == hard)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 14)
-    (set-strategic-number sn-maximum-attack-group-size 30)
-    (set-strategic-number sn-number-attack-groups 3)
-    (set-strategic-number sn-percent-attack-soldiers 78)
+    (set-strategic-number sn-minimum-attack-group-size 8)
+    (set-strategic-number sn-maximum-attack-group-size 22)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 72)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
 )
 (defrule
@@ -37638,10 +37871,10 @@
     (difficulty == hardest)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 16)
-    (set-strategic-number sn-maximum-attack-group-size 32)
-    (set-strategic-number sn-number-attack-groups 3)
-    (set-strategic-number sn-percent-attack-soldiers 82)
+    (set-strategic-number sn-minimum-attack-group-size 9)
+    (set-strategic-number sn-maximum-attack-group-size 24)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 78)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
 )
 
@@ -37650,28 +37883,46 @@
     (goal df22-attack-mode 4)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 10)
-    (set-strategic-number sn-maximum-attack-group-size 24)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 60)
+    (set-strategic-number sn-minimum-attack-group-size 5)
+    (set-strategic-number sn-maximum-attack-group-size 18)
+    (set-strategic-number sn-number-attack-groups 1)
+    (set-strategic-number sn-percent-attack-soldiers 55)
     (set-strategic-number sn-target-evaluation-ally-proximity 0)
 )
 
-; ALLY RESCUE: 40 percent goes out, one local defend group remains even if our own
-; economy is simultaneously in DEFENSE or RECOVERY.
+; ALLY RESCUE: one coherent intervention group.  Normal support sends about
+; 40 percent; critical TC/civilian collapse escalates to about 60 percent.
 (defrule
     (goal df22-attack-mode 3)
+    (goal df24-rescue-level 1)
 =>
     (set-goal createarmy 1)
-    (set-strategic-number sn-minimum-attack-group-size 6)
-    (set-strategic-number sn-maximum-attack-group-size 18)
-    (set-strategic-number sn-number-attack-groups 2)
+    (set-goal enabletsa 1)
+    (set-strategic-number sn-minimum-attack-group-size 3)
+    (set-strategic-number sn-maximum-attack-group-size 16)
+    (set-strategic-number sn-number-attack-groups 1)
     (set-strategic-number sn-percent-attack-soldiers 40)
-    (set-strategic-number sn-target-evaluation-ally-proximity 300)
+    (set-strategic-number sn-target-evaluation-ally-proximity 350)
     (set-strategic-number sn-coop-share-attacking 1)
     (set-strategic-number sn-number-defend-groups 1)
-    (set-strategic-number sn-minimum-defend-group-size 4)
-    (set-strategic-number sn-maximum-defend-group-size 12)
+    (set-strategic-number sn-minimum-defend-group-size 3)
+    (set-strategic-number sn-maximum-defend-group-size 10)
+)
+(defrule
+    (goal df22-attack-mode 3)
+    (goal df24-rescue-level 2)
+=>
+    (set-goal createarmy 1)
+    (set-goal enabletsa 1)
+    (set-strategic-number sn-minimum-attack-group-size 2)
+    (set-strategic-number sn-maximum-attack-group-size 22)
+    (set-strategic-number sn-number-attack-groups 1)
+    (set-strategic-number sn-percent-attack-soldiers 60)
+    (set-strategic-number sn-target-evaluation-ally-proximity 500)
+    (set-strategic-number sn-coop-share-attacking 1)
+    (set-strategic-number sn-number-defend-groups 1)
+    (set-strategic-number sn-minimum-defend-group-size 2)
+    (set-strategic-number sn-maximum-defend-group-size 8)
 )
 
 ; One-shot launch pulses. These are the ONLY active attack-now actions in FIX22.
@@ -37833,4 +38084,106 @@
 =>
     (set-goal df22-elite-cycle 0)
     (enable-timer df22-elite-timer 24)
+)
+
+
+; ============================================================================
+; FIX24 EARLY / RECOVERY MOBILIZATION OVERRIDES
+; ============================================================================
+; This is intentionally compact.  It does not choose elite quality and does not
+; create resources.  It only guarantees that the existing exact-tier dispatchers
+; receive cheap/middle family requests while the army is dangerously small.
+
+(defrule
+    (timer-triggered df24-mobilize-timer)
+=>
+    (disable-timer df24-mobilize-timer)
+)
+
+; Feudal: never let fast-castle/random-strategy flags leave the Fortress virtually
+; unarmed.  From 20 seconds after Feudal, a sub-10 field army enters mobilization.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 20)
+    (military-population < 10)
+=>
+    (set-goal feudalarmy 1)
+)
+
+; Ensure one range exists for the cheap spear/skirm/archer defensive triangle.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 35)
+    (military-population < 8)
+    (wood-amount > 150)
+    (building-type-count-total archery-range < 1)
+    (can-build archery-range)
+    (up-timer-status df18-infra-timer == timer-disabled)
+=>
+    (set-goal pausetsa 1)
+    (build archery-range)
+    (enable-timer df18-infra-timer 12)
+)
+
+; Baseline refresh: cheap families are requested every 18 seconds until ten
+; military population exists. Existing threat/civ rules can add scouts/infantry.
+(defrule
+    (current-age == feudal-age)
+    (current-age-time >= 25)
+    (military-population < 10)
+    (up-timer-status df24-mobilize-timer == timer-disabled)
+=>
+    (set-goal df13-spearman-request 1)
+    (set-goal df13-skirmisher-request 1)
+    (set-goal df13-archer-request 1)
+    (enable-timer df24-mobilize-timer 18)
+)
+
+; Direct threat adds a little more cheap mass; still no attack is forced here.
+(defrule
+    (current-age == feudal-age)
+    (town-under-attack)
+    (military-population < 14)
+=>
+    (set-goal df13-spearman-request 1)
+    (set-goal df13-skirmisher-request 1)
+    (set-goal df13-archer-request 1)
+)
+
+; RECOVERY is mobilization. Every eight seconds the standing cheap/middle families
+; are refreshed until a real field army exists. Posture 1 still controls quality.
+(defrule
+    (goal df21-economy-state 4)
+    (military-population < 30)
+    (up-timer-status df24-mobilize-timer == timer-disabled)
+=>
+    (set-goal df13-militia-request 1)
+    (set-goal df13-spearman-request 1)
+    (set-goal df13-archer-request 1)
+    (set-goal df13-skirmisher-request 1)
+    (set-goal df13-scout-request 1)
+    (enable-timer df24-mobilize-timer 8)
+)
+
+; Castle+ RECOVERY also requests a limited mounted/siege middle core. Caps avoid
+; turning reconstruction into an expensive elite queue.
+(defrule
+    (goal df21-economy-state 4)
+    (current-age >= castle-age)
+    (military-population < 26)
+    (unit-type-count-total knight-line < 6)
+    (food-amount > 140)
+    (gold-amount > 110)
+=>
+    (set-goal df13-knight-request 1)
+)
+(defrule
+    (goal df21-economy-state 4)
+    (current-age >= castle-age)
+    (military-population < 26)
+    (unit-type-count-total mangonel-line < 3)
+    (wood-amount > 180)
+    (gold-amount > 110)
+=>
+    (set-goal df13-mangonel-request 1)
 )

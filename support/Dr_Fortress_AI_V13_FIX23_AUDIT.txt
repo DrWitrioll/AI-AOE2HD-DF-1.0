@@ -1,0 +1,96 @@
+DR FORTRESS AI V13 FIX23 - HD PARSER / ERR2004 AUDIT
+=====================================================
+
+Runtime failure repaired
+------------------------
+FIX22 runtime error:
+  ERR2004: Missing identifier: df13-defense-state
+  first failing use: FIX22 line 21531
+
+Root cause:
+  df13-defense-state was defined, but too late for the AoE2 HD parser.
+  First executable use: line 21531
+  Old declaration:      line 25489
+  This was a forward reference, which the HD parser rejects.
+
+FIX23 repair
+------------
+- Moves (defconst df13-defense-state 164) into the early Fortress constant block,
+  before every executable use.
+- Removes the later duplicate declaration.
+- No gameplay rule, condition, action, timer duration, economy threshold,
+  ally-rescue behavior, attack-state behavior, pressure behavior or tier weighting
+  is changed versus FIX22.
+
+Full defconst ordering audit
+----------------------------
+FIX22 defconst symbols checked: 457
+FIX22 forward references found: 1
+  df13-defense-state: use 21531 < declaration 25489
+
+FIX23 defconst symbols checked: 457
+FIX23 forward references found: 0
+Duplicate df13-defense-state declarations in FIX23: 0
+Total df13-defense-state declarations in FIX23: 1
+
+Identifier regression audit
+---------------------------
+New active identifier tokens FIX21 -> FIX22: 13
+  df22-assault-pulse
+  df22-attack-mode
+  df22-elite-cycle
+  df22-elite-state
+  df22-elite-timer
+  df22-peace-timer
+  df22-pressure-pulse
+  df22-pressure-state
+  df22-pressure-timer
+  df22-rescue-pulse
+  df22-rescue-state
+  df22-rescue-timer
+  df22-retired-sink
+All are declared before first executable use.
+
+New active identifier tokens FIX22 -> FIX23: 0
+New executable first-token identifiers FIX22 -> FIX23: 0
+
+Parser-safety guards
+--------------------
+Active cc-add-resource: 0
+Active up-idle-unit-count: 0
+Active up-get-threat-data: 0
+Active up-compare-goal: 0
+Active up-guard-unit: 0
+Active up-reset-scouts: 0
+Active up-retreat-to: 0
+Active up-reset-placement: 0
+
+Structural / semantic checks
+----------------------------
+FIX22 defrules: 2837
+FIX23 defrules: 2837
+Raw active-code parenthesis signature unchanged versus FIX22.
+Normalized active gameplay code (ignoring comments and the relocated
+  df13-defense-state declaration): IDENTICAL to FIX22.
+
+Patch reproducibility
+---------------------
+Source FIX22 SHA-256:
+  170959c50bd0fabe7be8fa5f3c8e3278bded0ec65a4a8c5fd3b941dc68204e27
+
+FIX23 SHA-256:
+  163d1f9972fead309773cef86500c2623f589e040552e6223edfae76d6932dbd
+
+FIX23 size: 1011797 bytes
+FIX23 lines: 37840
+
+Dr_Fortress_AI_V13_FIX22_to_FIX23.diff dry-run: PASS
+Applying the diff to the exact FIX22 source produces SHA-256:
+  163d1f9972fead309773cef86500c2623f589e040552e6223edfae76d6932dbd
+which is byte-identical to Dr_Fortress_AI_V13_FIX23.per.
+
+Conclusion
+----------
+FIX23 specifically repairs the observed HD ERR2004 forward-reference failure.
+The enhanced ERR2004 audit now validates declaration order, not merely whether
+an identifier exists somewhere in the file.

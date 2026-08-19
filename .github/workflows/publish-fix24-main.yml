@@ -1,0 +1,122 @@
+name: Publish FIX24 exact
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-fix24-main.yml']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build and validate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,zlib
+          Path('/tmp/fix24.diff').write_bytes(zlib.decompress(base64.b64decode(Path('.github/fix24.diff.z.b64').read_text().strip())))
+          PY
+          mkdir /tmp/f24
+          git show origin/main:Dr_Fortress_AI_V13_FIX23.per > /tmp/f24/Dr_Fortress_AI_V13_FIX23.per
+          test "$(sha256sum /tmp/f24/Dr_Fortress_AI_V13_FIX23.per|cut -d' ' -f1)" = "163d1f9972fead309773cef86500c2623f589e040552e6223edfae76d6932dbd"
+          cd /tmp/f24
+          patch -s Dr_Fortress_AI_V13_FIX23.per /tmp/fix24.diff
+          mv Dr_Fortress_AI_V13_FIX23.per Dr_Fortress_AI_V13_FIX24.per
+          test "$(sha256sum Dr_Fortress_AI_V13_FIX24.per|cut -d' ' -f1)" = "fec71134f58339b91fe0b9fa831aff34cd47413ed6fcc91a464bc1a2c303a76d"
+          : > Dr_Fortress_AI_V13_FIX24.ai
+          cp /tmp/fix24.diff Dr_Fortress_AI_V13_FIX23_to_FIX24.diff
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,hashlib
+          p=Path('Dr_Fortress_AI_V13_FIX24.per'); t=p.read_text(); lines=t.splitlines()
+          def clean(s):
+              out=[]; q=False; esc=False
+              for c in s:
+                  if q:
+                      if esc: esc=False; continue
+                      if c=='\\': esc=True; continue
+                      if c=='"': q=False
+                      continue
+                  if c=='"': q=True; out.append(' '); continue
+                  if c==';': break
+                  out.append(c)
+              return ''.join(out)
+          a='\n'.join(clean(x) for x in lines)
+          bal=mn=0
+          for c in a:
+              if c=='(': bal+=1
+              elif c==')': bal-=1; mn=min(mn,bal)
+          assert (bal,mn)==(0,0)
+          decl={}
+          for i,l in enumerate(lines,1):
+              m=re.search(r'\(defconst\s+([^\s()]+)\s+',clean(l))
+              if m: decl.setdefault(m.group(1),i)
+          fwd=[]
+          for s,d in decl.items():
+              q=re.compile(r'(?<![A-Za-z0-9_-])'+re.escape(s)+r'(?![A-Za-z0-9_-])')
+              for i,l in enumerate(lines[:d-1],1):
+                  if q.search(clean(l)): fwd.append((s,i,d)); break
+          assert not fwd, fwd
+          for bad in ['cc-add-resource','up-idle-unit-count','up-get-threat-data','up-compare-goal','up-guard-unit','up-reset-scouts','up-retreat-to','up-reset-placement']:
+              assert not re.search(r'\('+re.escape(bad)+r'\b',a), bad
+          owner=t.index('; FIX22 FINAL ATTACK OWNER / ALLY RESCUE / PEACE PRESSURE / ELITE GUARANTEE')
+          tail=t.index('; FIX24 EARLY / RECOVERY MOBILIZATION OVERRIDES')
+          pats=[r'\(set-goal\s+createarmy\s+',r'\(set-strategic-number\s+sn-number-attack-groups\s+',r'\(set-strategic-number\s+sn-percent-attack-soldiers\s+',r'\(attack-now\b']
+          assert all(not re.search(x,'\n'.join(clean(y) for y in t[:owner].splitlines())) for x in pats)
+          assert all(not re.search(x,'\n'.join(clean(y) for y in t[tail:].splitlines())) for x in pats)
+          assert a.count('(up-pending-objects c: gate < 1)')==3
+          assert a.count('(enable-timer df24-gate-timer 150)')==3
+          assert '(players-military-population any-ally < 10)' in a
+          assert '(players-military-population any-enemy >= 6)' in a
+          assert len(re.findall(r'\(set-goal\s+df24-rescue-player\s+[1-8]\)',a))==16
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=='fec71134f58339b91fe0b9fa831aff34cd47413ed6fcc91a464bc1a2c303a76d'
+          report='\n'.join([
+            'DR FORTRESS AI V13 FIX24 - STATIC / HD PARSER AUDIT',
+            '====================================================',
+            'File: Dr_Fortress_AI_V13_FIX24.per',
+            'Source SHA-256: 163d1f9972fead309773cef86500c2623f589e040552e6223edfae76d6932dbd',
+            'SHA-256: fec71134f58339b91fe0b9fa831aff34cd47413ed6fcc91a464bc1a2c303a76d',
+            f'Size: {p.stat().st_size} bytes', f'Lines: {len(lines)}',
+            f'Active defrules: {len(re.findall(r"\\(defrule\\b",a))}',
+            f'Parenthesis balance: {bal}, minimum {mn}',
+            f'defconst symbols: {len(decl)}', f'Forward references: {len(fwd)}',
+            'Resource cheats: 0', 'Forbidden ERR2004-prone UP commands: 0',
+            'Attack writers before final owner: 0', 'Attack writers in FIX24 mobilization tail: 0',
+            'Gate issuers protected by pending check + 150s lock: 3/3',
+            'Rescue: normal 40% one group min3; critical 60% one group min2',
+            'Automatic early rescue: ally military <10, enemy military >=6',
+            'Feudal mobilization: spear/skirm/archer requests below 10 military',
+            'RECOVERY: cheap+middle request refresh every 8s below 30 military',
+            'Elite guarantee: unchanged from FIX23', 'Economy Governor: retained', 'No-cheat policy: retained',''])
+          Path('Dr_Fortress_AI_V13_FIX24_AUDIT.txt').write_text(report)
+          print(report)
+          PY
+          git show origin/main:Dr_Fortress_AI_V13_FIX22.per > /tmp/FIX22.per
+          git show origin/main:Dr_Fortress_AI_V13_FIX22.ai > /tmp/FIX22.ai
+      - name: Publish branches
+        run: |
+          set -euo pipefail
+          git config user.name "Dr Fortress AI bot"
+          git config user.email "actions@users.noreply.github.com"
+          git switch -C V13 origin/V13
+          cp /tmp/f24/Dr_Fortress_AI_V13_FIX24.per /tmp/f24/Dr_Fortress_AI_V13_FIX24.ai /tmp/f24/Dr_Fortress_AI_V13_FIX23_to_FIX24.diff /tmp/f24/Dr_Fortress_AI_V13_FIX24_AUDIT.txt .
+          git add Dr_Fortress_AI_V13_FIX24* Dr_Fortress_AI_V13_FIX23_to_FIX24.diff
+          git commit -m "Archive Dr Fortress AI V13 FIX24" && git push origin HEAD:V13
+          for b in FIX support; do
+            git switch -C "$b" "origin/$b"
+            cp /tmp/FIX22.per Dr_Fortress_AI_V13_FIX22.per
+            cp /tmp/FIX22.ai Dr_Fortress_AI_V13_FIX22.ai
+            git add Dr_Fortress_AI_V13_FIX22.per Dr_Fortress_AI_V13_FIX22.ai
+            git diff --cached --quiet || (git commit -m "Archive Dr Fortress AI V13 FIX22" && git push origin "HEAD:$b")
+          done
+          git fetch origin main
+          git switch -C main origin/main
+          cp /tmp/f24/Dr_Fortress_AI_V13_FIX24.per /tmp/f24/Dr_Fortress_AI_V13_FIX24.ai .
+          rm -f Dr_Fortress_AI_V13_FIX22.per Dr_Fortress_AI_V13_FIX22.ai .github/fix24.diff.z.b64 .github/workflows/publish-fix24-main.yml
+          git add -A
+          git commit -m "Publish Dr Fortress AI V13 FIX24"
+          git push origin HEAD:main

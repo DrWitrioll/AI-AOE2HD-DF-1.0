@@ -1,5 +1,20 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX21
+; DR FORTRESS AI V13 FIX23
+; FIX23 HD parser forward-reference hotfix:
+; - fixes ERR2004 on df13-defense-state by declaring the goal before its first executable use.
+; - adds no gameplay rebalance versus FIX22; ally rescue, single attack owner, peace-pressure, elite guarantee and FIX21 Economy Governor are unchanged.
+; - static validation now explicitly rejects every defconst that is first used before its declaration.
+; FIX22 unified attack owner / real ally rescue / peace-pressure / elite guarantee:
+; - makes the final Fortress layer the sole writer of createarmy, sn-number-attack-groups, sn-percent-attack-soldiers and attack-now.
+; - retires inherited Resonance/Fortress attack-state writers instead of merely overriding them later in the rule pass.
+; - real ally rescue commits about 40 percent of the existing field army toward enemies near allies for a timed intervention.
+; - rescue can override local DEFENSE/RECOVERY while one local defend group is deliberately retained.
+; - ally requests plus severe allied TC/villager/military collapse can trigger rescue; the force is released when the rescue window ends.
+; - four minutes of calm STABLE/ASSAULT economy arms a pressure window so a healthy Fortress cannot remain passive forever.
+; - ASSAULT entry emits one attack pulse; STABLE peace-pressure emits a controlled attack pulse; no legacy attack-now remains active.
+; - a compact four-slot elite guarantee rotates Champion / Arbalest / Paladin / Siege Onager without replacing the middle-tier backbone.
+; - Economy Governor remains the FIX21 design; only soft ASSAULT reserve thresholds and Feudal GROWTH food bias are gently tuned.
+; - no resource creation, no new wall/formations/civ systems, and no new executable vocabulary beyond FIX21 parser-proven tokens.
 ; FIX21 Fortress Economy 2.0 / economy-governed tier quality:
 ; - adds a five-state no-cheat Economy Governor: GROWTH, STABLE, DEFENSE, RECOVERY, ASSAULT.
 ; - economy state, not short military-population fluctuations, now owns df15-tier-posture.
@@ -182,6 +197,7 @@
 (defconst df13-scout-request 180)
 (defconst df13-knight-request 181)
 (defconst df13-wall-expansion-stage 182) ;0 initial, 1 outer, 2 third, 3/4 deep late layers
+(defconst df13-defense-state 164)      ;FIX23: declared early; 0=safe, 1=confirmed pressure
 (defconst df15-tier-posture 220)       ;FIX17: 1=cheap-biased MIX, 2=middle-backbone MIX, 3=elite-biased MIX
 (defconst df16-wall-stage 222)         ;0=unplanned, 1/2/3=Feudal geometry, 4=Castle fallback
 (defconst df17-wall-assault-phase 223) ;0=ready, 1=breach walls, 2=exploit opening
@@ -212,6 +228,16 @@
 (defconst df18-defense-clear 251) ;0=threat/unknown, 1=first calm window observed
 (defconst df21-economy-state 250) ;1=GROWTH, 2=STABLE, 3=DEFENSE, 4=RECOVERY, 5=ASSAULT
 (defconst df21-market-lock 252) ;0=ready, 1=Market transaction cooldown
+; FIX22 final attack owner / rescue / pressure / elite state. Goal namespace only.
+(defconst df22-attack-mode 260) ;0=HOLD, 2=ASSAULT, 3=ALLY RESCUE, 4=PEACE PRESSURE
+(defconst df22-rescue-state 261) ;0=off, 1=timed allied intervention
+(defconst df22-pressure-state 262) ;0=off, 1=timed autonomous pressure
+(defconst df22-elite-state 264) ;0=off, 1=strong STABLE, 2=ASSAULT
+(defconst df22-elite-cycle 265) ;0 Champion, 1 Arbalest, 2 Paladin, 3 Siege Onager
+(defconst df22-retired-sink 266) ;harmless no-op target for fully retired legacy writer rules
+(defconst df22-assault-pulse 267) ;one attack-now pulse per ASSAULT entry
+(defconst df22-rescue-pulse 268) ;one attack-now pulse per rescue request/window
+(defconst df22-pressure-pulse 269) ;one attack-now pulse per peace-pressure window
 
 ; FIX09 exact-tier family production requests.
 (defconst df13-militia-request 185)
@@ -260,6 +286,10 @@
 (defconst df18-infra-timer 50) ;key-building retry cooldown
 (defconst df18-wall-build-timer 51) ;wall/gate retry cooldown, independent of economy construction
 (defconst df21-market-timer 52) ;FIX21 emergency Market transaction cooldown
+(defconst df22-rescue-timer 53) ;FIX22 ally rescue intervention window
+(defconst df22-peace-timer 54) ;FIX22 calm-time detector
+(defconst df22-pressure-timer 55) ;FIX22 autonomous pressure duration
+(defconst df22-elite-timer 56) ;FIX22 compact elite guarantee throttle
 
 ; UserPatch/HD class and group values used without direct object-search DUC.
 (defconst df11-villager-class 904)
@@ -1178,7 +1208,7 @@
 (gold-amount < 200)
 (game-time > 360)
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal boomarmy 0)
 (set-goal imperialarmy 0)
 (enable-timer 38 60)
@@ -1197,7 +1227,7 @@
 (gold-amount < 200)
 (game-time > 360)
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal boomarmy 0)
 (set-goal imperialarmy 0)
 (enable-timer 37 60)
@@ -1345,8 +1375,8 @@
 (set-goal enabletsa 0)
 (set-strategic-number sn-minimum-attack-group-size 6) 
 (set-strategic-number sn-maximum-attack-group-size 26) 
-(set-strategic-number sn-number-attack-groups 25)
-(attack-now)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 25)
+; FIX22 ATTACK OWNER retired: (attack-now)
 (disable-self) 
 )
 
@@ -1417,10 +1447,10 @@
 (goal enabletsa 0) 
 (timer-triggered 40)
 =>
-(attack-now)
+; FIX22 ATTACK OWNER retired: (attack-now)
 (set-strategic-number sn-minimum-attack-group-size 10) 
 (set-strategic-number sn-maximum-attack-group-size 25) 
-(set-strategic-number sn-number-attack-groups 3)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 3)
 (disable-timer 40)
 )
 
@@ -1431,8 +1461,8 @@
 (goal enabletsa 0) 
 (timer-triggered 40)
 =>
-(attack-now)
-(set-strategic-number sn-number-attack-groups 5)
+; FIX22 ATTACK OWNER retired: (attack-now)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 5)
 (disable-timer 40)
 )
 
@@ -1444,8 +1474,8 @@
 (goal enabletsa 0) 
 (timer-triggered 40)
 =>
-(attack-now)
-(set-strategic-number sn-number-attack-groups 10)
+; FIX22 ATTACK OWNER retired: (attack-now)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 10)
 (disable-timer 40)
 )
 
@@ -1457,8 +1487,8 @@
 (goal enabletsa 0) 
 (timer-triggered 40)
 =>
-(attack-now)
-(set-strategic-number sn-number-attack-groups 50)
+; FIX22 ATTACK OWNER retired: (attack-now)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 50)
 (disable-timer 40)
 )
 
@@ -1469,8 +1499,8 @@
 (goal enabletsa 0) 
 (timer-triggered 40)
 =>
-(attack-now)
-(set-strategic-number sn-number-attack-groups 80)
+; FIX22 ATTACK OWNER retired: (attack-now)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 80)
 (disable-timer 40)
 )
 
@@ -1719,7 +1749,7 @@
 (set-goal enemyantiinfantry 0)
 (set-goal enemyanticavalry 0)
 (set-goal water-map 0)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal feudalarmy 1)
 (set-goal disablecommands 0)
 (set-goal swaptargeting 1) ;alternate angles of attack
@@ -1907,7 +1937,7 @@
 (game-time < 1200)
 (goal monkrush 1)
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (disable-self)
 ) 
@@ -1920,7 +1950,7 @@
 (or(goal knightrush 1)
 (goal crossbowrush 1))))
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 ;(chat-to-all "[FORTRESS] Operational message: DEBUG: Castle Age strategy type #1 chosen.")
 (disable-self)
 ) 
@@ -1932,7 +1962,7 @@
 (goal buildcastle 1)
 (goal fastcastle 1)
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 )
 
@@ -2111,7 +2141,7 @@
 (or(military-population >= 10)
 (game-time > 1800)))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -2127,7 +2157,7 @@
 (or(military-population >= 25)
 (game-time > 1800)))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -2156,7 +2186,7 @@
 (or(unit-type-count-total eagle-warrior-line >= 25)
 (game-time > 1800))) ;once 1620
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -2318,7 +2348,7 @@
 (or(unit-type-count-total archer-line >= 35)
 (game-time > 1800)))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -2330,7 +2360,7 @@
 (goal buildcastle 1)
 (game-time < 1800) 
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (up-assign-builders c: castle c: 4)
 ;(chat-to-all "[FORTRESS] Operational message: DEBUG: Castle Age strategy type #2 chosen.")
 (disable-self)
@@ -2357,7 +2387,7 @@
 (or(unit-type-count-total my-unique-unit-line >= 30)
 (game-time > 1800)))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -2386,7 +2416,7 @@
 (goal boom 0)
 (game-time < 1620)
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (set-strategic-number sn-food-gatherer-percentage 32)
 (set-strategic-number sn-wood-gatherer-percentage 36)
@@ -2445,7 +2475,7 @@
 (or(unit-type-count-total monk >= 10)
 (game-time > 1620))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal monkrush 0)
 ;(chat-to-all "[FORTRESS] Operational message: DEBUG: Monk strategy disabled.")
 (disable-self)
@@ -2466,7 +2496,7 @@
 (or(unit-type-count-total monk >= 15)
 (game-time > 1620))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal monkrush 0)
 ;(chat-to-all "[FORTRESS] Operational message: DEBUG: Monk strategy disabled.")
 (disable-self)
@@ -2710,7 +2740,7 @@
 (or(military-population >= 50)
 (game-time > 3300)))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -2758,7 +2788,7 @@
 (or(military-population >= 50)
 (game-time > 3300)))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -2927,7 +2957,7 @@
 (or(military-population >= 60)
 (game-time > 3300))))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -2998,7 +3028,7 @@
 (goal buildcastle 1)
 (game-time < 3300) 
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3010,7 +3040,7 @@
 (goal buildcastle 1)
 (game-time < 3300) 
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3087,7 +3117,7 @@
 (or(military-population >= 50)
 (game-time > 3300))))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3107,7 +3137,7 @@
 (or(military-population >= 50)
 (game-time > 3300))))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3203,7 +3233,7 @@
 (goal makeinfantry 1)
 (game-time < 3300) 
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3224,7 +3254,7 @@
 (or(military-population >= 50)
 (game-time > 3300)))))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3237,7 +3267,7 @@
 (military-population <= 8) ;previously 8
 (goal createarmy 0) 
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3250,7 +3280,7 @@
 (military-population <= 45) ;previously 8, 20, now 45 as of Final Patch
 (goal createarmy 0) 
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self)
 )
@@ -3262,14 +3292,15 @@
 ;(military-population < 25) 
 (current-age == castle-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
+    (set-goal df22-retired-sink 0)
 ) 
 
 (defrule
 (goal boom 1)
 (current-age == castle-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3280,7 +3311,7 @@
 (goal balancedarmy 1)))
 (current-age == castle-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal imperialarmy 1)
 (disable-self)
 ) 
@@ -3292,7 +3323,7 @@
 (goal uniquecastle 1))
 (current-age == castle-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal imperialarmy 1)
 (disable-self)
 ) 
@@ -3308,7 +3339,7 @@
 (game-time < 3000)
 (current-age == imperial-age)
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal imperialarmy 1)
 (disable-self)
 ) 
@@ -3323,7 +3354,7 @@
 (game-time < 3000)
 (current-age == imperial-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal imperialarmy 1)
 (disable-self)
 ) 
@@ -3338,7 +3369,7 @@
 (game-time < 3000)
 (current-age == imperial-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal imperialarmy 1)
 (disable-self)
 ) 
@@ -3348,7 +3379,7 @@
 (goal imperialarmy 0)
 (current-age == imperial-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3359,7 +3390,7 @@
 (players-military-population every-enemy <= 20)
 (goal createarmy 1) 
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 )
 
@@ -3376,7 +3407,7 @@
 (or(players-unit-type-count any-enemy battering-ram-line >= 1)
 (up-research-status c: imperial-age >= research-pending))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self) 
 ) 
@@ -3391,7 +3422,7 @@
 (or(current-age == imperial-age)
 (up-research-status c: imperial-age >= research-pending))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self) 
 ) 
@@ -3406,7 +3437,7 @@
 (or(current-age == imperial-age)
 (up-research-status c: imperial-age >= research-pending))
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (disable-self) 
 ) 
@@ -3420,7 +3451,7 @@
 (current-age-time > 600))
 (current-age == imperial-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (set-escrow-percentage food 0) ;new added
 (set-escrow-percentage gold 0) 
@@ -3438,7 +3469,7 @@
 (current-age-time > 600))
 (current-age == imperial-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal imperialarmy 0)
 (set-escrow-percentage food 0)
 (set-escrow-percentage gold 0)
@@ -3458,7 +3489,7 @@
 	(game-time < 1440)
 	(goal createarmy 1)
 =>
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(enable-timer 21 90) ;previously 60
 	;(chat-to-all "[FORTRESS] Operational message: Halting army production for technologies.")
 	(disable-self)
@@ -3475,7 +3506,7 @@
 	(not(research-completed ri-onager))
 	(not(research-completed my-unique-unit-upgrade))
 =>
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(enable-timer 21 90)
 	;(chat-to-all "[FORTRESS] Operational message: Halting army production for technologies.")
 	(disable-self)
@@ -3493,7 +3524,7 @@
 	(not(research-completed ri-chemistry))
 	(not(research-completed my-unique-unit-upgrade))
 =>
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(enable-timer 21 120) ;previously 90
 	;(chat-to-all "[FORTRESS] Operational message: Halting army production for technologies.")
 	(disable-self)
@@ -3508,7 +3539,7 @@
 	(or(players-military-population every-enemy <= 20)
 	(cc-players-unit-type-count every-enemy villager <= 25))
 =>
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(enable-timer 21 300)
 	;(chat-to-all "[FORTRESS] Operational message: 39DEBUG: Halting army production for mercy.")
 	(disable-self)
@@ -3517,7 +3548,7 @@
 (defrule
 	(timer-triggered 21)
 =>
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	;(chat-to-all "[FORTRESS] Operational message: Allowing an army to be created.")
 	(disable-timer 21)
 	(disable-self)
@@ -3534,7 +3565,7 @@
 	(nor(research-completed ri-bracer)
 	(research-completed ri-cannon-galleon))
 =>
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(enable-timer 21 120)
 	;(chat-to-all "[FORTRESS] Operational message: Halting army production for technologies.")
 	(disable-self)
@@ -3551,7 +3582,7 @@
 (military-population >= 25)
 (up-research-status c: imperial-age < research-pending)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3563,7 +3594,7 @@
 (military-population >= 15)
 (up-research-status c: imperial-age < research-pending)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3577,7 +3608,7 @@
 (gold-amount <= 1800)
 (up-research-status c: imperial-age < research-pending)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3588,7 +3619,7 @@
 (military-population >= 15)
 (up-research-status c: imperial-age < research-pending)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3598,7 +3629,8 @@
 (military-population >= 15)
 (up-research-status c: imperial-age < research-pending)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
+    (set-goal df22-retired-sink 0)
 ) 
 
 (defrule
@@ -3609,7 +3641,7 @@
 (or(military-population < 15)
 (up-research-status c: imperial-age >= research-pending))
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3620,7 +3652,7 @@
 (or(military-population < 15)
 (up-research-status c: imperial-age >= research-pending))
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3632,7 +3664,7 @@
 (up-research-status c: castle-age < research-pending)
 =>
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3645,7 +3677,7 @@
 (up-research-status c: castle-age < research-pending)
 =>
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3657,7 +3689,7 @@
 (up-research-status c: castle-age >= research-pending))
 =>
 (set-goal feudalarmy 1) 
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3671,7 +3703,7 @@
 (enemy-buildings-in-town))
 =>
 (set-goal feudalarmy 1) 
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3685,7 +3717,7 @@
 (enemy-buildings-in-town))
 =>
 (set-goal feudalarmy 1) 
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3698,7 +3730,7 @@
 (military-population <= 2)
 (players-military-population any-enemy >= 15)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3713,7 +3745,7 @@
 (goal infantryrush 0)
 (goal boom 0)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3722,7 +3754,7 @@
 (military-population <= 10)
 (game-time > 3000) ;previously 2460
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3737,7 +3769,7 @@
 (players-military-population every-enemy <= 25) ;once 30
 (current-age == castle-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (disable-self)
 ) 
 
@@ -3750,7 +3782,7 @@
 (military-population <= 20)) ;once 30
 (current-age == castle-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 ) 
 
@@ -3763,7 +3795,7 @@
 (warboat-count >= 6)
 (current-age >= feudal-age)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal feudalarmy 1)
 (disable-self)
 ) 
@@ -3775,7 +3807,7 @@
 (warboat-count < 6)
 (current-age >= feudal-age)
 =>
-(set-goal createarmy 0) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (disable-self)
 ) 
@@ -3786,7 +3818,7 @@
 (goal createarmy 0)
 (game-time > 1490)
 =>
-(set-goal createarmy 1) 
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal feudalarmy 1)
 (disable-self)
 ) 
@@ -4395,7 +4427,7 @@
 	(players-unit-type-count every-enemy kamayuk-line <= 30) ;forgotten
 =>
 	(set-goal masspaladin 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	;(chat-to-all "[FORTRESS] Operational message: DEBUG: Test strategy enabled.")
@@ -4419,7 +4451,7 @@
 	(players-unit-type-count any-enemy mameluke-line > 35))))))))))
 =>
 	(set-goal masspaladin 0) 
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	(disable-timer 21)
 	;(chat-to-all "[FORTRESS] Operational message: DEBUG: Test strategy disabled.")
 	(disable-self)
@@ -4439,7 +4471,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 30)
 =>
 	(set-goal masspaladin 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4459,7 +4491,7 @@
 	(players-unit-type-count any-enemy samurai-line > 35)))))))))
 =>
 	(set-goal masspaladin 0) 
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	(disable-timer 21)
 	(disable-self)
 ) 
@@ -4602,7 +4634,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4623,7 +4655,7 @@
 	(players-unit-type-count every-enemy archer-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4644,7 +4676,7 @@
 	(players-unit-type-count every-enemy hand-cannoneer <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4666,7 +4698,7 @@
 	(players-unit-type-count every-enemy hand-cannoneer <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4687,7 +4719,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4708,7 +4740,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4729,7 +4761,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4750,7 +4782,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4771,7 +4803,7 @@
 	(players-unit-type-count every-enemy skirmisher-line <= 60)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4793,7 +4825,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4814,7 +4846,7 @@
 	(players-unit-type-count every-enemy samurai-line <= 40)
 =>
 	(set-goal uniqueflood 1) 
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(disable-timer 21)
 	(enable-timer 21 420)
 	(disable-self)
@@ -4831,7 +4863,7 @@
 	(players-unit-type-count any-enemy samurai-line > 50))))))
 =>
 	(set-goal uniqueflood 0) 
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	(disable-timer 21)
 	(disable-self)
 ) 
@@ -4845,7 +4877,7 @@
 =>
 	(set-goal uniqueflood 0) 
 	(set-goal masspaladin 0) 
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	(disable-timer 21)
 	(disable-self)
 ) 
@@ -4855,7 +4887,7 @@
 =>
 (set-goal uniqueflood 0) 
 (set-goal masspaladin 0) 
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal createnavy 1)
 (set-goal imperialarmy 0)
 (disable-timer 21)
@@ -5663,7 +5695,7 @@
 (cc-players-unit-type-count any-enemy castle-arrow == 0)
 (cc-players-unit-type-count any-enemy castle-arrow-chemistry == 0)
 =>
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 20) 	
 (set-strategic-number sn-enemy-sighted-response-distance 20)
 (up-reset-unit c: -1) 
@@ -5749,7 +5781,7 @@
 (enable-timer 8 8)
 (enable-timer 12 10)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5778,7 +5810,7 @@
 (enable-timer 8 30)
 (enable-timer 6 20)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5807,7 +5839,7 @@
 (enable-timer 8 30)
 (enable-timer 6 20)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5834,7 +5866,7 @@
 (enable-timer 9 7)
 (enable-timer 8 30)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5862,7 +5894,7 @@
 (enable-timer 8 30)
 (enable-timer 6 20)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5890,7 +5922,7 @@
 (enable-timer 8 30)
 (enable-timer 6 20)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -5916,7 +5948,7 @@
 (enable-timer 9 7)
 (enable-timer 8 30)
 (set-goal enabletsa 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (up-retreat-now)
@@ -6207,7 +6239,7 @@
 (building-type-count town-center < 4)
 => 
 (enable-timer 21 120)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 ;(chat-to-all "[FORTRESS] Operational message: DEBUG: I need to rebalance my economy.")
 (disable-self)
 )
@@ -7992,7 +8024,7 @@
 	(current-age == feudal-age)
 =>
 	(set-escrow-percentage food 0)
-	(set-strategic-number sn-number-attack-groups 0)
+	; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 	(set-strategic-number sn-percent-civilian-gatherers 80)
 ;	(chat-local-to-self "[FORTRESS/DEBUG] Operational message: Food escrow to 0.")
 	(disable-self)
@@ -12434,7 +12466,7 @@
  	(set-strategic-number sn-wood-gatherer-percentage 34)
  	(set-strategic-number sn-gold-gatherer-percentage 20)
  	(set-strategic-number sn-stone-gatherer-percentage 6)
-	(set-goal createarmy 1) ;failsafe
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1) ;failsafe
 	(set-strategic-number sn-camp-max-distance 50)
 	(set-strategic-number sn-mill-max-distance 50)
  	(disable-self)
@@ -13199,7 +13231,7 @@
 =>
 	(disable-timer 28)
 	(enable-timer 28 90)
-	(set-goal createarmy 0)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 	(set-escrow-percentage wood 60)
 	(set-escrow-percentage gold 90)
 	(set-escrow-percentage stone 100)
@@ -13215,7 +13247,7 @@
 	(disable-timer 28)
 	(set-goal buildwonder 0)
 	(set-goal wonderrush 0)
-	(set-goal createarmy 1)
+	; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 	(set-escrow-percentage wood 0)
 	(set-escrow-percentage gold 30)
 	(set-escrow-percentage stone 0)
@@ -13319,7 +13351,7 @@
 (set-escrow-percentage wood 0)
 (set-escrow-percentage gold 0)
 (set-escrow-percentage stone 0)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -13349,7 +13381,7 @@
 (chat-to-enemies "[FORTRESS/ENEMY] Siege weapons will be required if you intend to destroy the Wonder.")
 (set-goal buildwonder 0)
 (set-goal wonderrush 0)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -13365,7 +13397,7 @@
 (set-strategic-number sn-percent-civilian-gatherers 60)
 (set-goal buildwonder 0)
 (set-goal wonderrush 0)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -13381,7 +13413,7 @@
 (set-strategic-number sn-percent-civilian-gatherers 60)
 (set-goal buildwonder 0)
 (set-goal wonderrush 0)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (disable-self)
 )
 
@@ -13722,7 +13754,7 @@
 ;(chat-to-allies "[FORTRESS/ALLY] Operational message: I will rush with Militia this game.")
 (set-strategic-number sn-minimum-attack-group-size 3)
 (set-strategic-number sn-maximum-attack-group-size 5)
-(set-strategic-number sn-number-attack-groups 2)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 (disable-self)
@@ -13742,7 +13774,7 @@
 ;(chat-to-allies "[FORTRESS/ALLY] Operational message: I will rush with Militia this game.")
 (set-strategic-number sn-minimum-attack-group-size 3)
 (set-strategic-number sn-maximum-attack-group-size 5)
-(set-strategic-number sn-number-attack-groups 2)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 (disable-self)
@@ -13792,7 +13824,7 @@
 (set-goal buildcastle 0)
 (set-goal balancedarmy 1)
 (set-goal feudalarmy 0)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal monkrush 1)
 (disable-self)
 )
@@ -13812,7 +13844,7 @@
 (set-goal buildcastle 0)
 (set-goal balancedarmy 1)
 (set-goal feudalarmy 0)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal monkrush 1)
 (disable-self)
 )
@@ -13831,7 +13863,7 @@
 ;(chat-to-allies "[FORTRESS/ALLY] Operational message: I am going to save stone to build an early Castle.")
 (set-goal minestone 1)
 (set-goal buildcastle 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 1)
 (up-assign-builders c: castle c: 4)
 (disable-self)
@@ -13850,7 +13882,7 @@
 (set-goal makecavalry 1)
 (set-goal knightrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 0)
 (disable-self)
 )
@@ -13870,7 +13902,7 @@
 (game-time > 480)
 =>
 (generate-random-number 8)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (disable-self)
 )
 
@@ -13904,7 +13936,7 @@
 (set-goal scoutrush 1)
 (set-goal feudalarmy 0)
 (set-goal balancedarmy 0)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal knightrush 1)
 (disable-self)
 )
@@ -13922,7 +13954,7 @@
 (set-goal makecavalry 1)
 (set-goal knightrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 0)
 (disable-self)
 )
@@ -13954,7 +13986,7 @@
 (set-goal makearchers 1)
 (set-goal crossbowrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 0)
 (disable-self)
 )
@@ -13973,7 +14005,7 @@
 (set-goal crossbowrush 1) ;added
 (set-goal knightrush 0)
 (set-goal feudalarmy 1) 
-(set-goal createarmy 0) ;added
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0) ;added
 (set-goal balancedarmy 1)
 (disable-self)
 )
@@ -13990,7 +14022,7 @@
 (set-goal minestone 1)
 (set-goal buildcastle 1)
 (set-goal balancedarmy 1)
-(set-goal createarmy 0) ;added
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0) ;added
 (up-assign-builders c: castle c: 4)
 (disable-self)
 )
@@ -14026,7 +14058,7 @@
 (set-goal scoutrush 1)
 (set-goal knightrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 1)
 (disable-self)
 )
@@ -14061,7 +14093,7 @@
 (set-goal minestone 1)
 (set-goal buildcastle 1)
 (set-goal balancedarmy 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (up-assign-builders c: castle c: 4)
 (set-escrow-percentage stone 100)
@@ -14080,7 +14112,7 @@
 (set-goal makecavalry 1)
 (set-goal knightrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 0)
 (disable-self)
 )
@@ -14097,7 +14129,7 @@
 (set-goal makearchers 1)
 (set-goal crossbowrush 1)
 (set-goal feudalarmy 0) 
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal balancedarmy 0)
 (disable-self)
 )
@@ -17417,7 +17449,7 @@
 ;(goal createarmy 1)
 (game-time < 1800) 
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal infantryrush 1)
 ;(chat-to-all "[FORTRESS] Operational message: TEST: It's Infantry time!")
 (disable-self)
@@ -17558,7 +17590,7 @@
 (or(military-population >= 30)
 (game-time > 1800)))))))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 ;(set-goal infantryrush 0)
 (disable-self)
 )
@@ -17579,7 +17611,7 @@
 ;(goal createarmy 1)
 (game-time < 1800) 
 =>
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal crossbowrush 0)
 (set-goal genitourrush 1)
 ;(chat-to-all "[FORTRESS] Operational message: TEST: It's Genitour time!")
@@ -17657,7 +17689,7 @@
 (or(military-population >= 40)
 (game-time > 1800))))
 =>
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal genitourrush 0)
 (set-goal crossbowrush 1)
 (disable-self)
@@ -19441,7 +19473,7 @@
 =>
 	(set-strategic-number sn-target-evaluation-ally-proximity 200) ;once 100
 	(set-strategic-number sn-coop-share-attacking 1) 
-	(set-strategic-number sn-percent-attack-soldiers 100)
+	; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 100)
 	;(chat-to-all "[FORTRESS] Operational message: DEBUG: I will send help to my allies.")
 	(disable-self)
 )
@@ -19456,7 +19488,7 @@
 =>
 	(set-strategic-number sn-target-evaluation-ally-proximity 200) ;once 100
 	(set-strategic-number sn-coop-share-attacking 1) 
-	(set-strategic-number sn-percent-attack-soldiers 100)
+	; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 100)
 	;(chat-to-all "[FORTRESS] Operational message: DEBUG: I will send help to my allies.")
 	(disable-self)
 )
@@ -19625,7 +19657,7 @@
 (chat-to-allies "[FORTRESS/ALLY] [CMD-31] Operational message: Attack an enemy now.")
 (set-strategic-number sn-minimum-attack-group-size 5)
 (set-strategic-number sn-maximum-attack-group-size 20)
-(set-strategic-number sn-number-attack-groups 100)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 100)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 (disable-self)
@@ -19640,7 +19672,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 10)
 (set-strategic-number sn-maximum-attack-group-size 20)
-(set-strategic-number sn-number-attack-groups 10)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 10)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 (enable-timer 40 1)
@@ -19753,7 +19785,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 10)
 (set-strategic-number sn-maximum-attack-group-size 20)
-(set-strategic-number sn-number-attack-groups 100)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 100)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 )
@@ -19766,7 +19798,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 5)
 (set-strategic-number sn-maximum-attack-group-size 10)
-(set-strategic-number sn-number-attack-groups 80)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 80)
 (set-strategic-number sn-percent-enemy-sighted-response 100) 	
 (set-strategic-number sn-enemy-sighted-response-distance 100)
 )
@@ -19820,7 +19852,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 10)
 (set-strategic-number sn-maximum-attack-group-size 20)
-(set-strategic-number sn-number-attack-groups 80)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 80)
 ;(set-strategic-number sn-percent-enemy-sighted-response 100) 	
 ;(set-strategic-number sn-enemy-sighted-response-distance 150)
 )
@@ -19863,7 +19895,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -19898,7 +19930,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -19934,7 +19966,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -19951,7 +19983,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -19988,7 +20020,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -20044,7 +20076,7 @@
 =>     
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -20087,7 +20119,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 )
@@ -20137,7 +20169,7 @@
 =>     
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 20) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 (set-goal enabletsa 0) 
@@ -20173,7 +20205,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 20) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 )
@@ -20228,7 +20260,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 2)
 (set-strategic-number sn-maximum-attack-group-size 4)
-(set-strategic-number sn-number-attack-groups 1)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 (disable-timer 4)
@@ -20385,7 +20417,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 20)
 (disable-timer 4)
@@ -20410,7 +20442,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 4)
 (set-strategic-number sn-maximum-attack-group-size 5)
-(set-strategic-number sn-number-attack-groups 1)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 (disable-timer 4)
@@ -20430,7 +20462,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 0) 	
 (set-strategic-number sn-enemy-sighted-response-distance 0)
 (disable-timer 4)
@@ -20451,7 +20483,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 5)
 (set-strategic-number sn-maximum-attack-group-size 8)
-(set-strategic-number sn-number-attack-groups 2)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 (disable-timer 4)
@@ -20470,7 +20502,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 2)
 (set-strategic-number sn-maximum-attack-group-size 4)
-(set-strategic-number sn-number-attack-groups 1)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 (disable-timer 4)
@@ -20489,7 +20521,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (disable-timer 4)
@@ -20511,7 +20543,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (up-retreat-now) 
@@ -20530,7 +20562,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 4)
 (set-strategic-number sn-maximum-attack-group-size 6)
-(set-strategic-number sn-number-attack-groups 1)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 ;(enable-timer 40 1)
@@ -20549,7 +20581,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 4)
 (set-strategic-number sn-maximum-attack-group-size 6)
-(set-strategic-number sn-number-attack-groups 1)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
 (set-strategic-number sn-percent-enemy-sighted-response 50) 	
 (set-strategic-number sn-enemy-sighted-response-distance 30)
 ;(enable-timer 40 1)
@@ -20867,7 +20899,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)  
@@ -20887,7 +20919,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)  
@@ -20924,7 +20956,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -20964,7 +20996,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -20984,7 +21016,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21004,7 +21036,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21115,7 +21147,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -21136,7 +21168,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21158,7 +21190,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21202,7 +21234,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -21223,7 +21255,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21245,7 +21277,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21288,7 +21320,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have a military advantage. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -21309,7 +21341,7 @@
 ;(chat-local-to-self "[FORTRESS/DEBUG] Operational message: I do not have enough military units. I will defend.")
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21352,7 +21384,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0) 
@@ -21372,7 +21404,7 @@
 =>
 (set-strategic-number sn-minimum-attack-group-size 0)
 (set-strategic-number sn-maximum-attack-group-size 0)
-(set-strategic-number sn-number-attack-groups 0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
 (set-strategic-number sn-percent-enemy-sighted-response 10) 	
 (set-strategic-number sn-enemy-sighted-response-distance 10)
 (set-goal enabletsa 0)
@@ -21788,7 +21820,7 @@
 (taunt-detected any-ally 36)
 =>     
 (set-strategic-number sn-number-boat-attack-groups 0)
-(set-strategic-number sn-number-attack-groups  0)
+; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups  0)
 (set-strategic-number sn-enemy-sighted-response-distance  0)	
 (set-goal enabletsa 0)
 )
@@ -24067,7 +24099,7 @@
 (set-goal fastcastle 0)
 (set-goal boom 0)
 (set-goal feudalarmy 1)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (enable-timer 22 1)
 (acknowledge-taunt this-any-human 32)
 )
@@ -24091,7 +24123,7 @@
 (set-goal fastcastle 1)
 (set-goal feudalarmy 0)
 (set-goal boom 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (enable-timer 22 1)
 (acknowledge-taunt this-any-human 33)
 )
@@ -24114,7 +24146,7 @@
 (goal disablecommands 0)
 =>     
 (set-goal wonderrush 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (set-goal fastcastle 1)
 (set-goal boom 1)
@@ -24141,7 +24173,7 @@
 (goal disablecommands 0)
 =>     
 (set-goal wonderrush 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal feudalarmy 0)
 (set-goal fastcastle 1)
 (set-goal boom 1)
@@ -24285,7 +24317,7 @@
 (goal disablecommands 0)
 =>     
 ;(enable-timer 24 1)
-(set-goal createarmy 0)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 0)
 (set-goal createnavy 0)
 (enable-timer 43 180)
 (acknowledge-taunt this-any-human 120)
@@ -24295,7 +24327,7 @@
 (timer-triggered 43) ;new
 =>     
 (disable-timer 43)
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal createnavy 1)
 )
 
@@ -24304,7 +24336,7 @@
 (game-time > 120)
 (goal disablecommands 0)
 =>     
-(set-goal createarmy 1)
+; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
 (set-goal createnavy 1)
 (acknowledge-taunt this-any-human 121)
 )
@@ -25459,7 +25491,6 @@
 
 (defconst df13-core 162)
 (defconst df13-pop-profile 163)        ;1=125, 2=150, 3=200+
-(defconst df13-defense-state 164)      ;0=safe, 1=confirmed pressure
 (defconst df13-counterattack 165)      ;0=off, 1=reform/counter window
 (defconst df13-threat-archer 166)
 (defconst df13-threat-cavalry 167)
@@ -25690,8 +25721,8 @@
 (defrule
     (goal df13-defense-state 1)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
     (set-strategic-number sn-number-defend-groups 2)
     (set-strategic-number sn-minimum-defend-group-size 5)
     (set-strategic-number sn-maximum-defend-group-size 24)
@@ -25710,8 +25741,8 @@
     (goal df13-military-rebuild 0)
     (military-population >= 12)
 =>
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 70)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 70)
     (set-strategic-number sn-minimum-attack-group-size 12)
     (set-strategic-number sn-maximum-attack-group-size 28)
     (set-strategic-number sn-number-defend-groups 1)
@@ -25743,8 +25774,8 @@
 (defrule
     (goal df13-recovery 1)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
     (set-strategic-number sn-number-defend-groups 1)
     (set-strategic-number sn-minimum-defend-group-size 4)
     (set-strategic-number sn-maximum-defend-group-size 20)
@@ -25854,10 +25885,10 @@
 (defrule
     (goal df13-military-rebuild 1)
 =>
-    (set-goal createarmy 1)
+    ; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
     (set-goal balancedarmy 1)
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
     (set-strategic-number sn-number-defend-groups 1)
     (set-strategic-number sn-minimum-defend-group-size 4)
     (set-strategic-number sn-maximum-defend-group-size 20)
@@ -26934,8 +26965,9 @@
     (goal df13-siege-ready 0)
     (goal df13-defense-state 0)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (goal df13-enemy-fortified 1)
@@ -26948,8 +26980,8 @@
     (set-goal df13-assault-ready 1)
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 32)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 75)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 75)
 )
 (defrule
     (goal df13-enemy-fortified 0)
@@ -26989,8 +27021,9 @@
     (goal df13-defense-state 0)
     (goal df13-recovery 0)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 
 ; 10-23 soldiers: one coherent reconnaissance/combat group.
@@ -27002,8 +27035,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 10)
     (set-strategic-number sn-maximum-attack-group-size 16)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 100)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 100)
     (set-strategic-number sn-local-targeting-mode 1)
     (set-strategic-number sn-percent-enemy-sighted-response 0)
     (set-strategic-number sn-enemy-sighted-response-distance 0)
@@ -27019,8 +27052,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 10)
     (set-strategic-number sn-maximum-attack-group-size 24)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 75)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 75)
     (set-strategic-number sn-local-targeting-mode 1)
     (set-strategic-number sn-percent-enemy-sighted-response 0)
     (set-strategic-number sn-enemy-sighted-response-distance 0)
@@ -27682,7 +27715,8 @@
 (defrule
     (goal df13-defense-state 1)
 =>
-    (set-goal createarmy 1)
+    ; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (goal df13-defense-state 1)
@@ -36435,8 +36469,9 @@
     (goal df13-defense-state 0)
     (soldier-count < 12)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == easy)
@@ -36446,8 +36481,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 10)
     (set-strategic-number sn-maximum-attack-group-size 16)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 55)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 55)
 )
 (defrule
     (difficulty == easy)
@@ -36456,16 +36491,17 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 22)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 65)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 65)
 )
 (defrule
     (difficulty == moderate)
     (goal df13-defense-state 0)
     (soldier-count < 14)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == moderate)
@@ -36475,8 +36511,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 12)
     (set-strategic-number sn-maximum-attack-group-size 20)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 65)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 65)
 )
 (defrule
     (difficulty == moderate)
@@ -36485,17 +36521,17 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 24)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 72)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 72)
 )
 
 ; A threatened Fortress keeps factories alive but does not launch offensive groups.
 (defrule
     (goal df13-defense-state 1)
 =>
-    (set-goal createarmy 1)
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
     (set-strategic-number sn-percent-enemy-sighted-response 100)
     (set-strategic-number sn-enemy-sighted-response-distance 100)
 )
@@ -36857,8 +36893,9 @@
     (goal df13-assault-ready 0)
     (soldier-count < 18)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == easy)
@@ -36869,8 +36906,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 10)
     (set-strategic-number sn-maximum-attack-group-size 18)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 50)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 50)
 )
 (defrule
     (difficulty == easy)
@@ -36880,8 +36917,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 22)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 60)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 60)
 )
 ; Moderate: stronger than Standard, but keeps roughly one third of the army home.
 (defrule
@@ -36890,8 +36927,9 @@
     (goal df13-assault-ready 0)
     (soldier-count < 20)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == moderate)
@@ -36902,8 +36940,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 12)
     (set-strategic-number sn-maximum-attack-group-size 20)
-    (set-strategic-number sn-number-attack-groups 1)
-    (set-strategic-number sn-percent-attack-soldiers 58)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 58)
 )
 (defrule
     (difficulty == moderate)
@@ -36913,8 +36951,8 @@
 =>
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 24)
-    (set-strategic-number sn-number-attack-groups 2)
-    (set-strategic-number sn-percent-attack-soldiers 66)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 66)
 )
 ; Hard/Hardest remain dangerous, but the normal field posture still keeps a reserve.
 (defrule
@@ -36923,8 +36961,9 @@
     (goal df13-assault-ready 0)
     (soldier-count < 18)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == hard)
@@ -36932,10 +36971,10 @@
     (goal df13-assault-ready 0)
     (soldier-count >= 18)
 =>
-    (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
     (set-strategic-number sn-minimum-attack-group-size 14)
     (set-strategic-number sn-maximum-attack-group-size 28)
-    (set-strategic-number sn-percent-attack-soldiers 72)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 72)
 )
 (defrule
     (difficulty == hardest)
@@ -36943,8 +36982,9 @@
     (goal df13-assault-ready 0)
     (soldier-count < 16)
 =>
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-goal df22-retired-sink 0)
 )
 (defrule
     (difficulty == hardest)
@@ -36952,10 +36992,10 @@
     (goal df13-assault-ready 0)
     (soldier-count >= 16)
 =>
-    (set-strategic-number sn-number-attack-groups 2)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 2)
     (set-strategic-number sn-minimum-attack-group-size 16)
     (set-strategic-number sn-maximum-attack-group-size 32)
-    (set-strategic-number sn-percent-attack-soldiers 78)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 78)
 )
 
 ; Defense itself is uncompromising: keep production enabled and commit sighted
@@ -36963,9 +37003,9 @@
 (defrule
     (goal df13-defense-state 1)
 =>
-    (set-goal createarmy 1)
-    (set-strategic-number sn-number-attack-groups 0)
-    (set-strategic-number sn-percent-attack-soldiers 0)
+    ; FIX22 ATTACK OWNER retired: (set-goal createarmy 1)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-number-attack-groups 0)
+    ; FIX22 ATTACK OWNER retired: (set-strategic-number sn-percent-attack-soldiers 0)
     (set-strategic-number sn-number-defend-groups 2)
     (set-strategic-number sn-minimum-defend-group-size 6)
     (set-strategic-number sn-maximum-defend-group-size 26)
@@ -37089,9 +37129,9 @@
     (goal df13-recovery 0)
     (goal df13-military-rebuild 0)
     (goal df13-assault-ready 1)
-    (food-amount > 430)
-    (wood-amount > 360)
-    (gold-amount > 280)
+    (food-amount > 400)
+    (wood-amount > 330)
+    (gold-amount > 250)
 =>
     (set-goal df21-economy-state 5)
 )
@@ -37102,9 +37142,9 @@
     (goal df13-recovery 0)
     (goal df13-military-rebuild 0)
     (goal df13-assault-ready 1)
-    (food-amount > 620)
-    (wood-amount > 520)
-    (gold-amount > 420)
+    (food-amount > 560)
+    (wood-amount > 460)
+    (gold-amount > 360)
 =>
     (set-goal df21-economy-state 5)
 )
@@ -37121,14 +37161,14 @@
 (defrule
     (current-age == castle-age)
     (goal df21-economy-state 5)
-    (or (food-amount < 260) (or (wood-amount < 220) (gold-amount < 150)))
+    (or (food-amount < 240) (or (wood-amount < 190) (gold-amount < 120)))
 =>
     (set-goal df21-economy-state 2)
 )
 (defrule
     (current-age == imperial-age)
     (goal df21-economy-state 5)
-    (or (food-amount < 380) (or (wood-amount < 320) (gold-amount < 240)))
+    (or (food-amount < 330) (or (wood-amount < 270) (gold-amount < 190)))
 =>
     (set-goal df21-economy-state 2)
 )
@@ -37169,9 +37209,9 @@
     (current-age == feudal-age)
     (goal df21-economy-state 1)
 =>
-    (set-strategic-number sn-food-gatherer-percentage 47)
-    (set-strategic-number sn-wood-gatherer-percentage 34)
-    (set-strategic-number sn-gold-gatherer-percentage 11)
+    (set-strategic-number sn-food-gatherer-percentage 50)
+    (set-strategic-number sn-wood-gatherer-percentage 32)
+    (set-strategic-number sn-gold-gatherer-percentage 10)
     (set-strategic-number sn-stone-gatherer-percentage 8)
 )
 (defrule
@@ -37352,3 +37392,449 @@
     (enable-timer df21-market-timer 45)
 )
 
+
+; ============================================================================
+; FIX22 FINAL ATTACK OWNER / ALLY RESCUE / PEACE PRESSURE / ELITE GUARANTEE
+; ============================================================================
+; Everything above may still calculate economy, threats, counters and formations,
+; but only this final layer writes createarmy, sn-number-attack-groups,
+; sn-percent-attack-soldiers or attack-now.
+;
+; Attack modes: 0 HOLD, 2 ASSAULT, 3 ALLY RESCUE, 4 PEACE PRESSURE.
+; Rescue has highest priority.  It deliberately commits only about 40 percent of
+; the existing army so a Fortress under DEFENSE/RECOVERY still keeps a local core.
+
+; --- Rescue triggers ---------------------------------------------------------
+; Human/AI ally explicit reinforcement and attack requests.
+(defrule
+    (player-valid any-ally)
+    (goal df22-rescue-state 0)
+    (military-population >= 8)
+    (taunt-detected any-ally 12)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+    (acknowledge-taunt this-any-ally 12)
+)
+(defrule
+    (player-valid any-ally)
+    (goal df22-rescue-state 0)
+    (military-population >= 10)
+    (taunt-detected any-ally 31)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+    (acknowledge-taunt this-any-ally 31)
+)
+(defrule
+    (player-valid any-ally)
+    (goal df22-rescue-state 0)
+    (military-population >= 6)
+    (taunt-detected any-ally 222)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 210)
+    (acknowledge-taunt this-any-ally 222)
+)
+
+; Automatic rescue: an ally has effectively lost its TC anchor.
+(defrule
+    (player-valid any-ally)
+    (game-time > 900)
+    (goal df22-rescue-state 0)
+    (military-population >= 10)
+    (players-building-type-count any-ally town-center < 1)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+    (chat-to-allies "[FORTRESS/ALLY] Rescue force committed to the threatened allied sector.")
+)
+
+; Automatic rescue: severe civilian collapse.  Separate human/computer tests keep
+; the selector parser-proven and avoid treating a missing ally class as a casualty.
+(defrule
+    (cc-players-building-count any-computer-ally >= 1)
+    (game-time > 900)
+    (goal df22-rescue-state 0)
+    (military-population >= 10)
+    (cc-players-unit-type-count any-computer-ally villager < 10)
+    (players-military-population any-enemy >= 15)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+)
+(defrule
+    (cc-players-building-count any-human-ally >= 1)
+    (game-time > 900)
+    (goal df22-rescue-state 0)
+    (military-population >= 10)
+    (cc-players-unit-type-count any-human-ally villager < 10)
+    (players-military-population any-enemy >= 15)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+)
+
+; Automatic rescue: ally has both a small army and a damaged economy while the
+; enemy still has a meaningful field force.  This is the safe HD approximation
+; for allied "under strong pressure" because town-under-attack is self-only.
+(defrule
+    (player-valid any-ally)
+    (game-time > 1200)
+    (goal df22-rescue-state 0)
+    (military-population >= 12)
+    (players-military-population any-ally < 8)
+    (cc-players-unit-type-count any-ally villager < 25)
+    (players-military-population any-enemy >= 24)
+=>
+    (set-goal df22-rescue-state 1)
+    (set-goal df22-rescue-pulse 1)
+    (enable-timer df22-rescue-timer 180)
+)
+
+(defrule
+    (goal df22-rescue-state 1)
+    (timer-triggered df22-rescue-timer)
+=>
+    (set-goal df22-rescue-state 0)
+    (disable-timer df22-rescue-timer)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+
+; --- Peace -> pressure -------------------------------------------------------
+; Four calm minutes in STABLE/ASSAULT arm a 90-second active pressure window.
+(defrule
+    (or (goal df21-economy-state 2) (goal df21-economy-state 5))
+    (goal df22-rescue-state 0)
+    (goal df22-pressure-state 0)
+    (not (town-under-attack))
+    (up-timer-status df22-peace-timer == timer-disabled)
+=>
+    (enable-timer df22-peace-timer 240)
+)
+(defrule
+    (or (goal df21-economy-state 3) (goal df21-economy-state 4))
+=>
+    (set-goal df22-pressure-state 0)
+    (disable-timer df22-peace-timer)
+    (disable-timer df22-pressure-timer)
+)
+(defrule
+    (goal df22-rescue-state 1)
+=>
+    (set-goal df22-pressure-state 0)
+    (disable-timer df22-peace-timer)
+    (disable-timer df22-pressure-timer)
+)
+(defrule
+    (timer-triggered df22-peace-timer)
+    (or (goal df21-economy-state 2) (goal df21-economy-state 5))
+    (goal df22-rescue-state 0)
+    (military-population >= 16)
+=>
+    (set-goal df22-pressure-state 1)
+    (set-goal df22-pressure-pulse 1)
+    (disable-timer df22-peace-timer)
+    (enable-timer df22-pressure-timer 90)
+)
+(defrule
+    (timer-triggered df22-peace-timer)
+    (military-population < 16)
+=>
+    (disable-timer df22-peace-timer)
+    (enable-timer df22-peace-timer 120)
+)
+(defrule
+    (goal df22-pressure-state 1)
+    (timer-triggered df22-pressure-timer)
+=>
+    (set-goal df22-pressure-state 0)
+    (disable-timer df22-pressure-timer)
+)
+
+; --- Attack mode selection --------------------------------------------------
+; Economy Governor owns the peaceful baseline; rescue overrides everything.
+(defrule
+    (or (goal df21-economy-state 1) (or (goal df21-economy-state 2) (or (goal df21-economy-state 3) (goal df21-economy-state 4))))
+=>
+    (set-goal df22-attack-mode 0)
+)
+(defrule
+    (goal df21-economy-state 5)
+=>
+    (set-goal df22-attack-mode 2)
+)
+(defrule
+    (goal df21-economy-state 2)
+    (goal df22-pressure-state 1)
+=>
+    (set-goal df22-attack-mode 4)
+)
+(defrule
+    (goal df22-rescue-state 1)
+=>
+    (set-goal df22-attack-mode 3)
+)
+
+; --- Sole createarmy / attack-group owner -----------------------------------
+; Dark GROWTH saves the opening economy; Feudal+ continues normal production.
+(defrule
+    (current-age == dark-age)
+    (goal df22-attack-mode 0)
+=>
+    (set-goal createarmy 0)
+    (set-strategic-number sn-number-attack-groups 0)
+    (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+(defrule
+    (current-age >= feudal-age)
+    (goal df22-attack-mode 0)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-number-attack-groups 0)
+    (set-strategic-number sn-percent-attack-soldiers 0)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+
+; ASSAULT keeps a reserve but is decisively offensive.
+(defrule
+    (goal df22-attack-mode 2)
+    (difficulty == easy)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 10)
+    (set-strategic-number sn-maximum-attack-group-size 22)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 62)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+(defrule
+    (goal df22-attack-mode 2)
+    (difficulty == moderate)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 12)
+    (set-strategic-number sn-maximum-attack-group-size 26)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 70)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+(defrule
+    (goal df22-attack-mode 2)
+    (difficulty == hard)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 14)
+    (set-strategic-number sn-maximum-attack-group-size 30)
+    (set-strategic-number sn-number-attack-groups 3)
+    (set-strategic-number sn-percent-attack-soldiers 78)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+(defrule
+    (goal df22-attack-mode 2)
+    (difficulty == hardest)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 16)
+    (set-strategic-number sn-maximum-attack-group-size 32)
+    (set-strategic-number sn-number-attack-groups 3)
+    (set-strategic-number sn-percent-attack-soldiers 82)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+
+; PEACE PRESSURE is deliberately smaller than full ASSAULT.
+(defrule
+    (goal df22-attack-mode 4)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 10)
+    (set-strategic-number sn-maximum-attack-group-size 24)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 60)
+    (set-strategic-number sn-target-evaluation-ally-proximity 0)
+)
+
+; ALLY RESCUE: 40 percent goes out, one local defend group remains even if our own
+; economy is simultaneously in DEFENSE or RECOVERY.
+(defrule
+    (goal df22-attack-mode 3)
+=>
+    (set-goal createarmy 1)
+    (set-strategic-number sn-minimum-attack-group-size 6)
+    (set-strategic-number sn-maximum-attack-group-size 18)
+    (set-strategic-number sn-number-attack-groups 2)
+    (set-strategic-number sn-percent-attack-soldiers 40)
+    (set-strategic-number sn-target-evaluation-ally-proximity 300)
+    (set-strategic-number sn-coop-share-attacking 1)
+    (set-strategic-number sn-number-defend-groups 1)
+    (set-strategic-number sn-minimum-defend-group-size 4)
+    (set-strategic-number sn-maximum-defend-group-size 12)
+)
+
+; One-shot launch pulses. These are the ONLY active attack-now actions in FIX22.
+(defrule
+    (goal df22-attack-mode 3)
+    (goal df22-rescue-pulse 1)
+=>
+    (attack-now)
+    (set-goal df22-rescue-pulse 0)
+)
+(defrule
+    (goal df22-attack-mode 4)
+    (goal df22-pressure-pulse 1)
+=>
+    (attack-now)
+    (set-goal df22-pressure-pulse 0)
+)
+(defrule
+    (goal df21-economy-state 5)
+    (goal df22-rescue-state 0)
+    (goal df22-assault-pulse 0)
+=>
+    (attack-now)
+    (set-goal df22-assault-pulse 1)
+)
+(defrule
+    (or (goal df21-economy-state 1) (or (goal df21-economy-state 2) (or (goal df21-economy-state 3) (goal df21-economy-state 4))))
+=>
+    (set-goal df22-assault-pulse 0)
+)
+
+; --- Compact elite guarantee ------------------------------------------------
+; Posture pools still make middle tiers the backbone. This small rotor only adds
+; a recurring top-tier slot when ASSAULT, or when an Imperial STABLE economy is
+; genuinely rich. One attempt every 24 seconds prevents queue/resource bursts.
+(defrule
+    (goal df21-economy-state 5)
+=>
+    (set-goal df22-elite-state 2)
+)
+(defrule
+    (goal df21-economy-state 2)
+    (current-age == imperial-age)
+    (food-amount > 650)
+    (wood-amount > 450)
+    (gold-amount > 350)
+    (military-population >= 24)
+=>
+    (set-goal df22-elite-state 1)
+)
+(defrule
+    (or (goal df21-economy-state 1) (or (goal df21-economy-state 3) (goal df21-economy-state 4)))
+=>
+    (set-goal df22-elite-state 0)
+)
+(defrule
+    (goal df21-economy-state 2)
+    (or (current-age < imperial-age) (or (food-amount < 550) (or (wood-amount < 380) (gold-amount < 280))))
+=>
+    (set-goal df22-elite-state 0)
+)
+(defrule
+    (timer-triggered df22-elite-timer)
+=>
+    (disable-timer df22-elite-timer)
+)
+
+; Slot 0: Champion.
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 0)
+    (up-timer-status df22-elite-timer == timer-disabled)
+    (research-completed ri-champion)
+    (unit-type-count-total champion < 18)
+    (food-amount > 220)
+    (gold-amount > 160)
+    (can-train champion)
+=>
+    (train champion)
+    (set-goal df22-elite-cycle 1)
+    (enable-timer df22-elite-timer 24)
+)
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 0)
+    (up-timer-status df22-elite-timer == timer-disabled)
+=>
+    (set-goal df22-elite-cycle 1)
+    (enable-timer df22-elite-timer 24)
+)
+
+; Slot 1: Arbalest.
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 1)
+    (up-timer-status df22-elite-timer == timer-disabled)
+    (research-completed ri-arbalest)
+    (unit-type-count-total arbalest < 20)
+    (wood-amount > 220)
+    (gold-amount > 160)
+    (can-train arbalest)
+=>
+    (train arbalest)
+    (set-goal df22-elite-cycle 2)
+    (enable-timer df22-elite-timer 24)
+)
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 1)
+    (up-timer-status df22-elite-timer == timer-disabled)
+=>
+    (set-goal df22-elite-cycle 2)
+    (enable-timer df22-elite-timer 24)
+)
+
+; Slot 2: Paladin.
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 2)
+    (up-timer-status df22-elite-timer == timer-disabled)
+    (research-completed ri-paladin)
+    (unit-type-count-total paladin < 14)
+    (food-amount > 300)
+    (gold-amount > 220)
+    (can-train paladin)
+=>
+    (train paladin)
+    (set-goal df22-elite-cycle 3)
+    (enable-timer df22-elite-timer 24)
+)
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 2)
+    (up-timer-status df22-elite-timer == timer-disabled)
+=>
+    (set-goal df22-elite-cycle 3)
+    (enable-timer df22-elite-timer 24)
+)
+
+; Slot 3: Siege Onager.
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 3)
+    (up-timer-status df22-elite-timer == timer-disabled)
+    (research-completed ri-siege-onager)
+    (unit-type-count-total siege-onager < 5)
+    (wood-amount > 320)
+    (gold-amount > 250)
+    (can-train siege-onager)
+=>
+    (train siege-onager)
+    (set-goal df22-elite-cycle 0)
+    (enable-timer df22-elite-timer 24)
+)
+(defrule
+    (or (goal df22-elite-state 1) (goal df22-elite-state 2))
+    (goal df22-elite-cycle 3)
+    (up-timer-status df22-elite-timer == timer-disabled)
+=>
+    (set-goal df22-elite-cycle 0)
+    (enable-timer df22-elite-timer 24)
+)

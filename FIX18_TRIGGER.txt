@@ -1,2 +1,3 @@
 Trigger exact Dr Fortress AI V13 FIX18 publisher.
 Builder transport verified; rerun exact audited FIX18.
+Runner work path corrected; execute exact hash-verified build.

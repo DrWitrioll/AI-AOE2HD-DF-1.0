@@ -1,0 +1,109 @@
+--- Dr_Fortress_AI_V13_FIX18.per
++++ Dr_Fortress_AI_V13_FIX19.per
+@@ -1,5 +1,9 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX18
++; DR FORTRESS AI V13 FIX19
++; FIX19 parser repair for FIX18 deterministic tier dispatcher:
++; - HD 5.8 ERR2004 at FIX18 line 28516: base militia identifier is militiaman, not militia.
++; - replaces every new base-tier (can-train militia)/(train militia) occurrence with the parser-proven militiaman identifier.
++; - no gameplay rebalance versus FIX18; all no-cheat economy, tier reservation, wall/palisade, build-lock, garrison and surrender changes are retained.
+ ; FIX18 no-cheat stable-fortress / deterministic-tier / construction-state repair:
+ ; - legitimate economy only: inherited resource-creation rules are removed as whole rules, not merely muted actions.
+ ; - economy is deliberately slower and steadier after cheat removal: defensive reserves, balanced gather profiles and less premature attack commitment.
+@@ -28513,9 +28517,9 @@
+ (defrule
+     (goal df13-militia-request 1)
+     (goal df18-militia-cycle 0)
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 1)
+ )
+@@ -28534,9 +28538,9 @@
+     (goal df13-militia-request 1)
+     (goal df18-militia-cycle 1)
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 2)
+ )
+@@ -28568,9 +28572,9 @@
+     (goal df18-militia-cycle 2)
+     (not (research-completed ri-long-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 3)
+ )
+@@ -28602,9 +28606,9 @@
+     (goal df18-militia-cycle 3)
+     (not (research-completed ri-long-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 4)
+ )
+@@ -28650,9 +28654,9 @@
+     (not (research-completed ri-two-handed-swordsman))
+     (not (research-completed ri-long-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 5)
+ )
+@@ -28698,9 +28702,9 @@
+     (not (research-completed ri-long-swordsman))
+     (not (research-completed ri-two-handed-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 6)
+ )
+@@ -28761,9 +28765,9 @@
+     (not (research-completed ri-long-swordsman))
+     (not (research-completed ri-two-handed-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 7)
+ )
+@@ -28824,9 +28828,9 @@
+     (not (research-completed ri-champion))
+     (not (research-completed ri-two-handed-swordsman))
+     (not (research-completed ri-man-at-arms))
+-    (can-train militia)
++    (can-train militiaman)
+ =>
+-    (train militia)
++    (train militiaman)
+     (set-goal df13-militia-request 0)
+     (set-goal df18-militia-cycle 0)
+ )

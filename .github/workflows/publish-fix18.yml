@@ -1,3 +1,4 @@
+# trigger-after-registration
 name: Publish FIX18
 
 on:

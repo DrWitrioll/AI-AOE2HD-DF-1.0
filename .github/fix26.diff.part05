@@ -1,0 +1,500 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 110)
+     (wood-amount > 95)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35285,6 +35606,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 110)
+     (wood-amount > 95)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35308,6 +35630,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 110)
+     (wood-amount > 95)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35341,6 +35664,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 110)
+     (wood-amount > 95)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35364,6 +35688,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 110)
+     (wood-amount > 95)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35399,6 +35724,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 130)
+     (gold-amount > 85)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35432,6 +35758,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 130)
+     (gold-amount > 85)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35455,6 +35782,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 130)
+     (gold-amount > 85)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35488,6 +35816,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 150)
+     (gold-amount > 100)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35511,6 +35840,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 150)
+     (gold-amount > 100)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35544,6 +35874,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 150)
+     (gold-amount > 100)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35567,6 +35898,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 150)
+     (gold-amount > 100)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35600,6 +35932,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 170)
+     (gold-amount > 115)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35623,6 +35956,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 170)
+     (gold-amount > 115)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35646,6 +35980,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 170)
+     (gold-amount > 115)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35679,6 +36014,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 170)
+     (gold-amount > 115)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35702,6 +36038,7 @@
+     (research-completed ri-elite-longboat)
+     (wood-amount > 170)
+     (gold-amount > 115)
++    (can-train elite-longboat)
+ =>
+     (train elite-longboat)
+     (set-goal df13-longboat-request 0)
+@@ -35737,6 +36074,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 185)
+     (gold-amount > 190)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35770,6 +36108,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 185)
+     (gold-amount > 190)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35793,6 +36132,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 185)
+     (gold-amount > 190)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35826,6 +36166,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 205)
+     (gold-amount > 205)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35849,6 +36190,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 205)
+     (gold-amount > 205)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35882,6 +36224,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 205)
+     (gold-amount > 205)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35905,6 +36248,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 205)
+     (gold-amount > 205)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35938,6 +36282,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 225)
+     (gold-amount > 220)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35961,6 +36306,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 225)
+     (gold-amount > 220)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -35984,6 +36330,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 225)
+     (gold-amount > 220)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -36017,6 +36364,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 225)
+     (gold-amount > 220)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -36040,6 +36388,7 @@
+     (research-completed ri-elite-turtle-ship)
+     (wood-amount > 225)
+     (gold-amount > 220)
++    (can-train elite-turtle-ship)
+ =>
+     (train elite-turtle-ship)
+     (set-goal df13-turtle-request 0)
+@@ -36075,6 +36424,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 95)
+     (gold-amount > 60)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36108,6 +36458,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 95)
+     (gold-amount > 60)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36131,6 +36482,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 95)
+     (gold-amount > 60)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36164,6 +36516,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 110)
+     (gold-amount > 75)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36187,6 +36540,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 110)
+     (gold-amount > 75)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36220,6 +36574,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 110)
+     (gold-amount > 75)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36243,6 +36598,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 110)
+     (gold-amount > 75)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36276,6 +36632,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 125)
+     (gold-amount > 85)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36299,6 +36656,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 125)
+     (gold-amount > 85)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36322,6 +36680,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 125)
+     (gold-amount > 85)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36355,6 +36714,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 125)
+     (gold-amount > 85)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -36378,6 +36738,7 @@
+     (research-completed ri-elite-magyar-huszar)
+     (food-amount > 125)
+     (gold-amount > 85)
++    (can-train elite-magyar-huszar)
+ =>
+     (train elite-magyar-huszar)
+     (set-goal df13-magyar-huszar-request 0)
+@@ -38293,6 +38654,7 @@
+ ; every four seconds. The custom DAT intentionally keeps those paid old tiers legal.
+ (defrule
+     (goal df25-production-floor 1)
++    (current-age == feudal-age)
+     (goal df25-production-cycle 0)
+     (up-timer-status df25-production-timer == timer-disabled)
+     (can-train spearman)
+@@ -38303,65 +38665,406 @@
+ )
+ (defrule
+     (goal df25-production-floor 1)
++    (current-age == feudal-age)
+     (goal df25-production-cycle 0)
+     (up-timer-status df25-production-timer == timer-disabled)
+ =>
+     (set-goal df25-production-cycle 1)
+-    (enable-timer df25-production-timer 1)
+-)
+-(defrule
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 1)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train skirmisher)
++=>
++    (train skirmisher)
++    (set-goal df25-production-cycle 2)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 1)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 2)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 2)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train archer)
++=>
++    (train archer)
++    (set-goal df25-production-cycle 3)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 2)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 3)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 3)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train militiaman)
++=>
++    (train militiaman)
++    (set-goal df25-production-cycle 0)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (current-age == feudal-age)
++    (goal df25-production-cycle 3)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 0)
++    (enable-timer df25-production-timer 4)
++)
++
++
++; --- FIX26 Castle+ exact-tier emergency floor -------------------------------
++; FIX25 correctly guaranteed production, but its Castle+ emergency path always
++; trained legacy Spear/Skirm/Archer/Militia.  During prolonged low-army states
++; this path could dominate the normal exact-tier dispatcher and visually recreate
++; the tier bug.  Castle+ now rotates through six families and always attempts the
++; strongest researched model that is actually trainable.  No request/cycle is
++; consumed on a phantom exact-tier train; each slot retries on the next rotor pass.
++
++; Slot 0 - spear family.
++(defrule
++    (current-age >= castle-age)
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (research-completed ri-halberdier)
++    (can-train halberdier)
++=>
++    (train halberdier)
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (not (research-completed ri-halberdier))
++    (research-completed ri-pikeman)
++    (can-train pikeman)
++=>
++    (train pikeman)
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (not (research-completed ri-halberdier))
++    (not (research-completed ri-pikeman))
++    (can-train spearman)
++=>
++    (train spearman)
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 4)
++)
++
++; Slot 1 - archer family.
++(defrule
++    (current-age >= castle-age)
+     (goal df25-production-floor 1)
+     (goal df25-production-cycle 1)
+     (up-timer-status df25-production-timer == timer-disabled)
+-    (can-train skirmisher)
+-=>
+-    (train skirmisher)
++    (research-completed ri-arbalest)
++    (can-train arbalest)
++=>
++    (train arbalest)
+     (set-goal df25-production-cycle 2)
+     (enable-timer df25-production-timer 4)
+ )
+ (defrule
++    (current-age >= castle-age)
+     (goal df25-production-floor 1)
+     (goal df25-production-cycle 1)
+     (up-timer-status df25-production-timer == timer-disabled)
+-=>
++    (not (research-completed ri-arbalest))
++    (research-completed ri-crossbow)
++    (can-train crossbowman)
++=>
++    (train crossbowman)
+     (set-goal df25-production-cycle 2)
+-    (enable-timer df25-production-timer 1)
+-)
+-(defrule
++    (enable-timer df25-production-timer 4)

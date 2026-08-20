@@ -1,0 +1,500 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 70)
+     (gold-amount > 45)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29044,6 +29115,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 85)
+     (gold-amount > 55)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29067,6 +29139,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 85)
+     (gold-amount > 55)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29090,6 +29163,7 @@
+     (research-completed ri-arbalest)
+     (wood-amount > 115)
+     (gold-amount > 80)
++    (can-train arbalest)
+ =>
+     (train arbalest)
+     (set-goal df13-archer-request 0)
+@@ -29103,6 +29177,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 85)
+     (gold-amount > 55)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29127,6 +29202,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 85)
+     (gold-amount > 55)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29160,6 +29236,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 85)
+     (gold-amount > 55)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29183,6 +29260,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29206,6 +29284,7 @@
+     (research-completed ri-arbalest)
+     (wood-amount > 130)
+     (gold-amount > 90)
++    (can-train arbalest)
+ =>
+     (train arbalest)
+     (set-goal df13-archer-request 0)
+@@ -29219,6 +29298,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29243,6 +29323,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29266,6 +29347,7 @@
+     (research-completed ri-arbalest)
+     (wood-amount > 130)
+     (gold-amount > 90)
++    (can-train arbalest)
+ =>
+     (train arbalest)
+     (set-goal df13-archer-request 0)
+@@ -29279,6 +29361,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29303,6 +29386,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29326,6 +29410,7 @@
+     (research-completed ri-crossbow)
+     (wood-amount > 95)
+     (gold-amount > 65)
++    (can-train crossbowman)
+ =>
+     (train crossbowman)
+     (set-goal df13-archer-request 0)
+@@ -29351,6 +29436,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 65)
+     (wood-amount > 55)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29384,6 +29470,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 65)
+     (wood-amount > 55)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29407,6 +29494,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 65)
+     (wood-amount > 55)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29440,6 +29528,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 65)
+     (wood-amount > 55)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29463,6 +29552,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 80)
+     (wood-amount > 65)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29486,6 +29576,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 80)
+     (wood-amount > 65)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29509,6 +29600,7 @@
+     (research-completed ri-imperial-skirmisher)
+     (food-amount > 110)
+     (wood-amount > 90)
++    (can-train imperial-skirmisher)
+ =>
+     (train imperial-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29522,6 +29614,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 80)
+     (wood-amount > 65)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29546,6 +29639,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 80)
+     (wood-amount > 65)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29579,6 +29673,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 80)
+     (wood-amount > 65)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29602,6 +29697,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29625,6 +29721,7 @@
+     (research-completed ri-imperial-skirmisher)
+     (food-amount > 125)
+     (wood-amount > 100)
++    (can-train imperial-skirmisher)
+ =>
+     (train imperial-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29638,6 +29735,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29662,6 +29760,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29685,6 +29784,7 @@
+     (research-completed ri-imperial-skirmisher)
+     (food-amount > 125)
+     (wood-amount > 100)
++    (can-train imperial-skirmisher)
+ =>
+     (train imperial-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29698,6 +29798,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29722,6 +29823,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29745,6 +29847,7 @@
+     (research-completed ri-elite-skirmisher)
+     (food-amount > 90)
+     (wood-amount > 75)
++    (can-train elite-skirmisher)
+ =>
+     (train elite-skirmisher)
+     (set-goal df13-skirmisher-request 0)
+@@ -29769,6 +29872,7 @@
+     (goal df18-scout-cycle 0)
+     (research-completed ri-light-cavalry)
+     (food-amount > 90)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29801,6 +29905,7 @@
+     (goal df18-scout-cycle 2)
+     (research-completed ri-light-cavalry)
+     (food-amount > 90)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29823,6 +29928,7 @@
+     (goal df18-scout-cycle 3)
+     (research-completed ri-light-cavalry)
+     (food-amount > 90)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29855,6 +29961,7 @@
+     (goal df18-scout-cycle 5)
+     (research-completed ri-light-cavalry)
+     (food-amount > 90)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29877,6 +29984,7 @@
+     (goal df18-scout-cycle 0)
+     (research-completed ri-light-cavalry)
+     (food-amount > 110)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29899,6 +30007,7 @@
+     (goal df18-scout-cycle 1)
+     (research-completed ri-light-cavalry)
+     (food-amount > 110)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29921,6 +30030,7 @@
+     (goal df18-scout-cycle 2)
+     (research-completed ri-hussar)
+     (food-amount > 140)
++    (can-train hussar)
+ =>
+     (train hussar)
+     (set-goal df13-scout-request 0)
+@@ -29933,6 +30043,7 @@
+     (not (research-completed ri-hussar))
+     (research-completed ri-light-cavalry)
+     (food-amount > 110)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29956,6 +30067,7 @@
+     (goal df18-scout-cycle 3)
+     (research-completed ri-light-cavalry)
+     (food-amount > 110)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -29988,6 +30100,7 @@
+     (goal df18-scout-cycle 5)
+     (research-completed ri-light-cavalry)
+     (food-amount > 110)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30010,6 +30123,7 @@
+     (goal df18-scout-cycle 0)
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30032,6 +30146,7 @@
+     (goal df18-scout-cycle 1)
+     (research-completed ri-hussar)
+     (food-amount > 155)
++    (can-train hussar)
+ =>
+     (train hussar)
+     (set-goal df13-scout-request 0)
+@@ -30044,6 +30159,7 @@
+     (not (research-completed ri-hussar))
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30067,6 +30183,7 @@
+     (goal df18-scout-cycle 2)
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30089,6 +30206,7 @@
+     (goal df18-scout-cycle 3)
+     (research-completed ri-hussar)
+     (food-amount > 155)
++    (can-train hussar)
+ =>
+     (train hussar)
+     (set-goal df13-scout-request 0)
+@@ -30101,6 +30219,7 @@
+     (not (research-completed ri-hussar))
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30124,6 +30243,7 @@
+     (goal df18-scout-cycle 4)
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30146,6 +30266,7 @@
+     (goal df18-scout-cycle 5)
+     (research-completed ri-light-cavalry)
+     (food-amount > 125)
++    (can-train light-cavalry)
+ =>
+     (train light-cavalry)
+     (set-goal df13-scout-request 0)
+@@ -30171,6 +30292,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 105)
+     (gold-amount > 90)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30204,6 +30326,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 105)
+     (gold-amount > 90)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30227,6 +30350,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 105)
+     (gold-amount > 90)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30260,6 +30384,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 105)
+     (gold-amount > 90)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30283,6 +30408,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 125)
+     (gold-amount > 105)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30306,6 +30432,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 125)
+     (gold-amount > 105)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30329,6 +30456,7 @@
+     (research-completed ri-paladin)
+     (food-amount > 165)
+     (gold-amount > 145)
++    (can-train paladin)
+ =>
+     (train paladin)
+     (set-goal df13-knight-request 0)
+@@ -30342,6 +30470,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 125)
+     (gold-amount > 105)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30366,6 +30495,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 125)
+     (gold-amount > 105)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30399,6 +30529,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 125)
+     (gold-amount > 105)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30422,6 +30553,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30445,6 +30577,7 @@
+     (research-completed ri-paladin)
+     (food-amount > 180)
+     (gold-amount > 160)
++    (can-train paladin)

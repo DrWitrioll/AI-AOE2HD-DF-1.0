@@ -1,0 +1,457 @@
+--- Dr_Fortress_AI_V13_FIX24.per
++++ Dr_Fortress_AI_V13_FIX25.per
+@@ -1,5 +1,15 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX24
++; DR FORTRESS AI V13 FIX25
++; FIX25 Production Uptime / Spending Governor / Castle timing:
++; - mandatory Feudal production foundation now builds Barracks first, then Archery Range; FIX24 could request units before legal production infrastructure existed.
++; - a parser-proven direct cheap-unit floor attempts one affordable soldier every few seconds while field military is critically low.
++; - STABLE/ASSAULT Spending Governor converts healthy Castle/Imperial reserves into recurring family requests and gradually adds production buildings.
++; - Spending Governor has reserve hysteresis; it stops before draining the legitimate no-cheat economy below the Economy Governor safety floor.
++; - Feudal Castle-save state starts around minute 12 when locally safe, shifts gatherers/escrow toward food+gold and escalates after 14:00/15:00.
++; - Castle research is launched from escrow as soon as legal after 14:00; target is roughly 14:30-16:00 on a standard safe start, not a forced fast castle under pressure.
++; - existing exact-tier dispatcher, FIX24 early mobilization, targeted Ally Rescue, single Attack Owner and Economy Governor are retained.
++; - no resource creation; no Relative Strength, post-battle counterattack, elite-ratio or new counter-composition logic is introduced.
++; - ERR2004 preflight: every new defconst is declared before first active use and only FIX24 parser-proven executable vocabulary is used.
+ ; FIX24 early mobilization / stronger targeted rescue / gate-throttle repair:
+ ; - Feudal GROWTH now guarantees an early cheap defensive field core instead of waiting until minute 21-25.
+ ; - RECOVERY actively refreshes cheap+middle family requests; weakness means mobilize, not military paralysis.
+@@ -253,6 +263,12 @@
+ (defconst df24-rescue-player 270) ;0=unresolved, 1..8 concrete allied player to support
+ (defconst df24-rescue-level 271) ;0=off, 1=normal support, 2=critical rescue
+ (defconst df24-gate-lock 272) ;0=gate planner ready, 1=long failed-placement/pending cooldown
++; FIX25 production/spending/castle-save state. Goal namespace only.
++(defconst df25-production-cycle 273) ;0 spear, 1 skirmisher, 2 archer, 3 militia cheap-floor rotor
++(defconst df25-spend-state 274) ;0 off, 1 convert healthy STABLE/ASSAULT reserves into army/production
++(defconst df25-spend-cycle 275) ;0 spear, 1 archer, 2 skirmisher, 3 militia, 4 knight family request
++(defconst df25-castle-save 276) ;0 normal Feudal economy, 1 locally-safe Castle-age saving window
++(defconst df25-production-floor 277) ;0 normal dispatcher, 1 direct cheap safety floor active
+ 
+ ; FIX09 exact-tier family production requests.
+ (defconst df13-militia-request 185)
+@@ -307,6 +323,8 @@
+ (defconst df22-elite-timer 56) ;FIX22 compact elite guarantee throttle
+ (defconst df24-mobilize-timer 57) ;FIX24 Feudal/RECOVERY family-request refresh
+ (defconst df24-gate-timer 58) ;FIX24 long gate-attempt cooldown
++(defconst df25-production-timer 59) ;FIX25 cheap-unit uptime cadence
++(defconst df25-spend-timer 60) ;FIX25 Spending Governor family-request cadence
+ 
+ ; UserPatch/HD class and group values used without direct object-search DUC.
+ (defconst df11-villager-class 904)
+@@ -38187,3 +38205,415 @@
+ =>
+     (set-goal df13-mangonel-request 1)
+ )
++
++; ============================================================================
++; FIX25 PRODUCTION UPTIME / SPENDING GOVERNOR / CASTLE TIMING
++; ============================================================================
++; Scope is deliberately narrow: make legal production exist, keep it fed, spend
++; healthy reserves, and reach Castle earlier when locally safe.  Attack ownership,
++; Rescue targeting, elite ratios and counter-composition remain untouched.
++
++; --- Local timers -----------------------------------------------------------
++(defrule
++    (timer-triggered df25-production-timer)
++=>
++    (disable-timer df25-production-timer)
++)
++(defrule
++    (timer-triggered df25-spend-timer)
++=>
++    (disable-timer df25-spend-timer)
++)
++
++; --- Mandatory Feudal production foundation --------------------------------
++; FIX24 could set exact-tier family requests while no Barracks existed. Because a
++; Range itself needs the Barracks prerequisite, that could leave a player unarmed
++; for ten or more minutes.  FIX25 establishes one legal mixed-production core.
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 10)
++    (building-type-count-total barracks < 1)
++    (up-pending-objects c: barracks < 1)
++    (can-build barracks)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (set-goal pausetsa 1)
++    (build barracks)
++    (enable-timer df18-infra-timer 10)
++)
++(defrule
++    (current-age == feudal-age)
++    (current-age-time >= 25)
++    (building-type-count-total barracks >= 1)
++    (building-type-count-total archery-range < 1)
++    (up-pending-objects c: archery-range < 1)
++    (can-build archery-range)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (set-goal pausetsa 1)
++    (build archery-range)
++    (enable-timer df18-infra-timer 10)
++)
++
++; --- Direct cheap military floor --------------------------------------------
++; Feudal protects Castle timing by stopping the direct safety floor at ten field
++; soldiers. Castle+ raises the emergency floor to sixteen; normal Spending/Recovery
++; logic remains responsible for larger standing armies.
++(defrule
++    (current-age == feudal-age)
++    (military-population < 10)
++=>
++    (set-goal df25-production-floor 1)
++)
++(defrule
++    (current-age == feudal-age)
++    (military-population >= 10)
++=>
++    (set-goal df25-production-floor 0)
++)
++(defrule
++    (current-age >= castle-age)
++    (military-population < 16)
++=>
++    (set-goal df25-production-floor 1)
++)
++(defrule
++    (current-age >= castle-age)
++    (military-population >= 16)
++=>
++    (set-goal df25-production-floor 0)
++)
++(defrule
++    (population-headroom < 1)
++=>
++    (set-goal df25-production-floor 0)
++)
++; This is a safety floor, not a replacement for exact-tier family dispatchers.
++; When the field army is critically small, one affordable legacy unit is attempted
++; every four seconds. The custom DAT intentionally keeps those paid old tiers legal.
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train spearman)
++=>
++    (train spearman)
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 0)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 1)
++    (enable-timer df25-production-timer 1)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 1)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train skirmisher)
++=>
++    (train skirmisher)
++    (set-goal df25-production-cycle 2)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 1)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 2)
++    (enable-timer df25-production-timer 1)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 2)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train archer)
++=>
++    (train archer)
++    (set-goal df25-production-cycle 3)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 2)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 3)
++    (enable-timer df25-production-timer 1)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 3)
++    (up-timer-status df25-production-timer == timer-disabled)
++    (can-train militiaman)
++=>
++    (train militiaman)
++    (set-goal df25-production-cycle 0)
++    (enable-timer df25-production-timer 4)
++)
++(defrule
++    (goal df25-production-floor 1)
++    (goal df25-production-cycle 3)
++    (up-timer-status df25-production-timer == timer-disabled)
++=>
++    (set-goal df25-production-cycle 0)
++    (enable-timer df25-production-timer 1)
++)
++
++; --- Spending Governor -------------------------------------------------------
++; STABLE/ASSAULT only.  It deliberately does not own gather percentages or tier
++; quality. It turns a healthy bank into recurring existing family requests until
++; either a useful field army exists or reserves fall back to the safety floor.
++(defrule
++    (current-age == castle-age)
++    (or (goal df21-economy-state 2) (goal df21-economy-state 5))
++    (military-population < 35)
++    (food-amount > 430)
++    (wood-amount > 330)
++    (gold-amount > 230)
++=>
++    (set-goal df25-spend-state 1)
++)
++(defrule
++    (current-age == imperial-age)
++    (or (goal df21-economy-state 2) (goal df21-economy-state 5))
++    (military-population < 50)
++    (food-amount > 600)
++    (wood-amount > 450)
++    (gold-amount > 350)
++=>
++    (set-goal df25-spend-state 1)
++)
++(defrule
++    (or (goal df21-economy-state 1) (or (goal df21-economy-state 3) (goal df21-economy-state 4)))
++=>
++    (set-goal df25-spend-state 0)
++)
++(defrule
++    (current-age == castle-age)
++    (goal df25-spend-state 1)
++    (or (military-population >= 35) (or (food-amount < 240) (or (wood-amount < 180) (gold-amount < 120))))
++=>
++    (set-goal df25-spend-state 0)
++)
++(defrule
++    (current-age == imperial-age)
++    (goal df25-spend-state 1)
++    (or (military-population >= 50) (or (food-amount < 320) (or (wood-amount < 240) (gold-amount < 180))))
++=>
++    (set-goal df25-spend-state 0)
++)
++
++; One existing family request every seven seconds.  Exact-tier quality remains
++; owned by the FIX20/FIX21 dispatcher; FIX25 only keeps demand flowing.
++(defrule
++    (goal df25-spend-state 1)
++    (goal df25-spend-cycle 0)
++    (up-timer-status df25-spend-timer == timer-disabled)
++=>
++    (set-goal df13-spearman-request 1)
++    (set-goal df25-spend-cycle 1)
++    (enable-timer df25-spend-timer 7)
++)
++(defrule
++    (goal df25-spend-state 1)
++    (goal df25-spend-cycle 1)
++    (up-timer-status df25-spend-timer == timer-disabled)
++=>
++    (set-goal df13-archer-request 1)
++    (set-goal df25-spend-cycle 2)
++    (enable-timer df25-spend-timer 7)
++)
++(defrule
++    (goal df25-spend-state 1)
++    (goal df25-spend-cycle 2)
++    (up-timer-status df25-spend-timer == timer-disabled)
++=>
++    (set-goal df13-skirmisher-request 1)
++    (set-goal df25-spend-cycle 3)
++    (enable-timer df25-spend-timer 7)
++)
++(defrule
++    (goal df25-spend-state 1)
++    (goal df25-spend-cycle 3)
++    (up-timer-status df25-spend-timer == timer-disabled)
++=>
++    (set-goal df13-militia-request 1)
++    (set-goal df25-spend-cycle 4)
++    (enable-timer df25-spend-timer 7)
++)
++(defrule
++    (goal df25-spend-state 1)
++    (goal df25-spend-cycle 4)
++    (up-timer-status df25-spend-timer == timer-disabled)
++=>
++    (set-goal df13-knight-request 1)
++    (set-goal df25-spend-cycle 0)
++    (enable-timer df25-spend-timer 7)
++)
++
++; Healthy banks progressively buy queue capacity.  The shared infrastructure
++; timer serializes construction, so a rich AI cannot burst-order all buildings.
++(defrule
++    (current-age >= castle-age)
++    (goal df25-spend-state 1)
++    (building-type-count-total stable < 1)
++    (wood-amount > 330)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (build stable)
++    (enable-timer df18-infra-timer 12)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-spend-state 1)
++    (building-type-count-total archery-range < 2)
++    (wood-amount > 450)
++    (up-pending-objects c: archery-range < 1)
++    (can-build archery-range)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (build archery-range)
++    (enable-timer df18-infra-timer 12)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-spend-state 1)
++    (building-type-count-total barracks < 2)
++    (wood-amount > 520)
++    (up-pending-objects c: barracks < 1)
++    (can-build barracks)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (build barracks)
++    (enable-timer df18-infra-timer 12)
++)
++(defrule
++    (current-age == imperial-age)
++    (goal df25-spend-state 1)
++    (building-type-count-total stable < 2)
++    (wood-amount > 650)
++    (up-pending-objects c: stable < 1)
++    (can-build stable)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (build stable)
++    (enable-timer df18-infra-timer 12)
++)
++
++; --- Locally-safe Castle timing ---------------------------------------------
++; Standard-start target is roughly 14:30-16:00. Saving begins around minute 12,
++; but confirmed local pressure/recovery cancels the accelerator immediately.
++(defrule
++    (current-age == feudal-age)
++    (game-time >= 720)
++    (goal df21-economy-state 1)
++    (goal df13-defense-state 0)
++    (goal df13-recovery 0)
++    (goal df13-military-rebuild 0)
++    (not (town-under-attack))
++    (up-research-status c: castle-age < research-pending)
++=>
++    (set-goal df25-castle-save 1)
++)
++
++; The second Feudal prerequisite is made explicit.  Range + Blacksmith is enough
++; to make the age-up legal without forcing a Market detour.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (building-type-count-total archery-range >= 1)
++    (building-type-count-total blacksmith < 1)
++    (up-pending-objects c: blacksmith < 1)
++    (can-build blacksmith)
++    (up-timer-status df18-infra-timer == timer-disabled)
++=>
++    (build blacksmith)
++    (enable-timer df18-infra-timer 10)
++)
++
++; 12:00-14:00: save without switching off the cheap military floor.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (game-time < 840)
++=>
++    (set-escrow-percentage food 60)
++    (set-escrow-percentage gold 45)
++    (set-strategic-number sn-food-gatherer-percentage 46)
++    (set-strategic-number sn-wood-gatherer-percentage 28)
++    (set-strategic-number sn-gold-gatherer-percentage 22)
++    (set-strategic-number sn-stone-gatherer-percentage 4)
++)
++; 14:00-15:00: stronger age-up pull.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (game-time >= 840)
++    (game-time < 900)
++=>
++    (set-escrow-percentage food 75)
++    (set-escrow-percentage gold 55)
++    (set-strategic-number sn-food-gatherer-percentage 48)
++    (set-strategic-number sn-wood-gatherer-percentage 26)
++    (set-strategic-number sn-gold-gatherer-percentage 22)
++    (set-strategic-number sn-stone-gatherer-percentage 4)
++)
++; After 15:00, finish the click unless local defense has taken ownership.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (game-time >= 900)
++=>
++    (set-escrow-percentage food 85)
++    (set-escrow-percentage gold 65)
++    (set-strategic-number sn-food-gatherer-percentage 50)
++    (set-strategic-number sn-wood-gatherer-percentage 24)
++    (set-strategic-number sn-gold-gatherer-percentage 22)
++    (set-strategic-number sn-stone-gatherer-percentage 4)
++)
++
++; Launch Castle as soon as prerequisites/resources are legal. Existing inherited
++; rules remain valid fallbacks; this accelerator simply makes the resources ready.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (game-time >= 840)
++    (can-research-with-escrow castle-age)
++=>
++    (release-escrow food)
++    (release-escrow gold)
++    (research castle-age)
++    (set-goal df25-castle-save 0)
++    (set-escrow-percentage food 0)
++    (set-escrow-percentage gold 0)
++)
++
++; Heavy local pressure/recovery overrides timing.  No forced fast castle while the
++; base is actually collapsing; the normal Economy Governor resumes control.
++(defrule
++    (current-age == feudal-age)
++    (goal df25-castle-save 1)
++    (or (goal df13-defense-state 1) (or (goal df13-recovery 1) (goal df13-military-rebuild 1)))
++=>
++    (release-escrow food)
++    (release-escrow gold)
++    (set-escrow-percentage food 0)
++    (set-escrow-percentage gold 0)
++    (set-goal df25-castle-save 0)
++)
++(defrule
++    (current-age >= castle-age)
++    (goal df25-castle-save 1)
++=>
++    (set-goal df25-castle-save 0)
++    (set-escrow-percentage food 0)
++    (set-escrow-percentage gold 0)
++)
++

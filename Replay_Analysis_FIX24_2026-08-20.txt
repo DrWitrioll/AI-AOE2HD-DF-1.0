@@ -1,0 +1,76 @@
+================================================================================
+ANALÝZA REPLAYE – SP Replay v5.8 @2026.08.20 010704.aoe2record
+AI verze: Dr_Fortress_AI_V13_FIX24
+Datum analýzy: 20. 8. 2026
+================================================================================
+
+1. HRÁČI V REPLAYI
+------------------
+- Hráč 1: Dr_Fortress_AI_V13_FIX24
+- Hráč 2: Dr_Fortress_AI_V13_FIX24
+- Hráč 3: Dr_Fortress_AI_V13_FIX24
+
+Všichni tři hráči hráli stejnou verzi Fortress AI (FIX24).
+
+
+2. POZITIVNÍ ZMĚNA OPROTI PŘEDCHOZÍM REPLAYŮM
+---------------------------------------------
+- Počet hlášek „Army strength is insufficient for an attack; defensive posture maintained.“ = 0
+
+  V předchozích replayích (FIX20–23) se tato hláška objevovala velmi často a prakticky blokovala
+  útok i Rescue. V FIX24 už tento safety gate tolik nezasahuje. To je jasný pokrok.
+
+
+3. CO SE STÁLE DĚJE ŠPATNĚ
+--------------------------
+
+Hlavní problémy, které se v chatu opakují:
+
+- „Reinforcements requested at my base.“ (vícekrát od všech tří AI)
+- „Allied support may be required shortly.“
+- „Without allied support, this position may be lost.“
+- Hráč 2: „My economy fell too far behind to support a competitive army.“
+- Hráč 2: „My field army has been destroyed and recovery is unlikely.“
+- Hráč 2 se pokusil vzdát (CMD-9) – „My position is no longer recoverable.“
+- Hráč 1: „My support-unit composition lacked enough direct combat power.“
+
+Závěr z chování:
+- AI si o pomoc říkají, ale reálná záchrana buď nepřichází včas, nebo je příliš slabá.
+- Po ztrátě armády se AI nedokáže dostatečně rychle vzpamatovat (chybí continuous production).
+- Ekonomika jedné z AI výrazně zaostala → neměla čím doplňovat ztráty.
+- I když „insufficient army“ už neblokuje, samotná produkce a doplňování ztrát je stále slabé.
+
+
+4. CO TO POTVRZUJE PRO DALŠÍ VÝVOJ
+----------------------------------
+
+Tento replay potvrzuje priority, které byly stanoveny pro FIX25+:
+
+1. Permanentní vojenská produkce (production uptime)
+   - Výrobní budovy se nesmí dlouho zastavit. Po bitvě musí okamžitě běžet nový proud jednotek.
+
+2. Spending governor (méně bankování zdrojů)
+   - Přebytek food/wood/gold se musí měnit na armádu, upgrady nebo další production buildings.
+
+3. Rychlejší Castle timing
+   - Cílově kolem 14:30–16:00, pokud AI není pod těžkým tlakem.
+
+4. Relative attack strength
+   - Hodnotit sílu relativně k nepříteli, ne absolutními prahy.
+
+5. Post-battle counterattack
+   - Po vyhrané bitvě netahat armádu domů, ale trestat (forward buildings, economy).
+
+
+5. SHRNUTÍ
+----------
+FIX24 úspěšně odstranil přehnaný „insufficient army“ filtr.
+Základní problém však zůstává: AI stále nedokáže včas a průběžně vyrábět dost vojáků
+a po ztrátách se rychle vzpamatovat.
+
+Doporučený směr pro FIX25:
+→ Production uptime + Spending governor + rychlejší Castle.
+
+================================================================================
+Konec reportu
+================================================================================

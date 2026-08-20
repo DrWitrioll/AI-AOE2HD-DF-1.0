@@ -1,0 +1,79 @@
+name: Publish exact FIX27
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix27-exact.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and verify FIX27
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Dr Fortress AI bot"
+          git config user.email "actions@users.noreply.github.com"
+          python3 - <<'PY'
+          import base64, zlib, pathlib
+          root=pathlib.Path('.github/fix27')
+          for src,dst in [('diff.z.b64','/tmp/fix27.diff'),('audit.z.b64','/tmp/fix27.audit'),('replay.z.b64','/tmp/fix26.replay')]:
+              pathlib.Path(dst).write_bytes(zlib.decompress(base64.b64decode((root/src).read_text().strip())))
+          PY
+          cp Dr_Fortress_AI_V13_FIX25.per /tmp/FIX25.per
+          cp Dr_Fortress_AI_V13_FIX26.per /tmp/FIX26.per
+          cp /tmp/FIX26.per /tmp/FIX27.per
+          patch -s /tmp/FIX27.per < /tmp/fix27.diff
+          test "$(sha256sum /tmp/FIX27.per | awk '{print $1}')" = "fdff0489cd8cfe38d313f29d45355091d8c6b2bdf9b656402775f7d763a48c87"
+
+      - name: Publish main latest two
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/FIX27.per Dr_Fortress_AI_V13_FIX27.per
+          : > Dr_Fortress_AI_V13_FIX27.ai
+          rm -f Dr_Fortress_AI_V13_FIX25.per Dr_Fortress_AI_V13_FIX25.ai
+          rm -rf .github/fix27
+          rm -f .github/fix27.diff.part* .github/fix27.raw.part*
+          rm -f .github/workflows/publish_fix27.yml .github/workflows/fix27-exact.yml
+          git add -A
+          git commit -m "Publish Dr Fortress AI V13 FIX27 combat economy and tier reliability"
+          git push origin HEAD:main
+
+      - name: Archive FIX25 and publish V13 history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch support
+          cp /tmp/FIX25.per Dr_Fortress_AI_V13_FIX25.per
+          : > Dr_Fortress_AI_V13_FIX25.ai
+          git add Dr_Fortress_AI_V13_FIX25.per Dr_Fortress_AI_V13_FIX25.ai
+          if ! git diff --cached --quiet; then git commit -m "Archive Dr Fortress AI V13 FIX25"; git push origin support; fi
+
+          git switch FIX
+          cp /tmp/FIX25.per Dr_Fortress_AI_V13_FIX25.per
+          : > Dr_Fortress_AI_V13_FIX25.ai
+          git add Dr_Fortress_AI_V13_FIX25.per Dr_Fortress_AI_V13_FIX25.ai
+          if ! git diff --cached --quiet; then git commit -m "Archive Dr Fortress AI V13 FIX25"; git push origin FIX; fi
+
+          git switch V13
+          cp /tmp/FIX26.per Dr_Fortress_AI_V13_FIX26.per
+          : > Dr_Fortress_AI_V13_FIX26.ai
+          diff -u --label Dr_Fortress_AI_V13_FIX25.per --label Dr_Fortress_AI_V13_FIX26.per /tmp/FIX25.per /tmp/FIX26.per > Dr_Fortress_AI_V13_FIX25_to_FIX26.diff || true
+          printf '%s\n' 'DR FORTRESS AI V13 FIX26 - STATIC / HD PARSER AUDIT' '====================================================' 'FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3' 'Parser/static preflight at publication: duplicate defconst 0; forward-reference / ERR2004 ordering hazards 0; parenthesis balance clean; no active cc-add-resource resource cheat. Single Attack Owner retained.' 'Runtime FIX26 replay later showed the tier dispatcher still did not produce higher tiers reliably; see Replay_Analysis_FIX26_2026-08-20.txt.' > Dr_Fortress_AI_V13_FIX26_AUDIT.txt
+          cp /tmp/FIX27.per Dr_Fortress_AI_V13_FIX27.per
+          : > Dr_Fortress_AI_V13_FIX27.ai
+          cp /tmp/fix27.diff Dr_Fortress_AI_V13_FIX26_to_FIX27.diff
+          cp /tmp/fix27.audit Dr_Fortress_AI_V13_FIX27_AUDIT.txt
+          cp /tmp/fix26.replay Replay_Analysis_FIX26_2026-08-20.txt
+          git add Dr_Fortress_AI_V13_FIX26.per Dr_Fortress_AI_V13_FIX26.ai Dr_Fortress_AI_V13_FIX25_to_FIX26.diff Dr_Fortress_AI_V13_FIX26_AUDIT.txt Dr_Fortress_AI_V13_FIX27.per Dr_Fortress_AI_V13_FIX27.ai Dr_Fortress_AI_V13_FIX26_to_FIX27.diff Dr_Fortress_AI_V13_FIX27_AUDIT.txt Replay_Analysis_FIX26_2026-08-20.txt
+          if ! git diff --cached --quiet; then git commit -m "Archive FIX26 and publish FIX27 history"; git push origin V13; fi

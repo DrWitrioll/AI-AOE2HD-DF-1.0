@@ -1,0 +1,72 @@
+================================================================================
+ANALÝZA REPLAYE – SP Replay v5.8 @2026.08.20 152022.aoe2record
+AI verze: Dr_Fortress_AI_V13_FIX25
+Datum analýzy: 20. 8. 2026
+================================================================================
+
+1. HRÁČI V REPLAYI
+------------------
+- Hráč 1: Dr_Fortress_AI_V13_FIX25
+- Hráč 2: Dr_Fortress_AI_V13_FIX25
+- Hráč 3: Dr_Fortress_AI_V13_FIX25
+- Hráč 4: ResonanceBot 5-1c
+
+
+2. POZITIVNÍ ZMĚNY
+------------------
+- Počet hlášek „Army strength is insufficient for an attack“ = 0
+  (stejně jako v předchozím FIX24 replayi – tento safety gate už netáhne AI do pasivity)
+
+- AI se aktivně snaží útočit:
+  - „Attack groups are assembling for an offensive“
+  - „Order acknowledged. Offensive forces are moving.“
+  - „Attack an enemy now!“
+
+  To je zlepšení oproti dřívějším verzím, které zůstávaly pasivní.
+
+
+3. STÁLE PROBLEMATICKÉ
+----------------------
+Opakující se problémy:
+
+- „Reinforcements requested at my base.“
+- „Without allied support, this position may be lost.“
+- „Civilian production and task allocation fell below acceptable levels.“ (2×)
+- „I failed to establish a meaningful strategic advantage.“
+- Jeden hráč: „My base has suffered a critical collapse.“
+
+Z chatu hráče (pozorování během hry):
+- „ERROR TIERLIST BUG“
+- „FATAL ERROR TIERLIST BUG“
+- „ERROR HIGH TIER BUG“
+- „JAKO TA ARM“ / „JAKO V“
+
+→ Tierlist / výroba vyšších tierů je stále rozbitá. AI pravděpodobně stále vyrábí levné jednotky místo vyšších, i když by na ně měla mít zdroje a research.
+
+
+4. CO TO ZNAMENÁ PRO DALŠÍ VÝVOJ
+--------------------------------
+FIX25 splnil část zadání (odstranění insufficient brzdy + větší ochota útočit), ale:
+
+1. **Tierlist stále nefunguje** – vyšší tiery se nevyrábí spolehlivě (potvrzeno pozorováním ve hře).
+2. **Civilian production** padá pod přijatelnou úroveň.
+3. AI se stále dostává do kolapsu a žádá o posily, které nestačí.
+
+Doporučené priority pro FIX26:
+
+1. Oprava tierlistu / skutečná výroba vyšších tierů (High priority)
+2. Stabilizace civilian production / task allocation
+3. Relative attack strength (hodnocení síly relativně k nepříteli)
+
+
+5. SHRNUTÍ
+----------
+- Insufficient army filtr = vyřešený
+- Ochota útočit = lepší
+- Tierlist = stále rozbitý
+- Civilian production = nestabilní
+- Celková konkurenceschopnost proti Resonance = stále slabá
+
+================================================================================
+Konec reportu
+================================================================================

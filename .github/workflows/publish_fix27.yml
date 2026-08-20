@@ -35,7 +35,6 @@ jobs:
           patch -s /tmp/FIX27.per < /tmp/fix27.diff
           test "$(sha256sum /tmp/FIX27.per | cut -d' ' -f1)" = "fdff0489cd8cfe38d313f29d45355091d8c6b2bdf9b656402775f7d763a48c87"
 
-          # main = latest two only: FIX26 + FIX27
           cp /tmp/FIX27.per Dr_Fortress_AI_V13_FIX27.per
           : > Dr_Fortress_AI_V13_FIX27.ai
           rm -f Dr_Fortress_AI_V13_FIX25.per Dr_Fortress_AI_V13_FIX25.ai
@@ -44,7 +43,6 @@ jobs:
           git commit -m "Publish Dr Fortress AI V13 FIX27 combat economy and tier reliability"
           git push origin main
 
-          # support archive: preserve FIX25
           git switch support
           cp /tmp/FIX25.per Dr_Fortress_AI_V13_FIX25.per
           : > Dr_Fortress_AI_V13_FIX25.ai
@@ -54,7 +52,6 @@ jobs:
             git push origin support
           fi
 
-          # FIX archive: preserve FIX25 (may already be present)
           git switch FIX
           cp /tmp/FIX25.per Dr_Fortress_AI_V13_FIX25.per
           : > Dr_Fortress_AI_V13_FIX25.ai
@@ -64,17 +61,17 @@ jobs:
             git push origin FIX
           fi
 
-          # V13 = complete history for FIX26/FIX27 and diagnostics.
           git switch V13
           cp /tmp/FIX26.per Dr_Fortress_AI_V13_FIX26.per
           : > Dr_Fortress_AI_V13_FIX26.ai
           diff -u --label Dr_Fortress_AI_V13_FIX25.per --label Dr_Fortress_AI_V13_FIX26.per /tmp/FIX25.per /tmp/FIX26.per > Dr_Fortress_AI_V13_FIX25_to_FIX26.diff || true
-          cat > Dr_Fortress_AI_V13_FIX26_AUDIT.txt <<'EOF'
-DR FORTRESS AI V13 FIX26 - STATIC / HD PARSER AUDIT
-====================================================
-FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3
-Parser/static preflight at publication: duplicate defconst 0; forward-reference / ERR2004 ordering hazards 0; parenthesis balance clean; no active cc-add-resource resource cheat. Single Attack Owner retained. Runtime FIX26 replay later showed the tier dispatcher still did not produce higher tiers reliably; see Replay_Analysis_FIX26_2026-08-20.txt.
-EOF
+          printf '%s\n' \
+            'DR FORTRESS AI V13 FIX26 - STATIC / HD PARSER AUDIT' \
+            '====================================================' \
+            'FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3' \
+            'Parser/static preflight at publication: duplicate defconst 0; forward-reference / ERR2004 ordering hazards 0; parenthesis balance clean; no active cc-add-resource resource cheat. Single Attack Owner retained.' \
+            'Runtime FIX26 replay later showed the tier dispatcher still did not produce higher tiers reliably; see Replay_Analysis_FIX26_2026-08-20.txt.' \
+            > Dr_Fortress_AI_V13_FIX26_AUDIT.txt
           cp /tmp/FIX27.per Dr_Fortress_AI_V13_FIX27.per
           : > Dr_Fortress_AI_V13_FIX27.ai
           cp /tmp/fix27.diff Dr_Fortress_AI_V13_FIX26_to_FIX27.diff

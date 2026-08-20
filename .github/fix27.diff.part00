@@ -1,0 +1,96 @@
+--- Dr_Fortress_AI_V13_FIX26.per
++++ Dr_Fortress_AI_V13_FIX27.per
+@@ -1,5 +1,12 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX26
++; DR FORTRESS AI V13 FIX27
++; FIX27 Combat Economy / tier reliability / build-owner repair:
++; - a new primary core-family dispatcher runs before the legacy cycle and selects the best actually trainable tier for the current posture; fallback is based on can-train, not research flags, so custom-DAT tiers cannot deadlock requests.
++; - low-army combat solvency keeps 10-20 real soldiers flowing, adds mounted production, and lets normal Market trades convert excess gold into food/wood during an emergency without resource cheats.
++; - local siege pressure requests mobile cavalry before Fortress loses the base to unsupported rams/mangonels.
++; - Ally Rescue now mobilizes while the intervention is active instead of assuming a useful army already exists.
++; - Feudal wall plan 2 receives its own gate-2 attempt; TC and Castle construction use shared pending/cooldown ownership to stop repeated same-location command storms.
++; - FIX26 relative pressure, Economy Governor, Single Attack Owner and targeted Rescue remain intact.
+ ; FIX26 transactional tier / civilian stability / relative-strength repair:
+ ; - exact-tier dispatcher is transactional: a family request/cycle is consumed only when the requested exact model passes can-train; failed custom-DAT train attempts no longer masquerade as success.
+ ; - Castle+ emergency production floor now prefers the best researched trainable spear/archer/skirmisher/infantry/knight/siege tier instead of flooding legacy base units.
+@@ -279,6 +286,12 @@
+ (defconst df25-production-floor 277) ;0 normal dispatcher, 1 direct cheap safety floor active
+ (defconst df26-relative-state 278) ;0 off, 1 conservative favorable-strength pressure window
+ (defconst df26-relative-cooldown 279) ;0 ready, 1 mandatory cooldown prevents immediate re-entry
++(defconst df27-combat-state 280) ;0 normal, 1 low-army combat-solvency mobilization
++(defconst df27-tc-lock 281) ;0 ready, 1 shared Town Center construction ownership cooldown
++(defconst df27-castle-lock 282) ;0 ready, 1 shared Castle construction ownership cooldown
++(defconst df27-tier-probe-spear 283) ;one-shot custom-DAT trainability diagnostic
++(defconst df27-tier-probe-archer 284) ;one-shot custom-DAT trainability diagnostic
++(defconst df27-tier-probe-knight 285) ;one-shot custom-DAT trainability diagnostic
+ 
+ ; FIX09 exact-tier family production requests.
+ (defconst df13-militia-request 185)
+@@ -337,6 +350,9 @@
+ (defconst df25-spend-timer 60) ;FIX25 Spending Governor family-request cadence
+ (defconst df26-relative-timer 61) ;FIX26 relative-strength pressure hold window
+ (defconst df26-relative-cooldown-timer 62) ;FIX26 pause before another relative pressure window
++(defconst df27-combat-timer 63) ;FIX27 low-army family-request cadence
++(defconst df27-tc-lock-timer 64) ;FIX27 TC command-storm cooldown
++(defconst df27-castle-lock-timer 65) ;FIX27 Castle command-storm cooldown
+ 
+ ; UserPatch/HD class and group values used without direct object-search DUC.
+ (defconst df11-villager-class 904)
+@@ -769,6 +785,8 @@
+ 	(building-type-count town-center < 1)
+   	(game-time > 40)
+     (up-timer-status df18-infra-timer == timer-disabled)
++    (goal df27-tc-lock 0)
++    (up-pending-objects c: town-center < 1)
+ =>
+ 	(set-strategic-number sn-percent-civilian-explorers  0)
+ 	(set-strategic-number sn-percent-civilian-builders 100)
+@@ -777,6 +795,8 @@
+ 	(set-strategic-number sn-cap-civilian-explorers 0)
+ 	(set-strategic-number sn-cap-civilian-builders 100)
+ 	(build town-center)
++    (set-goal df27-tc-lock 1)
++    (enable-timer df27-tc-lock-timer 75)
+ 	(enable-timer df18-infra-timer 28)
+ 	(disable-self)
+ )
+@@ -6128,9 +6148,13 @@
+ (building-type-count town-center == 0)
+ (can-build town-center)
+     (up-timer-status df18-infra-timer == timer-disabled)
++    (goal df27-tc-lock 0)
++    (up-pending-objects c: town-center < 1)
+ => 
+ (set-goal pausetsa 1)
+ (build town-center)
++    (set-goal df27-tc-lock 1)
++    (enable-timer df27-tc-lock-timer 75)
+ (enable-timer df18-infra-timer 28)
+ )
+ 
+@@ -6140,9 +6164,13 @@
+ (building-type-count town-center < 2)
+ (can-build-with-escrow town-center)
+     (up-timer-status df18-infra-timer == timer-disabled)
++    (goal df27-tc-lock 0)
++    (up-pending-objects c: town-center < 1)
+ => 
+ (set-goal pausetsa 1)
+ (build town-center)
++    (set-goal df27-tc-lock 1)
++    (enable-timer df27-tc-lock-timer 75)
+ (enable-timer df18-infra-timer 28)
+ (release-escrow wood)
+ (release-escrow stone)
+@@ -6155,9 +6183,13 @@
+ (building-type-count town-center < 3)
+ (can-build-with-escrow town-center)
+     (up-timer-status df18-infra-timer == timer-disabled)
++    (goal df27-tc-lock 0)
++    (up-pending-objects c: town-center < 1)
+ => 
+ (set-goal pausetsa 1)
+ (build town-center)
++    (set-goal df27-tc-lock 1)
++    (enable-timer df27-tc-lock-timer 75)

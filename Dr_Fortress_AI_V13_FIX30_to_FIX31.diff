@@ -1,0 +1,207 @@
+--- Dr_Fortress_AI_V13_FIX30.per
++++ Dr_Fortress_AI_V13_FIX31.per
+@@ -1,7 +1,9 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX30
+-; FIX30 HD 5.8 PARSER COMPATIBILITY HOTFIX:
+-; - defines neutral-player as player 0 before any executable rule; no gameplay rebalance.
++; DR FORTRESS AI V13 FIX31
++; FIX31 HD 5.8 ERR2010 LINE-LENGTH / QUOTE PARSER HOTFIX:
++; - splits FIX29 diagnostic one-line rules into parser-safe multi-line rules.
++; - removes the unnecessary FIX30 neutral-player compatibility constant; it was not the ERR2010 cause.
++; - gameplay and FIX29 Tier API Probe logic are otherwise unchanged.
+ ; - FIX29 Tier API Probe / Direct High-Tier Trainability Test remains unchanged.
+ ; - FIX28 Single Tier Owner remains the only train authority for target families.
+ ; - Visible chat-to-all diagnostics now prove the heartbeat is running in replay.
+@@ -243,8 +245,6 @@
+ ;also new lumberjacks, etc won't be assigned until huntable object is dead
+ 
+ ; HD 5.8 compatibility alias: Gaia / neutral player is player number 0.
+-; Added after runtime ERR2004: Unknown identifier: neutral-player.
+-(defconst neutral-player 0)
+ 
+ (defconst military-superiority 190)
+ 
+@@ -36318,22 +36318,166 @@
+     (chat-to-all "[FIX29 TIER API] HEARTBEAT - visible diagnostic round")
+ )
+ 
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-long 0) (research-completed ri-long-swordsman) (food-amount >= 90) (gold-amount >= 50) (can-train long-swordsman) => (chat-to-all "[FIX29 TIER API] LONG SWORDSMAN RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-long 0) (research-completed ri-long-swordsman) (food-amount >= 90) (gold-amount >= 50) (not (can-train long-swordsman)) => (chat-to-all "[FIX29 TIER API] LONG SWORDSMAN RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-champion 0) (research-completed ri-champion) (food-amount >= 160) (gold-amount >= 110) (can-train champion) => (chat-to-all "[FIX29 TIER API] CHAMPION RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-champion 0) (research-completed ri-champion) (food-amount >= 160) (gold-amount >= 110) (not (can-train champion)) => (chat-to-all "[FIX29 TIER API] CHAMPION RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-pikeman 0) (research-completed ri-pikeman) (food-amount >= 70) (wood-amount >= 45) (can-train pikeman) => (chat-to-all "[FIX29 TIER API] PIKEMAN RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-pikeman 0) (research-completed ri-pikeman) (food-amount >= 70) (wood-amount >= 45) (not (can-train pikeman)) => (chat-to-all "[FIX29 TIER API] PIKEMAN RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-crossbow 0) (research-completed ri-crossbow) (wood-amount >= 70) (gold-amount >= 45) (can-train crossbowman) => (chat-to-all "[FIX29 TIER API] CROSSBOW RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-crossbow 0) (research-completed ri-crossbow) (wood-amount >= 70) (gold-amount >= 45) (not (can-train crossbowman)) => (chat-to-all "[FIX29 TIER API] CROSSBOW RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-arbalest 0) (research-completed ri-arbalest) (wood-amount >= 140) (gold-amount >= 100) (can-train arbalest) => (chat-to-all "[FIX29 TIER API] ARBALEST RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-arbalest 0) (research-completed ri-arbalest) (wood-amount >= 140) (gold-amount >= 100) (not (can-train arbalest)) => (chat-to-all "[FIX29 TIER API] ARBALEST RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-cavalier 0) (research-completed ri-cavalier) (food-amount >= 110) (gold-amount >= 70) (can-train cavalier) => (chat-to-all "[FIX29 TIER API] CAVALIER RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-cavalier 0) (research-completed ri-cavalier) (food-amount >= 110) (gold-amount >= 70) (not (can-train cavalier)) => (chat-to-all "[FIX29 TIER API] CAVALIER RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-paladin 0) (research-completed ri-paladin) (food-amount >= 220) (gold-amount >= 160) (can-train paladin) => (chat-to-all "[FIX29 TIER API] PALADIN RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-paladin 0) (research-completed ri-paladin) (food-amount >= 220) (gold-amount >= 160) (not (can-train paladin)) => (chat-to-all "[FIX29 TIER API] PALADIN RESEARCHED + CANNOT TRAIN (reserve OK)"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-onager 0) (research-completed ri-onager) (wood-amount >= 220) (gold-amount >= 180) (can-train onager) => (chat-to-all "[FIX29 TIER API] ONAGER RESEARCHED + CAN TRAIN"))
+-(defrule (goal df29-tier-diagnostic-pulse 1) (goal df29-probe-onager 0) (research-completed ri-onager) (wood-amount >= 220) (gold-amount >= 180) (not (can-train onager)) => (chat-to-all "[FIX29 TIER API] ONAGER RESEARCHED + CANNOT TRAIN (reserve OK)"))
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-long 0)
++    (research-completed ri-long-swordsman)
++    (food-amount >= 90)
++    (gold-amount >= 50)
++    (can-train long-swordsman)
++=>
++    (chat-to-all "[FIX29 TIER API] LONG SWORDSMAN RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-long 0)
++    (research-completed ri-long-swordsman)
++    (food-amount >= 90)
++    (gold-amount >= 50)
++    (not (can-train long-swordsman))
++=>
++    (chat-to-all "[FIX29 TIER API] LONG SWORDSMAN RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-champion 0)
++    (research-completed ri-champion)
++    (food-amount >= 160)
++    (gold-amount >= 110)
++    (can-train champion)
++=>
++    (chat-to-all "[FIX29 TIER API] CHAMPION RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-champion 0)
++    (research-completed ri-champion)
++    (food-amount >= 160)
++    (gold-amount >= 110)
++    (not (can-train champion))
++=>
++    (chat-to-all "[FIX29 TIER API] CHAMPION RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-pikeman 0)
++    (research-completed ri-pikeman)
++    (food-amount >= 70)
++    (wood-amount >= 45)
++    (can-train pikeman)
++=>
++    (chat-to-all "[FIX29 TIER API] PIKEMAN RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-pikeman 0)
++    (research-completed ri-pikeman)
++    (food-amount >= 70)
++    (wood-amount >= 45)
++    (not (can-train pikeman))
++=>
++    (chat-to-all "[FIX29 TIER API] PIKEMAN RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-crossbow 0)
++    (research-completed ri-crossbow)
++    (wood-amount >= 70)
++    (gold-amount >= 45)
++    (can-train crossbowman)
++=>
++    (chat-to-all "[FIX29 TIER API] CROSSBOW RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-crossbow 0)
++    (research-completed ri-crossbow)
++    (wood-amount >= 70)
++    (gold-amount >= 45)
++    (not (can-train crossbowman))
++=>
++    (chat-to-all "[FIX29 TIER API] CROSSBOW RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-arbalest 0)
++    (research-completed ri-arbalest)
++    (wood-amount >= 140)
++    (gold-amount >= 100)
++    (can-train arbalest)
++=>
++    (chat-to-all "[FIX29 TIER API] ARBALEST RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-arbalest 0)
++    (research-completed ri-arbalest)
++    (wood-amount >= 140)
++    (gold-amount >= 100)
++    (not (can-train arbalest))
++=>
++    (chat-to-all "[FIX29 TIER API] ARBALEST RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-cavalier 0)
++    (research-completed ri-cavalier)
++    (food-amount >= 110)
++    (gold-amount >= 70)
++    (can-train cavalier)
++=>
++    (chat-to-all "[FIX29 TIER API] CAVALIER RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-cavalier 0)
++    (research-completed ri-cavalier)
++    (food-amount >= 110)
++    (gold-amount >= 70)
++    (not (can-train cavalier))
++=>
++    (chat-to-all "[FIX29 TIER API] CAVALIER RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-paladin 0)
++    (research-completed ri-paladin)
++    (food-amount >= 220)
++    (gold-amount >= 160)
++    (can-train paladin)
++=>
++    (chat-to-all "[FIX29 TIER API] PALADIN RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-paladin 0)
++    (research-completed ri-paladin)
++    (food-amount >= 220)
++    (gold-amount >= 160)
++    (not (can-train paladin))
++=>
++    (chat-to-all "[FIX29 TIER API] PALADIN RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-onager 0)
++    (research-completed ri-onager)
++    (wood-amount >= 220)
++    (gold-amount >= 180)
++    (can-train onager)
++=>
++    (chat-to-all "[FIX29 TIER API] ONAGER RESEARCHED + CAN TRAIN")
++)
++(defrule
++    (goal df29-tier-diagnostic-pulse 1)
++    (goal df29-probe-onager 0)
++    (research-completed ri-onager)
++    (wood-amount >= 220)
++    (gold-amount >= 180)
++    (not (can-train onager))
++=>
++    (chat-to-all "[FIX29 TIER API] ONAGER RESEARCHED + CANNOT TRAIN (reserve OK)")
++)
+ 
+ (defrule
+     (goal df29-tier-diagnostic-pulse 1)

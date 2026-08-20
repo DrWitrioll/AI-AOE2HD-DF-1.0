@@ -1,10 +1,19 @@
 ; ============================================================================
-; DR FORTRESS AI V13 FIX33b
-; FIX33b TIER API DIAGNOSTIC VISIBILITY HOTFIX:
+; DR FORTRESS AI V13 FIX34
+; FIX34 EXACT TIER DUC PRODUCTION PROBE:
+; - replaces only the old symbolic one-shot Tier API train probes with exact-ID DUC action-train probes
+; - DUC selects exactly one owned production building, then issues up-target-point/action-train with the raw DAT unit ID
+; - probes deliberately do NOT depend on can-train; FIX33b CAN/CANNOT diagnostics remain separate for comparison
+; - exact IDs tested: Long Swordsman 77, Crossbowman 24, Pikeman 358, Champion 567,
+;   Arbalest 492, Cavalier 283, Paladin 569, Onager 550
+; - no DAT changes, no economy/attack redesign, no resource cheat
+; FIX33c DIAGNOSTIC GOAL INITIALIZATION HOTFIX:
 ; - preserves the complete FIX33 Timer Registry Repair / State-Machine Recovery
+; - preserves FIX33b robust timer start and timer-independent Tier API diagnostics
+; - explicitly initializes extended diagnostic/probe goals to 0 before use
 ; - robust one-shot (true) start enables Tier API diagnostic timer 33 for 80 seconds
 ; - adds timer-independent one-shot CAN/CANNOT research diagnostics for eight tiers
-; - direct train probes, Economy, Attack, Rescue and Single Tier Owner logic are unchanged
+; - FIX34 changes only the temporary diagnostic direct-train probes; gameplay owners remain unchanged
 ; FIX33 TIMER REGISTRY REPAIR / STATE-MACHINE RECOVERY:
 ; - every active timer is now in the HD/Forgotten valid range 1..50
 ; - dead write-only legacy timer writers 1/2/7/34 are retired before slot reuse
@@ -398,6 +407,9 @@
 (defconst df33-military-cadence-timer 34) ;shared mobilize/production/spend/combat request cadence
 (defconst df13-farm-timer 46) ;farm-order cooldown
 (defconst df33-relative-phase-timer 48) ;shared relative-pressure hold/cooldown phase timer
+
+; UserPatch/HD DUC action used by FIX34 exact-tier production diagnostics.
+(defconst action-train 10) ;DUC up-target-point special action: exact unit training
 
 ; UserPatch/HD class and group values used without direct object-search DUC.
 (defconst df11-villager-class 904)
@@ -36057,90 +36069,113 @@
     (set-goal df33b-diag-onager 1)
 )
 
-; --- FIX29 ONE-SHOT DIRECT TIER API PROBES -----------------------------------
-; These are diagnostic subrules INSIDE the same Tier Owner, not a second owner.
-; They do not touch family requests. A probe remains pending while can-train is
-; false. When reserve + can-train become true, exactly one direct train command is
-; issued and the probe is latched done. Replay chat + MAKE then tells us whether
-; HD/DAT exposes the researched unit to AI direct training.
+; --- FIX34 EXACT TIER DUC PRODUCTION PROBES -----------------------------------
+; Diagnostic only. These rules intentionally bypass can-train so we can answer the
+; custom-DAT question directly: does DUC action-train preserve the exact raw unit ID,
+; or does HD remap the request back to the base member of the upgrade line?
+;
+; DUC sequence:
+;   1) clear both search lists/filters
+;   2) select exactly one owned producer into LocalList
+;   3) issue (up-target-point 0 action-train c: RAW_UNIT_ID)
+;   4) latch the probe so each exact ID is issued once
+;
+; FIX33b CAN/CANNOT diagnostics remain active independently. Replay should therefore
+; let us compare the symbolic Tier API result with the actual DUC AI_TRAIN unit ID.
 (defrule
     (goal df29-probe-long 0)
     (research-completed ri-long-swordsman)
+    (building-type-count barracks >= 1)
     (food-amount >= 90) (gold-amount >= 50)
-    (can-train long-swordsman)
 =>
-    (chat-to-all "[FIX29 TIER API] LONG SWORDSMAN RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train long-swordsman)
+    (up-full-reset-search)
+    (up-find-local c: barracks c: 1)
+    (chat-to-all "[FIX34 DUC] LONG SWORDSMAN -> EXACT TRAIN ID 77")
+    (up-target-point 0 action-train c: 77)
     (set-goal df29-probe-long 1)
 )
 (defrule
     (goal df29-probe-champion 0)
     (research-completed ri-champion)
+    (building-type-count barracks >= 1)
     (food-amount >= 160) (gold-amount >= 110)
-    (can-train champion)
 =>
-    (chat-to-all "[FIX29 TIER API] CHAMPION RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train champion)
+    (up-full-reset-search)
+    (up-find-local c: barracks c: 1)
+    (chat-to-all "[FIX34 DUC] CHAMPION -> EXACT TRAIN ID 567")
+    (up-target-point 0 action-train c: 567)
     (set-goal df29-probe-champion 1)
 )
 (defrule
     (goal df29-probe-pikeman 0)
     (research-completed ri-pikeman)
+    (building-type-count barracks >= 1)
     (food-amount >= 70) (wood-amount >= 45)
-    (can-train pikeman)
 =>
-    (chat-to-all "[FIX29 TIER API] PIKEMAN RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train pikeman)
+    (up-full-reset-search)
+    (up-find-local c: barracks c: 1)
+    (chat-to-all "[FIX34 DUC] PIKEMAN -> EXACT TRAIN ID 358")
+    (up-target-point 0 action-train c: 358)
     (set-goal df29-probe-pikeman 1)
 )
 (defrule
     (goal df29-probe-crossbow 0)
     (research-completed ri-crossbow)
+    (building-type-count archery-range >= 1)
     (wood-amount >= 70) (gold-amount >= 45)
-    (can-train crossbowman)
 =>
-    (chat-to-all "[FIX29 TIER API] CROSSBOW RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train crossbowman)
+    (up-full-reset-search)
+    (up-find-local c: archery-range c: 1)
+    (chat-to-all "[FIX34 DUC] CROSSBOWMAN -> EXACT TRAIN ID 24")
+    (up-target-point 0 action-train c: 24)
     (set-goal df29-probe-crossbow 1)
 )
 (defrule
     (goal df29-probe-arbalest 0)
     (research-completed ri-arbalest)
+    (building-type-count archery-range >= 1)
     (wood-amount >= 140) (gold-amount >= 100)
-    (can-train arbalest)
 =>
-    (chat-to-all "[FIX29 TIER API] ARBALEST RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train arbalest)
+    (up-full-reset-search)
+    (up-find-local c: archery-range c: 1)
+    (chat-to-all "[FIX34 DUC] ARBALEST -> EXACT TRAIN ID 492")
+    (up-target-point 0 action-train c: 492)
     (set-goal df29-probe-arbalest 1)
 )
 (defrule
     (goal df29-probe-cavalier 0)
     (research-completed ri-cavalier)
+    (building-type-count stable >= 1)
     (food-amount >= 110) (gold-amount >= 70)
-    (can-train cavalier)
 =>
-    (chat-to-all "[FIX29 TIER API] CAVALIER RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train cavalier)
+    (up-full-reset-search)
+    (up-find-local c: stable c: 1)
+    (chat-to-all "[FIX34 DUC] CAVALIER -> EXACT TRAIN ID 283")
+    (up-target-point 0 action-train c: 283)
     (set-goal df29-probe-cavalier 1)
 )
 (defrule
     (goal df29-probe-paladin 0)
     (research-completed ri-paladin)
+    (building-type-count stable >= 1)
     (food-amount >= 220) (gold-amount >= 160)
-    (can-train paladin)
 =>
-    (chat-to-all "[FIX29 TIER API] PALADIN RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train paladin)
+    (up-full-reset-search)
+    (up-find-local c: stable c: 1)
+    (chat-to-all "[FIX34 DUC] PALADIN -> EXACT TRAIN ID 569")
+    (up-target-point 0 action-train c: 569)
     (set-goal df29-probe-paladin 1)
 )
 (defrule
     (goal df29-probe-onager 0)
     (research-completed ri-onager)
+    (building-type-count siege-workshop >= 1)
     (wood-amount >= 220) (gold-amount >= 180)
-    (can-train onager)
 =>
-    (chat-to-all "[FIX29 TIER API] ONAGER RESEARCHED + CAN TRAIN -> DIRECT TRAIN COMMAND ISSUED")
-    (train onager)
+    (up-full-reset-search)
+    (up-find-local c: siege-workshop c: 1)
+    (chat-to-all "[FIX34 DUC] ONAGER -> EXACT TRAIN ID 550")
+    (up-target-point 0 action-train c: 550)
     (set-goal df29-probe-onager 1)
 )
 
@@ -36319,6 +36354,38 @@
     (train battering-ram) (set-goal df13-ram-request 0) (set-goal df25-production-cycle 0)
 )
 
+; --- FIX33c: initialize extended Tier API diagnostic/probe goals ------------
+; Extended goals are not assumed to start at zero in HD/UserPatch semantics.
+; Split across two one-shot rules to keep action counts conservative.
+(defrule
+    (true)
+=>
+    (set-goal df29-tier-diagnostic-pulse 0)
+    (set-goal df29-probe-long 0)
+    (set-goal df29-probe-champion 0)
+    (set-goal df29-probe-pikeman 0)
+    (set-goal df29-probe-crossbow 0)
+    (set-goal df29-probe-arbalest 0)
+    (set-goal df29-probe-cavalier 0)
+    (set-goal df29-probe-paladin 0)
+    (set-goal df29-probe-onager 0)
+    (disable-self)
+)
+
+(defrule
+    (true)
+=>
+    (set-goal df33b-diag-long 0)
+    (set-goal df33b-diag-champion 0)
+    (set-goal df33b-diag-pikeman 0)
+    (set-goal df33b-diag-crossbow 0)
+    (set-goal df33b-diag-arbalest 0)
+    (set-goal df33b-diag-cavalier 0)
+    (set-goal df33b-diag-paladin 0)
+    (set-goal df33b-diag-onager 0)
+    (disable-self)
+)
+
 ; --- TEMPORARY FIX29 VISIBLE TIER API DIAGNOSTIC, 80-second heartbeat --------
 ; One heartbeat line always appears, proving diagnostics are alive in the replay.
 ; Per-tier CANNOT is only emitted after the research is complete AND the same
@@ -36340,7 +36407,7 @@
 (defrule
     (goal df29-tier-diagnostic-pulse 1)
 =>
-    (chat-to-all "[FIX29 TIER API] HEARTBEAT - visible diagnostic round")
+    (chat-to-all "[FIX34 DUC] HEARTBEAT - exact-tier DUC probes armed")
 )
 
 (defrule

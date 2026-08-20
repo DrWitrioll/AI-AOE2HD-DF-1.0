@@ -1,1 +1,74 @@
-placeholder
+================================================================================
+ANALÝZA REPLAYE – SP Replay v5.8 @2026.08.20 170352.aoe2record
+AI verze: Dr_Fortress_AI_V13_FIX26
+Datum analýzy: 20. 8. 2026
+================================================================================
+
+1. HRÁČI V REPLAYI
+------------------
+- Hráč 1: Dr_Fortress_AI_V13_FIX26
+- Hráč 2: Dr_Fortress_AI_V13_FIX26
+- Hráč 3: Dr_Fortress_AI_V13_FIX26
+- Hráč 4: ResonanceBot 5-1c
+
+
+2. POZITIVNÍ ZMĚNY
+------------------
+- Počet hlášek „Army strength is insufficient for an attack“ = 0
+- AI se aktivně snaží útočit (9× zprávy typu „Attack groups are assembling“,
+  „Offensive forces are moving“, „Attack an enemy now!“)
+- Rescue žádosti jsou méně frekventované než v dřívějších verzích (2× Reinforcements requested)
+
+
+3. STÁLE PROBLEMATICKÉ
+----------------------
+Z chatu hráče (přímé pozorování během hry):
+- „me jestli funguje tierlist“
+- „tierlist nefunguje?“
+
+→ Tierlist / výroba vyšších tierů je stále rozbitá i po FIX26 transactional dispatcheru.
+
+Další:
+- ResonanceBot vyhrál („You fought valiantly, but my victory was inevitable.“)
+- Stále se objevují žádosti o posily a tributes
+- AI stále nedokáže dlouhodobě konkurovat ResonanceBotovi
+
+
+4. CO TO ZNAMENÁ
+----------------
+FIX26 zlepšil:
+- ochotu útočit
+- odstranění insufficient brzdy (drží se)
+- transactional logiku tierů (teoreticky)
+
+Ale prakticky:
+- Vyšší tiery se podle pozorování ve hře stále nevyrábí spolehlivě
+- Fortress AI jako tým stále prohrává s ResonanceBotem
+
+
+5. DOPORUČENÍ PRO DALŠÍ KROK (FIX27)
+------------------------------------
+Priorita č. 1: Skutečně ověřit a opravit, proč transactional tier dispatcher
+stále nevyrábí vyšší tiery (Champion / Long Swordsman / Cavalier / Paladin /
+Arbalest / Onager atd.), i když research je hotový a zdroje jsou.
+
+Možné příčiny k prozkoumání:
+- can-train vrací false i pro vyzkoumané tiery (custom DAT)
+- cyklus se posouvá i při neúspěchu
+- resource thresholdy jsou stále příliš vysoké
+- emergency floor stále preferuje levné jednotky v praxi
+
+Až bude tierlist reálně fungovat, teprve pak dává smysl dál ladit relative strength
+a post-battle chování.
+
+
+6. SHRNUTÍ
+----------
+- Insufficient filtr = OK
+- Ochota útočit = lepší
+- Tierlist = stále nefunguje (potvrzeno pozorováním ve hře)
+- Celkový výsledek proti Resonance = prohra
+
+================================================================================
+Konec reportu
+================================================================================

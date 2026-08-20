@@ -1,0 +1,65 @@
+DR FORTRESS AI V13 FIX27 - STATIC / HD PARSER / STATE-MACHINE AUDIT
+====================================================================
+Basis: FIX26 replay report + live observations identified persistent tier failure,
+stranded gold, low military production, weak siege response and construction storms.
+
+Source FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3
+FIX27 SHA-256: fdff0489cd8cfe38d313f29d45355091d8c6b2bdf9b656402775f7d763a48c87
+FIX26->FIX27 diff SHA-256: e80dacde4ef18263915ac79983eccc0127dd61739fcfcba121dbc0d800f94dba
+Size: 1091068 bytes
+Lines: 40310
+Raw defrule occurrences: 3014
+defconst symbols: 481
+Duplicate defconst symbols: 0
+Forward references / ERR2004 ordering hazards: 0
+Raw active-code parenthesis signature: balance 0, minimum 0
+New executable first-token vocabulary vs FIX26: 0
+Forbidden ERR2004-prone UP commands: 0
+Active cc-add-resource resource cheats: 0
+
+Single Attack Owner integrity:
+  createarmy writers: 9 -> 9
+  sn-number-attack-groups writers: 9 -> 9
+  sn-percent-attack-soldiers writers: 9 -> 9
+  attack-now writers: 3 -> 3
+
+FIX27 core-tier dispatcher:
+  52 primary rules before legacy FIX20 dispatcher
+  all 52 train actions have an exact matching can-train gate
+  fallback is based on NOT(can-train higher-tier), not NOT(research-completed)
+  request is cleared only in the branch that issues a concrete train action
+  maximum active lines in new primary rules: 11
+
+Combat solvency / Market:
+  low-army state enters below 12 military and exits at 18 (hysteresis)
+  family demand refresh: 6 seconds
+  emergency Market conversion only uses normal buy-commodity actions
+  emergency threshold: military <12, gold >600; food target 300 / wood target 250
+  emergency Market cooldown: 12 seconds; normal FIX21 stabilizer remains 45 seconds
+  Castle+ low-army production requests Knight/Scout/Mangonel plus infantry/ranged families
+  local enemy siege while town-under-attack/DEFENSE requests mobile cavalry
+  active Ally Rescue with <12 military feeds the same combat production motor
+
+Construction-loop repair:
+  active Town Center build rules guarded by shared FIX27 lock: 12/12
+  active Town Center build rules guarded by pending-object check: 12/12
+  active Castle build rules guarded by shared FIX27 lock: 8/8
+  active Castle build rules guarded by pending-object check: 8/8
+  TC cooldown: 75 seconds
+  Castle cooldown: 100 seconds
+  Feudal wall plan 2 receives a dedicated gate-2 attempt with FIX24 gate throttle
+
+Tier diagnostics:
+  one-shot high-bank probes for Pikeman, Crossbowman and Cavalier
+  probe only reports when researched upper tier is not trainable while lower tier is trainable
+  probes do not alter production state
+
+State-loop checks:
+  combat-solvency uses 12/18 hysteresis, preventing threshold ping-pong
+  production request refresh is timer-throttled
+  TC/Castle retry owners have timed release and pending-object gates
+  existing FIX26 relative-pressure hold/cooldown logic is unchanged
+  Rescue remains the final Attack Owner override
+
+Exact FIX26->FIX27 patch reproduction: PASS (bit-identical)
+Runtime/in-game HD 5.8 replay validation: REQUIRED

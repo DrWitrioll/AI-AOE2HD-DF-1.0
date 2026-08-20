@@ -1,0 +1,59 @@
+DR FORTRESS AI V13 FIX28 - SINGLE TIER OWNER STATIC AUDIT
+============================================================
+FIX27 SHA-256: fdff0489cd8cfe38d313f29d45355091d8c6b2bdf9b656402775f7d763a48c87
+FIX28 SHA-256: caf7b512523741e76569529dd437c63b366c3c3fb4844a619c4ae9e9dd772a1e
+FIX28 bytes: 991091
+FIX28 lines: 36222
+
+SCOPE
+-----
+FIX28 changes only target-family tier ownership, emergency floor plumbing, and temporary can-train diagnostics. Economy Governor, Single Attack Owner, Ally Rescue, no-cheat policy and the rest of FIX27 remain inherited.
+
+TIER OWNER INTEGRITY
+--------------------
+Target-family train calls active: 23
+Target-family train calls before FIX28 owner marker: 0
+Expected owner train branches: 23 (Militia 5, Spear 3, Archer 3, Skirm 3, Knight 3, Mangonel 3, Ram 3)
+Per-unit active train counts: {'champion': 1, 'two-handed-swordsman': 1, 'long-swordsman': 1, 'man-at-arms': 1, 'militiaman': 1, 'halberdier': 1, 'pikeman': 1, 'spearman': 1, 'arbalest': 1, 'crossbowman': 1, 'archer': 1, 'imperial-skirmisher': 1, 'elite-skirmisher': 1, 'skirmisher': 1, 'paladin': 1, 'cavalier': 1, 'knight': 1, 'siege-onager': 1, 'onager': 1, 'mangonel': 1, 'siege-ram': 1, 'capped-ram': 1, 'battering-ram': 1}
+Target-family request-reset rules without a target train in the same rule: 0 []
+df25-production-cycle moves without a target train in the same rule: 0 []
+Old target cycle symbols are declarations only: militia=1, spear=1, archer=1, skirm=1, knight=1, mangonel=1, ram=1
+
+EMERGENCY FLOOR
+---------------
+Direct train rules mentioning df25-production-floor: 0 []
+Activation threshold present: military-population < 9
+Shutdown threshold present: military-population >= 9
+Emergency requests are request-only; the 0->1->2->3 rotor advances exclusively in successful FIX28 owner train rules.
+
+DIAGNOSTICS
+-----------
+Timer: df28-tier-diagnostic-timer = 66, cadence 75 seconds
+CAN/CANNOT message pair counts: {'long-swordsman': (1, 1), 'champion': (1, 1), 'cavalier': (1, 1), 'paladin': (1, 1), 'arbalest': (1, 1), 'onager': (1, 1)}
+
+PARSER / STATIC PREFLIGHT
+-------------------------
+Parenthesis final balance: 0
+Parenthesis minimum balance: 0
+defconst declarations: 484
+Duplicate defconst names: 0 []
+Custom df forward/undeclared references: 0 []
+New active first-token executable identifiers vs FIX27: []
+Forbidden/risky active identifiers: {'cc-add-resource': 0, 'up-idle-unit-count': 0, 'up-get-threat-data': 0, 'up-compare-goal': 0, 'up-guard-unit': 0, 'up-reset-scouts': 0, 'up-retreat-to': 0, 'up-reset-placement': 0}
+Resource cheat cc-add-resource: 0
+Max active lines in a FIX28 appended rule: 10
+Attack Owner writer counts FIX27->FIX28: {'set-goal createarmy': (9, 9), 'sn-number-attack-groups': (9, 9), 'sn-percent-attack-soldiers': (9, 9), 'attack-now': (3, 3)}
+
+RESOURCE THRESHOLDS
+-------------------
+Militia: Champion 160F/110G; Two-Handed or Long 90F/50G; MAA 70F/35G; Militiaman fallback.
+Knight: Paladin 220F/160G; Cavalier 110F/70G; Knight fallback.
+Archer: Arbalest 140W/100G; Crossbow 70W/45G; Archer fallback.
+Spearman: Halberdier 120F/80W; Pikeman 70F/45W; Spearman fallback.
+Skirmisher: Imperial 140F/140W; Elite 70F/70W; Skirmisher fallback.
+Mangonel: Siege Onager 320W/260G; Onager 220W/180G; Mangonel fallback.
+Ram: Siege Ram 320W/160G; Capped Ram 240W/110G; Battering Ram fallback.
+
+NOTE
+----
+Static can-train gating is the strongest parser-safe precondition available: the AI language does not return a post-train success value. Therefore request consumption is in the exact same rule as a can-train-guarded train action, with no failure/reset branch. Runtime replay diagnostics are intentionally retained to reveal actual custom-DAT trainability.

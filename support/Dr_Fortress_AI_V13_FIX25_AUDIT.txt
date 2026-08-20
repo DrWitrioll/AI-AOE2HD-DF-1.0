@@ -1,0 +1,46 @@
+DR FORTRESS AI V13 FIX25 - STATIC / HD PARSER AUDIT
+====================================================
+Basis: FIX24 replay report identified production uptime, spending and Castle timing as the next priorities.
+Source FIX24 SHA-256: fec71134f58339b91fe0b9fa831aff34cd47413ed6fcc91a464bc1a2c303a76d
+FIX25 SHA-256: 52d132ec17fd274012276ac690db1009f2411b1f3cb58fde4bf465effc14a828
+Size: 1039097 bytes
+Lines: 38619
+Active defrules: 2902
+defconst symbols: 469
+New defconst symbols: df25-castle-save, df25-production-cycle, df25-production-floor, df25-production-timer, df25-spend-cycle, df25-spend-state, df25-spend-timer
+Duplicate defconst symbols: 0
+Forward references / ERR2004 ordering hazards: 0
+Raw active-code parenthesis signature: balance 0, minimum 0
+New executable first-token vocabulary vs FIX24: 0
+Forbidden ERR2004-prone UP commands: 0
+Active cc-add-resource resource cheats: 0
+Attack Owner writer counts unchanged vs FIX24:
+  createarmy: 9 -> 9
+  sn-number-attack-groups: 9 -> 9
+  sn-percent-attack-soldiers: 9 -> 9
+  attack-now: 3 -> 3
+Exact FIX24->FIX25 patch reproduction: PASS
+Reproduced SHA-256: 52d132ec17fd274012276ac690db1009f2411b1f3cb58fde4bf465effc14a828
+
+FIX25 scope checks
+------------------
+- Mandatory Feudal Barracks before Range: present, pending-aware, shared infra cooldown.
+- Direct cheap production floor: Feudal <10 military; Castle+ <16 military; 4-second successful cadence.
+- Feudal floor stops at 10 to protect Castle timing; population-headroom zero disables the floor.
+- STABLE/ASSAULT Spending Governor: Castle activates below 35 military with 430F/330W/230G reserve.
+- STABLE/ASSAULT Spending Governor: Imperial activates below 50 military with 600F/450W/350G reserve.
+- Spending reserve hysteresis: present; DEFENSE/RECOVERY/GROWTH disables the spend mode.
+- Spending family rotor: Spear -> Archer -> Skirmisher -> Militia -> Knight every 7 seconds.
+- Progressive queue capacity: first Stable, second Range, second Barracks, second Imperial Stable under healthy reserves.
+- Castle-save accelerator begins at 12:00 only while locally safe and Castle research is not pending.
+- Castle-save escrow/gather pull: 12:00 soft, 14:00 stronger, 15:00 final push.
+- Castle research accelerator is eligible from 14:00 via parser-proven can-research-with-escrow/research.
+- Confirmed DEFENSE/RECOVERY cancels Castle-save and releases escrow.
+- Economy Governor retained. Single Attack Owner retained. Targeted Ally Rescue retained. FIX24 early mobilization retained.
+- No Relative Strength, post-battle counterattack, elite-ratio or new counter-composition layer added.
+- No resource creation added.
+
+IMPORTANT
+---------
+This is a static/parser-safety audit, not an in-game proof. Runtime HD 5.8 testing is still required.
+Target Castle timing (14:30-16:00) is a gameplay target for a normal safe standard start, not a guaranteed timestamp.

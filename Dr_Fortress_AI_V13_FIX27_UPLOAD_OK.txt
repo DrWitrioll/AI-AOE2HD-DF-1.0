@@ -1,0 +1,2 @@
+FIX27 manual upload verified. Expected SHA-256: fdff0489cd8cfe38d313f29d45355091d8c6b2bdf9b656402775f7d763a48c87
+Git blob: 11805857edfb1ea9baceaacaeab0d973fb8e35d5

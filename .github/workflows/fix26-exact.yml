@@ -1,0 +1,51 @@
+name: Publish exact FIX26
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix26-exact.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Apply audited FIX25 to FIX26 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/fix26.diff.part00 \
+              .github/fix26.diff.part01 \
+              .github/fix26.diff.part02 \
+              .github/fix26.diff.part03 \
+              .github/fix26.diff.part04 \
+              .github/fix26.diff.part05 \
+              .github/fix26.diff.part06 > /tmp/fix26.diff
+          test "$(sha256sum /tmp/fix26.diff | awk '{print $1}')" = "d21376cd17b28610ed7226c91aa76969857495dd242d5768dd2bcb23ac6c7133"
+          mkdir -p /tmp/fix26-build
+          cp Dr_Fortress_AI_V13_FIX25.per /tmp/fix26-build/
+          cd /tmp/fix26-build
+          patch -p0 < /tmp/fix26.diff
+          test "$(sha256sum Dr_Fortress_AI_V13_FIX25.per | awk '{print $1}')" = "3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3"
+          cp Dr_Fortress_AI_V13_FIX25.per "$GITHUB_WORKSPACE/Dr_Fortress_AI_V13_FIX26.per"
+          : > "$GITHUB_WORKSPACE/Dr_Fortress_AI_V13_FIX26.ai"
+
+      - name: Publish latest-two main layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Dr Fortress AI bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm Dr_Fortress_AI_V13_FIX24.per Dr_Fortress_AI_V13_FIX24.ai
+          git rm .github/fix26.diff.part00 .github/fix26.diff.part01 .github/fix26.diff.part02 .github/fix26.diff.part03 .github/fix26.diff.part04 .github/fix26.diff.part05 .github/fix26.diff.part06
+          git rm .github/workflows/fix26-exact.yml
+          git add Dr_Fortress_AI_V13_FIX26.per Dr_Fortress_AI_V13_FIX26.ai
+          git commit -m "Publish Dr Fortress AI V13 FIX26 transactional tiers"
+          git push origin HEAD:main

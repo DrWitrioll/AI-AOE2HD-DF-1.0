@@ -1,0 +1,54 @@
+DR FORTRESS AI V13 FIX31 - HD 5.8 ERR2010 PARSER HOTFIX AUDIT
+==============================================================
+
+CAUSE CONFIRMED
+---------------
+FIX29/FIX30 runtime error:
+  ERR2010: Missing closing quote
+
+The failing FIX30 line 36322 was 272 characters long.
+FIX30 contained exactly 6 lines longer than 255 characters:
+  36322 = 272
+  36324 = 260
+  36328 = 261
+  36330 = 260
+  36332 = 259
+  36334 = 256
+All six belonged to the new FIX29 visible Tier API diagnostic rules.
+The HD 5.8 parser can truncate/lose the closing quote on oversized lines, producing ERR2010.
+
+FIX31 CHANGE
+------------
+- All 16 compact Tier API status defrules were rewritten as parser-safe multi-line rules.
+- Logic, resource thresholds, can-train checks and chat messages remain the same.
+- The unnecessary FIX30 `(defconst neutral-player 0)` compatibility hotfix was removed.
+- No gameplay rebalance was added.
+- FIX29 direct high-tier train probes remain unchanged.
+
+STATIC VALIDATION
+-----------------
+Maximum physical line length: 237 characters
+Lines >255 characters: 0
+Odd/unclosed quote lines: 0
+Parenthesis balance: 0
+Minimum parenthesis depth: 0
+Defconst count: 492
+Duplicate defconst: 0
+Forward references to declared constants: 0
+Active cc-add-resource: 0
+Visible CAN diagnostic branches: 8
+Visible CANNOT diagnostic branches: 8
+Direct high-tier probe messages: 8
+
+EXACT PATCH VALIDATION
+----------------------
+FIX30 -> FIX31 unified diff applied to an untouched FIX30 copy reproduces FIX31 exactly.
+Round-trip SHA-256: a14968aa35aa11a53518d14a8d25c220aff3031f8dca52f526bd76e48481fd2a
+
+FIX31 SHA-256
+-------------
+a14968aa35aa11a53518d14a8d25c220aff3031f8dca52f526bd76e48481fd2a
+
+RUNTIME NOTE
+------------
+Static validation removes the identified ERR2010 line-length/quote hazard. Runtime loading in AoE2 HD 5.8 remains the final parser proof.

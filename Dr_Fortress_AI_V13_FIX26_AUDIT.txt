@@ -1,0 +1,132 @@
+DR FORTRESS AI V13 FIX26 - STATIC / STATE-MACHINE / HD PARSER AUDIT
+====================================================================
+Basis: FIX25 replay report + player live notes. FIX26 scope: exact-tier repair,
+civilian stability/task safety, conservative relative attack strength, plus audit
+for broken state transitions and hot/retry loops.
+
+SOURCE / OUTPUT
+---------------
+FIX25 SHA-256: 52d132ec17fd274012276ac690db1009f2411b1f3cb58fde4bf465effc14a828
+FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3
+FIX25->FIX26 diff SHA-256: d21376cd17b28610ed7226c91aa76969857495dd242d5768dd2bcb23ac6c7133
+FIX26 size: 1068986 bytes
+FIX26 lines: 39534
+Active defrules: 2946
+defconst symbols: 472
+Duplicate defconst symbols: 0
+Forward references / ERR2004 ordering hazards: 0
+Active parenthesis signature: balance 0, minimum 0
+New executable first-token vocabulary vs FIX25: 0 []
+
+PARSER / SAFETY
+---------------
+Active cc-add-resource resource cheats: 0
+Forbidden ERR2004-prone identifiers:
+  up-idle-unit-count: 0
+  up-get-threat-data: 0
+  up-compare-goal: 0
+  up-guard-unit: 0
+  up-reset-scouts: 0
+  up-retreat-to: 0
+  up-reset-placement: 0
+New/final rules over 16 active lines: 0
+Maximum new/final active rule length: 15 lines (rule 38947-38961)
+
+SINGLE ATTACK OWNER INTEGRITY
+-----------------------------
+Active writer counts FIX25 -> FIX26:
+  createarmy: 9 -> 9
+  sn-number-attack-groups: 9 -> 9
+  sn-percent-attack-soldiers: 9 -> 9
+  attack-now: 3 -> 3
+FIX26 Relative Strength writes attack-mode state and reuses the existing pressure
+pulse; it does not add another createarmy/group-SN/attack-now owner.
+
+BUGS FOUND AND REPAIRED
+-----------------------
+1. EXACT-TIER PHANTOM SUCCESS BUG
+   FIX25 generated family dispatcher contained 348 higher/exact-tier train branches
+   that could execute train <tier>, clear the family request and advance the cycle
+   without first proving can-train <tier>. With custom DAT costs/queues this allows
+   a failed train command to be recorded by the algorithm as success.
+   FIX26 transactional family train actions checked: 744
+   Family train actions still lacking exact can-train: 0
+   Training actions lacking either can-train or can-train-with-escrow anywhere in
+   the whole active script: 0 []
+
+2. CASTLE+ LEGACY FLOOR DOMINATED HIGH TIERS
+   FIX25 emergency floor used Spearman/Skirmisher/Archer/Militiaman even in
+   Castle/Imperial whenever military population <16. That is exactly the state
+   reached after losses, so the recovery path continuously reinforced low tiers.
+   FIX26 keeps the cheap floor Feudal-only. Castle+ floor rotates strongest
+   researched TRAINABLE model across spear/archer/skirmisher/infantry/knight/
+   mangonel families. Models represented:
+   arbalest, archer, cavalier, champion, crossbowman, elite-skirmisher, halberdier, imperial-skirmisher, knight, long-swordsman, man-at-arms, mangonel, militiaman, onager, paladin, pikeman, siege-onager, skirmisher, spearman, two-handed-swordsman
+
+3. ONE-SECOND EMPTY ROTOR HOT LOOP
+   FIX25 advanced an unavailable emergency-production slot after only one second.
+   With missing buildings/resources this could spin indefinitely at 1 Hz while
+   producing nothing. FIX26 production-floor 1-second retries remaining: 0.
+   Empty slots now use a bounded four-second retry cadence.
+
+4. RELATIVE-PRESSURE IMMEDIATE RE-ENTRY LOOP
+   During FIX26 audit, an initial 45-second relative-pressure design was found to
+   be able to expire and immediately re-enter on the same still-favorable state.
+   Final FIX26 adds df26-relative-cooldown + a separate cooldown timer. Relative
+   entry rules: 4; entries missing cooldown guard: 0.
+   Rescue/Defense/Recovery interrupt relative pressure and start a cooldown.
+
+5. FALSE CIVILIAN DIAGNOSTIC
+   The replay line "Civilian production and task allocation fell below acceptable
+   levels" was a random late-game failure explanation; FIX25 did NOT measure own
+   civilian population in that rule. FIX26 gates that message on civilian-pop <65
+   so it no longer claims a specific diagnosis without a matching signal.
+
+6. CIVILIAN STABILITY / TRAVEL SAFETY
+   Hardest receives NO resources. A minimum villager-production floor now applies
+   at Feudal <30 and Castle+ profile floors 60 / 75 / 90 for pop 125 / 150 / 200+.
+   can-train villager remains mandatory, so age-up/queue/pop/resource legality is
+   respected. Final camp/drop travel bounds override legacy late-game values that
+   could reach 80-120 tiles; Defense/Recovery contracts them further.
+
+7. RELATIVE ATTACK STRENGTH
+   No unsupported arithmetic comparator was introduced. Favorability is expressed
+   as conservative parser-proven bands using every-enemy, preventing one weak enemy
+   in a team game from authorizing an attack while another enemy has a large army.
+   Pressure windows reuse Single Attack Owner and remain subordinate to Ally Rescue.
+
+ALGORITHM / LOOP AUDIT RESULT
+-----------------------------
+No new zero-delay or one-second FIX26 production loop remains. The intentional
+periodic systems (Spending Governor, Rescue timers, wall phases, legacy periodic
+rules) remain timer-bounded. Static analysis cannot prove runtime liveness of the
+HD engine, so replay verification is still required.
+
+SCOPE PRESERVED
+---------------
+- Economy Governor retained.
+- Single Attack Owner retained.
+- Ally Rescue with concrete target retained and remains final override.
+- No-cheat retained.
+- FIX24/FIX25 early Feudal mobilization and Castle accelerator retained.
+- No post-battle counterattack.
+- No elite-ratio rewrite.
+- No complex counter-composition rewrite.
+
+PATCH REPRODUCTION
+------------------
+The unified FIX25->FIX26 patch was independently applied to a clean FIX25 copy and
+produced byte-identical FIX26 SHA-256: 3de30502c8f6e66d854f03b46d79180c852594453f9f3a4ea61c4f22562965c3.
+
+RUNTIME TEST REQUIRED
+---------------------
+Priority observations in the next HD 5.8 replay:
+1. After Pikeman/Crossbow/Cavalier/Onager/etc research, verify actual MAKE orders
+   and live units of those exact tiers.
+2. Check whether low-army Castle+ recovery now produces upgraded units instead of
+   a wall of legacy base tiers.
+3. Villager counts at 15/20/30/40 min and TC idle periods.
+4. Whether workers still select dangerous long-distance resource routes.
+5. Relative pressure launches only during favorable bands, stops after its window,
+   observes cooldown, and never overrides Ally Rescue.
+6. Check ERR2004/ERR2011/parser log before judging gameplay.

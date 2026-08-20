@@ -1,0 +1,150 @@
+DR FORTRESS AI V13 FIX33 - TIMER REGISTRY REPAIR / STATE-MACHINE RECOVERY AUDIT
+================================================================================
+
+BASE
+----
+FIX32 SHA-256: 461312694dfd42bb14648076780b5638053e61bbe3bad2037cb0adb14f7d09c7
+FIX33 SHA-256: 8e2604407bba0ff7d139933a4df6f9b426468ae457ab35daed828ce781841f23
+FIX33 Git blob: 3b565ce7962fcd28ac4fe3a678dddda297553b37
+FIX33 bytes: 995851
+FIX33 lines: 36335
+
+FIX33 TIMER MAPPING
+-------------------
+51 df18-wall-build-timer            -> 13  dedicated valid wall cadence
+52 df21-market-timer                -> 1   reclaimed Market transaction lock
+53 df22-rescue-timer                -> 2   reclaimed Ally Rescue window
+54 df22-peace-timer                 -> 7   shared pressure-phase timer
+55 df22-pressure-timer              -> 7   shared pressure-phase timer
+56 df22-elite-timer                 -> RETIRED with dead elite state/cycle block
+57 df24-mobilize-timer              -> 34  shared military-request cadence
+58 df24-gate-timer                  -> RETIRED; Gate lock uses timer 13 + pending-object release
+59 df25-production-timer            -> 34  shared military-request cadence
+60 df25-spend-timer                 -> 34  shared military-request cadence
+61 df26-relative-timer              -> 48  shared relative hold/cooldown phase timer
+62 df26-relative-cooldown-timer     -> 48  shared relative hold/cooldown phase timer
+63 df27-combat-timer                -> 34  shared military-request cadence
+64 df27-tc-lock-timer               -> RETIRED; TC lock uses timer 50 + pending-object release
+65 df27-castle-lock-timer           -> RETIRED; Castle lock uses timer 50 + pending-object release
+66 df29-tier-diagnostic-timer       -> 33  inherited FIX32 repair; preserved in FIX33
+
+RECLAIMED LEGACY WRITERS
+------------------------
+The four old write-only raw timer rules for IDs 1, 2, 7 and 34 were removed before those
+slots were reused. There are zero active raw operations on numeric timer IDs 1/2/7/34;
+all current use of those IDs goes through FIX33 named timer constants.
+
+STATE-MACHINE RECOVERY
+----------------------
+Market:
+- df21-market-lock has 7 set-to-1 transaction writers.
+- One reachable timer-triggered reset sets the lock to 0.
+- Timer ID is now valid slot 1.
+
+Ally Rescue:
+- Rescue state remains intact.
+- Rescue window now uses valid slot 2.
+- Existing triggered rule resets df22-rescue-state to 0 and clears target/focus state.
+
+Peace / autonomous pressure:
+- Former timers 54/55 are consolidated onto valid slot 7.
+- Peace-arm and active-pressure phases are distinguished by df22-pressure-state.
+- FIX33 adds pressure-state == 0 guards to peace-trigger branches so a pressure timeout
+  cannot accidentally re-arm itself when both old timers share one slot.
+
+Walls / Gates:
+- Wall cadence uses valid slot 13.
+- Dedicated invalid Gate timer 58 is removed.
+- Every Gate lock writer also starts wall timer 13 and has pending-object protection.
+- Gate lock resets when no Gate is pending and wall cadence is disabled.
+
+Military request cadence:
+- Mobilize / emergency production / Spending Governor / low-army combat request pacing
+  share valid slot 34.
+- Exactly one timer-triggered release rule disables the shared cadence.
+- Individual systems preserve their original requested interval (4/6/7/8/18 seconds),
+  but now serialize request bursts through one valid timer instead of four invalid timers.
+
+Relative pressure / cooldown:
+- Former timers 61/62 are consolidated onto valid slot 48.
+- State == pressure and cooldown == 1 distinguish the two phases.
+- Pressure timeout transitions to cooldown and restarts the same valid timer.
+- Cooldown timeout resets readiness.
+
+TC / Castle construction locks:
+- Invalid dedicated timers 64/65 are completely removed.
+- All 12 TC lock writers are pending-aware and start valid shared infrastructure timer 50.
+- All 8 Castle lock writers are pending-aware and start valid shared infrastructure timer 50.
+- TC/Castle lock reset rules require pending object count <1 and timer 50 disabled.
+- A failed build order therefore unlocks after infrastructure cadence; a real pending
+  foundation remains owned until it exits the pending queue.
+
+DEAD ELITE BLOCK
+----------------
+- df22-elite-timer, df22-elite-state and df22-elite-cycle are fully retired.
+- No production dispatcher consumed the elite cycle after the Single Tier Owner rewrite.
+- This is retirement of dead state churn, not a new elite-ratio balancing system.
+
+STATIC / PARSER SAFETY
+----------------------
+- Parenthesis final balance: 0
+- Minimum parenthesis depth: 0
+- Unclosed strings: 0
+- Lines with odd quote parity: 0
+- Lines >255 characters: 0
+- Duplicate defconst names: 0
+- Undeclared custom df* refs: 0
+- Forward custom df* refs: 0
+- Unresolved timer references: 0
+- Active timer IDs >50: 0
+- Active timer IDs are all within 1..50
+- Active cc-add-resource: 0
+- Risky/forbidden UP identifiers audited: 0
+- New executable first-token identifiers vs FIX32: 0
+
+LOCK RESET AUDIT
+----------------
+df21-market-lock:  7 set-to-1 writers, reset-to-0 path present
+df24-gate-lock:    4 set-to-1 writers, reset-to-0 path present
+df27-tc-lock:     12 set-to-1 writers, reset-to-0 path present
+df27-castle-lock:  8 set-to-1 writers, reset-to-0 path present
+
+SINGLE TIER OWNER INTEGRITY
+---------------------------
+- Target-family train actions before the FIX29 Single Tier Owner marker: 0
+- Target-family request reset outside a target-family train rule: 0
+- FIX29 direct API probes remain inside the same Single Tier Owner authority section.
+- No legacy target-family train owner was reactivated by FIX33.
+
+FIX32 TIER DIAGNOSTIC PRESERVATION
+----------------------------------
+- df29-tier-diagnostic-timer remains valid slot 33.
+- Heartbeat chat rule remains present.
+- Timer operations remain present and resolve to slot 33.
+- FIX33 does not alter Tier Owner selection or the Tier API diagnostic logic.
+- Runtime visibility still requires the next replay test; this audit proves static preservation.
+
+ATTACK OWNER INTEGRITY (FIX32 -> FIX33)
+---------------------------------------
+set-goal createarmy writers:            9 -> 9
+sn-number-attack-groups writers:        9 -> 9
+sn-percent-attack-soldiers writers:     9 -> 9
+attack-now actions:                     3 -> 3
+
+PATCH ROUNDTRIP
+---------------
+Exact FIX32 -> FIX33 unified diff applies cleanly and reconstructs FIX33 bit-identically: PASS
+
+OUT OF SCOPE / UNCHANGED
+------------------------
+- No new relative-strength algorithm
+- No post-battle counterattack
+- No elite-ratio balancing
+- No Scout Owner redesign
+- Economy Governor preserved
+- Single Attack Owner preserved
+- Ally Rescue preserved, timer/state repaired only
+- No-cheat preserved
+- Single Tier Owner preserved
+
+END OF AUDIT

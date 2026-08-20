@@ -1,0 +1,500 @@
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33516,6 +33774,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 95)
+     (gold-amount > 85)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33539,6 +33798,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 95)
+     (gold-amount > 85)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33572,6 +33832,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 110)
+     (gold-amount > 95)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33595,6 +33856,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 110)
+     (gold-amount > 95)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33618,6 +33880,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 110)
+     (gold-amount > 95)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33651,6 +33914,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 110)
+     (gold-amount > 95)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33674,6 +33938,7 @@
+     (research-completed ri-heavy-cavalry-archer)
+     (wood-amount > 110)
+     (gold-amount > 95)
++    (can-train heavy-cavalry-archer)
+ =>
+     (train heavy-cavalry-archer)
+     (set-goal df13-cavarcher-request 0)
+@@ -33709,6 +33974,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 125)
+     (gold-amount > 85)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33742,6 +34008,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 125)
+     (gold-amount > 85)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33765,6 +34032,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 125)
+     (gold-amount > 85)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33798,6 +34066,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 145)
+     (gold-amount > 100)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33821,6 +34090,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 145)
+     (gold-amount > 100)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33854,6 +34124,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 145)
+     (gold-amount > 100)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33877,6 +34148,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 145)
+     (gold-amount > 100)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33910,6 +34182,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 165)
+     (gold-amount > 115)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33933,6 +34206,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 165)
+     (gold-amount > 115)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33956,6 +34230,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 165)
+     (gold-amount > 115)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -33989,6 +34264,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 165)
+     (gold-amount > 115)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -34012,6 +34288,7 @@
+     (research-completed ri-heavy-scorpion)
+     (wood-amount > 165)
+     (gold-amount > 115)
++    (can-train heavy-scorpion)
+ =>
+     (train heavy-scorpion)
+     (set-goal df13-scorpion-request 0)
+@@ -34047,6 +34324,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 215)
+     (gold-amount > 160)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34080,6 +34358,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 215)
+     (gold-amount > 160)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34103,6 +34382,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 215)
+     (gold-amount > 160)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34136,6 +34416,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 230)
+     (gold-amount > 170)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34159,6 +34440,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 230)
+     (gold-amount > 170)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34192,6 +34474,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 230)
+     (gold-amount > 170)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34215,6 +34498,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 230)
+     (gold-amount > 170)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34248,6 +34532,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 250)
+     (gold-amount > 185)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34271,6 +34556,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 250)
+     (gold-amount > 185)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34294,6 +34580,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 250)
+     (gold-amount > 185)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34327,6 +34614,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 250)
+     (gold-amount > 185)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34350,6 +34638,7 @@
+     (research-completed ri-cannon-galleon)
+     (wood-amount > 250)
+     (gold-amount > 185)
++    (can-train elite-cannon-galleon)
+ =>
+     (train elite-cannon-galleon)
+     (set-goal df13-cannon-galleon-request 0)
+@@ -34385,6 +34674,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34418,6 +34708,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34441,6 +34732,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34474,6 +34766,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34497,6 +34790,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34530,6 +34824,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34553,6 +34848,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34586,6 +34882,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34609,6 +34906,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34632,6 +34930,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34665,6 +34964,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34688,6 +34988,7 @@
+     (research-completed ri-elite-steppe-lancer)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train elite-steppe-lancer)
+ =>
+     (train elite-steppe-lancer)
+     (set-goal df13-steppe-request 0)
+@@ -34723,6 +35024,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 150)
+     (gold-amount > 95)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34756,6 +35058,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 150)
+     (gold-amount > 95)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34779,6 +35082,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 150)
+     (gold-amount > 95)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34812,6 +35116,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 180)
+     (gold-amount > 115)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34835,6 +35140,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 180)
+     (gold-amount > 115)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34868,6 +35174,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 180)
+     (gold-amount > 115)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34891,6 +35198,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 180)
+     (gold-amount > 115)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34924,6 +35232,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 205)
+     (gold-amount > 135)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34947,6 +35256,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 205)
+     (gold-amount > 135)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -34970,6 +35280,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 205)
+     (gold-amount > 135)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -35003,6 +35314,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 205)
+     (gold-amount > 135)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -35026,6 +35338,7 @@
+     (research-completed ri-elite-battle-elephant)
+     (food-amount > 205)
+     (gold-amount > 135)
++    (can-train elite-battle-elephant)
+ =>
+     (train elite-battle-elephant)
+     (set-goal df13-elephant-request 0)
+@@ -35061,6 +35374,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 80)
+     (wood-amount > 70)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35094,6 +35408,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 80)
+     (wood-amount > 70)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35117,6 +35432,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 80)
+     (wood-amount > 70)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35150,6 +35466,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 95)
+     (wood-amount > 85)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35173,6 +35490,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 95)
+     (wood-amount > 85)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35206,6 +35524,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 95)
+     (wood-amount > 85)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35229,6 +35548,7 @@
+     (research-completed ri-elite-genitour)
+     (food-amount > 95)
+     (wood-amount > 85)
++    (can-train elite-genitour)
+ =>
+     (train elite-genitour)
+     (set-goal df13-genitour-request 0)
+@@ -35262,6 +35582,7 @@

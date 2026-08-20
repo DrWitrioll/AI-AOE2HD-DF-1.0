@@ -1,0 +1,500 @@
+ =>
+     (train paladin)
+     (set-goal df13-knight-request 0)
+@@ -30458,6 +30591,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30482,6 +30616,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30505,6 +30640,7 @@
+     (research-completed ri-paladin)
+     (food-amount > 180)
+     (gold-amount > 160)
++    (can-train paladin)
+ =>
+     (train paladin)
+     (set-goal df13-knight-request 0)
+@@ -30518,6 +30654,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30542,6 +30679,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30565,6 +30703,7 @@
+     (research-completed ri-cavalier)
+     (food-amount > 140)
+     (gold-amount > 120)
++    (can-train cavalier)
+ =>
+     (train cavalier)
+     (set-goal df13-knight-request 0)
+@@ -30590,6 +30729,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30623,6 +30763,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30646,6 +30787,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30679,6 +30821,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 100)
+     (gold-amount > 80)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30702,6 +30845,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30725,6 +30869,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30748,6 +30893,7 @@
+     (research-completed ri-imperial-camel)
+     (food-amount > 155)
+     (gold-amount > 135)
++    (can-train imperial-camel)
+ =>
+     (train imperial-camel)
+     (set-goal df13-camel-request 0)
+@@ -30761,6 +30907,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30785,6 +30932,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30818,6 +30966,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 120)
+     (gold-amount > 100)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30841,6 +30990,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30864,6 +31014,7 @@
+     (research-completed ri-imperial-camel)
+     (food-amount > 175)
+     (gold-amount > 150)
++    (can-train imperial-camel)
+ =>
+     (train imperial-camel)
+     (set-goal df13-camel-request 0)
+@@ -30877,6 +31028,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30901,6 +31053,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30924,6 +31077,7 @@
+     (research-completed ri-imperial-camel)
+     (food-amount > 175)
+     (gold-amount > 150)
++    (can-train imperial-camel)
+ =>
+     (train imperial-camel)
+     (set-goal df13-camel-request 0)
+@@ -30937,6 +31091,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30961,6 +31116,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -30984,6 +31140,7 @@
+     (research-completed ri-heavy-camel)
+     (food-amount > 135)
+     (gold-amount > 115)
++    (can-train heavy-camel)
+ =>
+     (train heavy-camel)
+     (set-goal df13-camel-request 0)
+@@ -31009,6 +31166,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 80)
+     (gold-amount > 65)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31042,6 +31200,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 80)
+     (gold-amount > 65)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31065,6 +31224,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 80)
+     (gold-amount > 65)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31098,6 +31258,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 80)
+     (gold-amount > 65)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31121,6 +31282,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 95)
+     (gold-amount > 75)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31144,6 +31306,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 95)
+     (gold-amount > 75)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31167,6 +31330,7 @@
+     (research-completed ri-elite-eagle-warrior)
+     (food-amount > 130)
+     (gold-amount > 105)
++    (can-train heavy-eagle-warrior)
+ =>
+     (train heavy-eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31180,6 +31344,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 95)
+     (gold-amount > 75)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31204,6 +31369,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 95)
+     (gold-amount > 75)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31237,6 +31403,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 95)
+     (gold-amount > 75)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31260,6 +31427,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31283,6 +31451,7 @@
+     (research-completed ri-elite-eagle-warrior)
+     (food-amount > 145)
+     (gold-amount > 120)
++    (can-train heavy-eagle-warrior)
+ =>
+     (train heavy-eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31296,6 +31465,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31320,6 +31490,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31343,6 +31514,7 @@
+     (research-completed ri-elite-eagle-warrior)
+     (food-amount > 145)
+     (gold-amount > 120)
++    (can-train heavy-eagle-warrior)
+ =>
+     (train heavy-eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31356,6 +31528,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31380,6 +31553,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31403,6 +31577,7 @@
+     (research-completed ri-eagle-warrior)
+     (food-amount > 105)
+     (gold-amount > 85)
++    (can-train eagle-warrior)
+ =>
+     (train eagle-warrior)
+     (set-goal df13-eagle-request 0)
+@@ -31428,6 +31603,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 210)
+     (gold-amount > 80)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31461,6 +31637,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 210)
+     (gold-amount > 80)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31484,6 +31661,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 210)
+     (gold-amount > 80)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31517,6 +31695,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 210)
+     (gold-amount > 80)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31540,6 +31719,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 225)
+     (gold-amount > 90)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31563,6 +31743,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 225)
+     (gold-amount > 90)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31586,6 +31767,7 @@
+     (research-completed ri-siege-ram)
+     (wood-amount > 265)
+     (gold-amount > 120)
++    (can-train siege-ram)
+ =>
+     (train siege-ram)
+     (set-goal df13-ram-request 0)
+@@ -31599,6 +31781,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 225)
+     (gold-amount > 90)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31623,6 +31806,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 225)
+     (gold-amount > 90)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31656,6 +31840,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 225)
+     (gold-amount > 90)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31679,6 +31864,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31702,6 +31888,7 @@
+     (research-completed ri-siege-ram)
+     (wood-amount > 280)
+     (gold-amount > 130)
++    (can-train siege-ram)
+ =>
+     (train siege-ram)
+     (set-goal df13-ram-request 0)
+@@ -31715,6 +31902,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31739,6 +31927,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31762,6 +31951,7 @@
+     (research-completed ri-siege-ram)
+     (wood-amount > 280)
+     (gold-amount > 130)
++    (can-train siege-ram)
+ =>
+     (train siege-ram)
+     (set-goal df13-ram-request 0)
+@@ -31775,6 +31965,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31799,6 +31990,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31822,6 +32014,7 @@
+     (research-completed ri-capped-ram)
+     (wood-amount > 235)
+     (gold-amount > 95)
++    (can-train capped-ram)
+ =>
+     (train capped-ram)
+     (set-goal df13-ram-request 0)
+@@ -31847,6 +32040,7 @@
+     (research-completed ri-onager)
+     (wood-amount > 180)
+     (gold-amount > 145)
++    (can-train onager)
+ =>
+     (train onager)
+     (set-goal df13-mangonel-request 0)
+@@ -31880,6 +32074,7 @@
+     (research-completed ri-onager)
+     (wood-amount > 180)
+     (gold-amount > 145)
++    (can-train onager)
+ =>
+     (train onager)
+     (set-goal df13-mangonel-request 0)
+@@ -31903,6 +32098,7 @@

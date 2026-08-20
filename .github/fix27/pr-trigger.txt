@@ -1,1 +1,0 @@
-Merge-trigger FIX27 publisher

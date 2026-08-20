@@ -1,0 +1,62 @@
+DR FORTRESS AI V13 FIX32 - TIER DIAGNOSTIC TIMER HOTFIX AUDIT
+================================================================
+
+FIX31 SHA-256: a14968aa35aa11a53518d14a8d25c220aff3031f8dca52f526bd76e48481fd2a
+FIX32 SHA-256: 461312694dfd42bb14648076780b5638053e61bbe3bad2037cb0adb14f7d09c7
+FIX32 bytes: 999237
+FIX32 lines: 36492
+
+CHANGE
+------
+- df29-tier-diagnostic-timer moved from 66 to 33.
+- No other executable/gameplay logic changed.
+- Timer 33 had zero active timer operations in FIX31.
+- Legacy df11-scout-timer is only an unused declaration; no active rule references it.
+
+FIX32 TIER TIMER OPERATIONS
+---------------------------
+- enable-timer 33 80
+- timer-triggered 33
+- disable-timer 33
+- re-enable timer 33 80 after diagnostic pulse
+
+STATIC / PARSER CHECKS
+----------------------
+- Parenthesis balance: 0
+- Minimum parenthesis depth: 0
+- Odd/unclosed quote lines: 0
+- Lines >255 chars: 0
+- Maximum line length: 237
+- Duplicate defconst names: 0
+- df* forward references: 0
+- New executable first-token identifiers vs FIX31: 0
+- Active cc-add-resource: 0
+- Remaining active timer operations >50: 112 (INTENTIONALLY NOT FIXED IN FIX32; documented in BIG_BUG_AUDIT)
+
+ATTACK OWNER INTEGRITY FIX31 -> FIX32
+-------------------------------------
+- createarmy writers: 9 -> 9
+- sn-number-attack-groups writers: 9 -> 9
+- sn-percent-attack-soldiers writers: 9 -> 9
+- attack-now: 3 -> 3
+
+TIER OWNER INTEGRITY
+--------------------
+- No target-family train action exists before the FIX29 Single Tier Owner.
+- No target-family request reset exists outside a rule that also trains a target-family unit.
+- FIX32 does not alter tier priority, requests, resource thresholds or train commands.
+
+PATCH ROUNDTRIP
+---------------
+- FIX31 -> FIX32 exact unified diff application: PASS
+- Reproduced SHA-256: 461312694dfd42bb14648076780b5638053e61bbe3bad2037cb0adb14f7d09c7
+
+RUNTIME TEST GOAL
+-----------------
+The next replay should visibly contain:
+[FIX29 TIER API] HEARTBEAT - visible diagnostic round
+
+After relevant research + reserve it should then show CAN or CANNOT for the probed higher-tier units.
+This is the only question FIX32 is intended to answer.
+
+END

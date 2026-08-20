@@ -1,0 +1,175 @@
+DR FORTRESS AI V13 FIX31 -> FIX32 LARGE STATIC / STATE-MACHINE AUDIT
+======================================================================
+
+Source audited:
+- FIX31 SHA-256: a14968aa35aa11a53518d14a8d25c220aff3031f8dca52f526bd76e48481fd2a
+- FIX31 bytes: 998852
+- FIX31 lines: 36487
+- Replay: SP Replay v5.8 @2026.08.20 201514.aoe2record
+- FIX32 SHA-256: 461312694dfd42bb14648076780b5638053e61bbe3bad2037cb0adb14f7d09c7
+
+RUNTIME EVIDENCE FROM FIX31 REPLAY
+----------------------------------
+- FIX31 loaded and ran: no ERR2004 / ERR2010 text is present in the replay binary.
+- Both Fortress players emitted normal tactical chat, so parser startup succeeded.
+- 0 occurrences of "[FIX29 TIER API]", "CAN TRAIN", "CANNOT TRAIN" or "DIRECT TRAIN COMMAND ISSUED".
+- Replay itself reports unsupported setup (not Dark Age / standard profile), so it is useful for parser/timer diagnostics but not a clean performance benchmark.
+
+CRITICAL TIMER REGISTRY BUG
+---------------------------
+AoE2 HD / Forgotten increased AI timers from 10 to 50. Valid timer slots are 1..50.
+FIX31 actively uses timer IDs 51..66.
+
+Active out-of-range timer operations: 116
+
+ID  NAME                             ACTIVE OPS
+51  df18-wall-build-timer            11
+52  df21-market-timer                9
+53  df22-rescue-timer                9
+54  df22-peace-timer                 8
+55  df22-pressure-timer              5
+56  df22-elite-timer                 6
+57  df24-mobilize-timer              4
+58  df24-gate-timer                  6
+59  df25-production-timer            6
+60  df25-spend-timer                 8
+61  df26-relative-timer              8
+62  df26-relative-cooldown-timer     5
+63  df27-combat-timer                3
+64  df27-tc-lock-timer               14
+65  df27-castle-lock-timer           10
+66  df29-tier-diagnostic-timer       4
+
+Likely state-machine consequences (based on the actual FIX31 rules):
+- 51 df18-wall-build-timer:
+  wall/gate build cadence cannot be trusted; repeated build-wall/build-gate attempts can lose their intended cooldown.
+- 52 df21-market-timer:
+  df21-market-lock is set to 1 after a transaction and its only normal reset depends on timer 52.
+  Result: after the first Market transaction the Market governor can remain locked permanently.
+- 53 df22-rescue-timer:
+  df22-rescue-state is set to 1 by rescue triggers and its normal reset depends on timer 53.
+  Result: Rescue can remain latched and keep Attack Owner / focus logic in the wrong mode.
+- 54/55 df22-peace/pressure:
+  the calm -> pressure -> calm state machine depends on invalid timers.
+  Result: autonomous pressure windows cannot be trusted to start/finish.
+- 56 df22-elite-timer:
+  the elite cycle currently has no consumer outside its own cycle/state rules.
+  Result: this is effectively a dead/no-op timer subsystem and should be retired.
+- 57 df24-mobilize-timer:
+  Feudal/Recovery request refresh lacks a reliable cadence.
+  Result: request writers may fire much more often than designed.
+- 58 df24-gate-timer:
+  df24-gate-lock is set to 1 after a gate attempt and reset only on timer 58.
+  Result: after the first gate attempt, later gate attempts can be blocked forever.
+- 59 df25-production-timer:
+  emergency production floor cadence is not reliable.
+  Result: request refresh can become effectively unthrottled.
+- 60 df25-spend-timer:
+  Spending Governor advances the family cycle and relies on timer 60 for pacing.
+  Result: multiple family requests can cycle/flood much faster than intended.
+- 61/62 df26-relative pressure/cooldown:
+  Relative Strength hold/cooldown windows cannot be trusted.
+  Result: relative state can stick, or cooldown can fail to clear.
+- 63 df27-combat-timer:
+  low-army combat request cadence is not reliable.
+  Result: repeated Knight/Scout/Mangonel/core-family requests can flood.
+- 64 df27-tc-lock-timer:
+  df27-tc-lock is set to 1 on a TC build attempt and reset only by timer 64.
+  Result: after one TC order, further TC expansion can be permanently blocked.
+- 65 df27-castle-lock-timer:
+  df27-castle-lock is set to 1 on a Castle build attempt and reset only by timer 65.
+  Result: after one Castle order, further Castle construction can be permanently blocked.
+- 66 df29-tier-diagnostic-timer:
+  visible Tier API heartbeat never appeared in the FIX31 replay.
+  FIX32 moves this one timer to valid slot 33.
+
+VALID TIMER CAPACITY / RECLAIM FINDINGS
+---------------------------------------
+Completely unused valid timer IDs in active FIX31 timer operations:
+- 13
+- 33
+- 48
+
+Valid timer IDs that are WRITE-ONLY (enabled/disabled but never tested with timer-triggered):
+- 1
+- 2
+- 7
+- 34
+
+Those four rules currently have no observable timer consumer and are candidates for retirement/reuse.
+
+Additional timer-registry findings:
+- Timer 50 (df18-infra-timer) has 143 active enable operations.
+  IMPORTANT: all 143 are guarded by up-timer-status == timer-disabled.
+  No classic "continuous timer reset every AI pass" pattern was found for timer 50.
+- df11-scout-timer = 33 is declaration-only; it has 0 active timer operations.
+- df11-threat-timer = 48 is declaration-only; it has 0 active timer operations.
+
+TIER OWNER / PRODUCTION INTEGRITY
+---------------------------------
+- Active target-family train actions (Militia/Spear/Archer/Skirm/Knight/Mangonel/Ram): {len(target_hits)}
+- Target-family train actions before the FIX29 Single Tier Owner: 0
+- Target-family request resets outside a rule that also trains a target-family unit: 0
+- Single Tier Owner therefore remains structurally intact in FIX31.
+- The missing FIX29 diagnostic output cannot be used as evidence about can-train until its timer is valid.
+
+OTHER HIGH-VALUE BUG / DESIGN FINDINGS
+--------------------------------------
+1. Scout cavalry production is still a separate large production surface.
+   - 43 active direct train actions for scout-cavalry/light-cavalry/hussar.
+   - 25 active writers set df13-scout-request = 1.
+   This is outside the seven FIX28 Tier Owner families.
+   It matches the earlier replay symptom where Scout Cavalry was produced in combat-scale numbers.
+   Recommendation: later create a dedicated Scout Owner / hard cap so scouting does not consume combat economy.
+
+2. TC / Castle ownership is still distributed across many legacy build rules.
+   - TC: 12 build branches use df27-tc-lock.
+   - Castle: 8 build branches use df27-castle-lock.
+   Their shared lock concept is correct, but invalid timers currently make the lock release unsafe.
+   Recommendation for Timer Registry repair: release these locks from valid infrastructure/pending logic instead of allocating two more dedicated timer slots.
+
+3. df22-elite-cycle is dead state churn.
+   - df22-elite-cycle is only read/written by its own four timer-cycle rules.
+   - No production dispatcher consumes the cycle after the Single Tier Owner rewrite.
+   Recommendation: retire the elite timer/cycle block.
+
+4. No naked recurring build loop was found by the static heuristic.
+   Every active recurring (build ...) rule has at least one of:
+   can-build / pending-object / timer gate / disable-self.
+   This does NOT prove placement quality, but it rules out a simple unconditional BUILD infinite loop.
+
+5. Parser/static safety after FIX31:
+   - parenthesis balance: 0
+   - minimum parenthesis depth: 0
+   - duplicate defconst names: 0
+   - custom df* forward references: 0
+   - lines >255 chars: 0
+   - lines with odd/unclosed quote parity: 0
+   - active cc-add-resource: 0
+
+FIX32 SCOPE (INTENTIONALLY NARROW)
+----------------------------------
+Only runtime-functional change:
+- df29-tier-diagnostic-timer: 66 -> 33
+
+Why only this fix now:
+- The next replay must isolate the Tier API question.
+- Repairing all timer/state systems at the same time would change economy, Rescue, production,
+  wall cadence, TC/Castle expansion and attack posture, making the tier diagnosis ambiguous.
+- FIX32 should answer only:
+  "After research + reserve, does HD report CAN TRAIN or CANNOT TRAIN for the separated high-tier unit?"
+
+FIX33 RECOMMENDED SCOPE AFTER FIX32 REPLAY
+------------------------------------------
+"Timer Registry Repair / State-Machine Recovery"
+
+Required tasks:
+1. Eliminate every active timer ID >50.
+2. Retire dead timer writers 1/2/7/34 and dead elite timer-cycle block.
+3. Reclaim valid slots 13/33/48 plus retired write-only slots.
+4. Redesign TC/Castle locks so they do not require dedicated timers 64/65.
+5. Rebuild Market, Rescue, Gate, wall cadence and military request cadence on valid timers.
+6. Re-audit all lock goals to prove every set-to-1 state has at least one reachable reset path.
+7. Re-run parser checks, timer registry check (all IDs 1..50), and state-loop audit.
+
+END OF AUDIT

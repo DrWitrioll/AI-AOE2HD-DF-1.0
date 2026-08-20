@@ -1,0 +1,25 @@
+--- Dr_Fortress_AI_V13_FIX31.per
++++ Dr_Fortress_AI_V13_FIX32.per
+@@ -1,6 +1,11 @@
+ ; ============================================================================
+-; DR FORTRESS AI V13 FIX31
+-; FIX31 HD 5.8 ERR2010 LINE-LENGTH / QUOTE PARSER HOTFIX:
++; DR FORTRESS AI V13 FIX32
++; FIX32 TIER API DIAGNOSTIC TIMER HOTFIX:
++; - HD/Forgotten exposes timer slots 1..50; FIX29/FIX31 used slot 66.
++; - Move only the visible Tier API heartbeat to active slot 33.
++; - Slot 33 has no active timer operations in FIX31; df11-scout-timer is declaration-only.
++; - No gameplay/economy/attack/tier-dispatch changes in FIX32.
++; - Full timer/state-machine audit is supplied separately for FIX33 planning.
+ ; - splits FIX29 diagnostic one-line rules into parser-safe multi-line rules.
+ ; - removes the unnecessary FIX30 neutral-player compatibility constant; it was not the ERR2010 cause.
+ ; - gameplay and FIX29 Tier API Probe logic are otherwise unchanged.
+@@ -381,7 +386,7 @@
+ (defconst df27-combat-timer 63) ;FIX27 low-army family-request cadence
+ (defconst df27-tc-lock-timer 64) ;FIX27 TC command-storm cooldown
+ (defconst df27-castle-lock-timer 65) ;FIX27 Castle command-storm cooldown
+-(defconst df29-tier-diagnostic-timer 66) ;FIX29 visible Tier API heartbeat, 80 seconds
++(defconst df29-tier-diagnostic-timer 33) ;FIX32: valid HD/Forgotten timer slot; legacy df11-scout-timer alias is inactive
+ 
+ ; UserPatch/HD class and group values used without direct object-search DUC.
+ (defconst df11-villager-class 904)

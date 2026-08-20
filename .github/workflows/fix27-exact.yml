@@ -5,12 +5,16 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/fix27-exact.yml'
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   publish:
+    if: ${{ !hashFiles('Dr_Fortress_AI_V13_FIX27.per') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

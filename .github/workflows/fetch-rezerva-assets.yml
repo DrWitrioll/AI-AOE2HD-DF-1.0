@@ -1,0 +1,43 @@
+name: Fetch Rezerva image assets
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/fetch-rezerva-assets.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright@1.55.0
+          npx playwright install chromium --with-deps
+
+      - name: Recover original PNG files
+        run: node scripts/fetch-firestorage.mjs
+
+      - name: Commit recovered files to bridge branch
+        run: |
+          git config user.name 'rezerva-asset-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-assets/nii-technicka-tabule.png rezerva-assets/posadka-nii.png rezerva-assets/prouzek.png
+          git commit -m 'Add original Rezerva image assets' || exit 0
+          git push origin HEAD:rezerva-web-assets

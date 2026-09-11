@@ -41,3 +41,5 @@ jobs:
           git add rezerva-site/index.html
           git commit -m 'Add final Rezerva site HTML' || exit 0
           git push origin HEAD:rezerva-web-assets
+
+# rerun after validator fix

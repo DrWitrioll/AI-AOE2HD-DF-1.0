@@ -67,7 +67,8 @@ if (!saved) {
 await browser.close();
 if (!saved) throw new Error('Could not recover final HTML from firestorage');
 const html = fs.readFileSync(out, 'utf8');
-for (const required of ['NAVIGACE A MAPY','FRAKCE A RASY','OBCHOD A MĚNY','LODĚ A TECHNIKA','POSÁDKA A POSTAVY','res.cloudinary.com/emmgrwto']) {
-  if (!html.includes(required)) throw new Error(`Missing expected content: ${required}`);
+const lower = html.toLowerCase();
+for (const required of ['navigace a mapy','frakce a rasy','obchod a měny','lodě a technika','posádka a postavy','res.cloudinary.com/emmgrwto']) {
+  if (!lower.includes(required.toLowerCase())) throw new Error(`Missing expected content: ${required}`);
 }
 console.log(`saved ${out}: ${Buffer.byteLength(html)} bytes`);

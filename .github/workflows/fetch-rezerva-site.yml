@@ -1,0 +1,43 @@
+name: Fetch final Rezerva site HTML
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/fetch-rezerva-site.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright@1.55.0
+          npx playwright install chromium --with-deps
+
+      - name: Recover final site HTML
+        run: node scripts/fetch-rezerva-site.mjs
+
+      - name: Commit final site HTML
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Add final Rezerva site HTML' || exit 0
+          git push origin HEAD:rezerva-web-assets

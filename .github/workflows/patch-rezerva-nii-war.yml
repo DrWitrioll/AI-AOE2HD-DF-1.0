@@ -1,0 +1,34 @@
+name: Patch Rezerva NII and current war
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/patch-rezerva-nii-war.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Patch NII dossier and war history
+        run: node scripts/patch-rezerva-nii-war.mjs
+
+      - name: Commit updated site
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Add detailed NII dossier and current Soviet war' || exit 0
+          git push origin HEAD:rezerva-web-assets
+
+# trigger 2026-09-12 nii-war-update

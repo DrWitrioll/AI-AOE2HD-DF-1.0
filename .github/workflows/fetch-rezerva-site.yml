@@ -39,7 +39,7 @@ jobs:
           git config user.name 'rezerva-site-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add rezerva-site/index.html
-          git commit -m 'Add final Rezerva site HTML' || exit 0
+          git commit -m 'Update Rezerva site content' || exit 0
           git push origin HEAD:rezerva-web-assets
 
-# rerun after validator fix
+# deploy trigger: history-soviets-races-crew-20260912

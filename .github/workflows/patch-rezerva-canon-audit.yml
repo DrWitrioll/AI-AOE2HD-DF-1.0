@@ -1,0 +1,34 @@
+name: Audit Rezerva FTL and NII loadout canon
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/patch-rezerva-canon-audit.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Apply canon audit
+        run: node scripts/patch-rezerva-canon-audit.mjs
+
+      - name: Commit audited site
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Audit FTL exclusivity and NII loadout separation' || exit 0
+          git push origin HEAD:rezerva-web-assets
+
+# trigger 2026-09-12 canon-audit-v1

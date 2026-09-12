@@ -1,0 +1,34 @@
+name: Patch Rezerva five images
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/patch-rezerva-five-images.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Patch site HTML
+        run: node scripts/patch-rezerva-five-images.mjs
+
+      - name: Commit patched site
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Add KVK and station images with detailed information' || exit 0
+          git push origin HEAD:rezerva-web-assets
+
+# trigger image page update 2026-09-12

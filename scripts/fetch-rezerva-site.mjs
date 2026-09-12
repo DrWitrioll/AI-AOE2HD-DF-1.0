@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
-const share = 'https://firestorage.ai/ja/f/k3GifTfXrFac';
+const share = 'https://firestorage.ai/ja/f/lhFuc1ztqzwz';
 const out = 'rezerva-site/index.html';
 fs.mkdirSync('rezerva-site', { recursive: true });
 
@@ -68,7 +68,7 @@ await browser.close();
 if (!saved) throw new Error('Could not recover final HTML from firestorage');
 const html = fs.readFileSync(out, 'utf8');
 const lower = html.toLowerCase();
-for (const required of ['navigace a mapy','frakce a rasy','obchod a měny','lodě a technika','posádka a postavy','res.cloudinary.com/emmgrwto']) {
+for (const required of ['navigace a mapy','frakce a rasy','obchod a měny','lodě a technika','posádka a postavy','historie','sověti','60 pomocných členů','82 evidováno','res.cloudinary.com/emmgrwto']) {
   if (!lower.includes(required.toLowerCase())) throw new Error(`Missing expected content: ${required}`);
 }
 console.log(`saved ${out}: ${Buffer.byteLength(html)} bytes`);

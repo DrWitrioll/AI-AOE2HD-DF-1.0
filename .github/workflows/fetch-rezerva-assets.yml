@@ -42,4 +42,4 @@ jobs:
           git commit -m 'Add new KVK and station image assets' || exit 0
           git push origin HEAD:rezerva-web-assets
 
-# trigger fixed image batch 2026-09-12
+# trigger individual-share image batch 2026-09-12

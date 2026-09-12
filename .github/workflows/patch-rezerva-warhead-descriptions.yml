@@ -1,0 +1,34 @@
+name: Patch Rezerva exact warhead descriptions
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/patch-rezerva-warhead-descriptions.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Apply exact warhead descriptions
+        run: node scripts/patch-rezerva-warhead-descriptions.mjs
+
+      - name: Commit updated site
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Refine confirmed NII warhead descriptions' || exit 0
+          git push origin HEAD:rezerva-web-assets
+
+# trigger 2026-09-12 exact-warhead-descriptions

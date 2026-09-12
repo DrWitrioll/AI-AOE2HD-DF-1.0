@@ -1,0 +1,45 @@
+name: Apply Rezerva global arsenal catalog
+
+on:
+  push:
+    branches:
+      - rezerva-web-assets
+    paths:
+      - '.github/workflows/apply-rezerva-catalog.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bridge branch
+        uses: actions/checkout@v4
+        with:
+          ref: rezerva-web-assets
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright@1.55.0
+          npx playwright install chromium --with-deps
+
+      - name: Apply catalog patch
+        run: node scripts/apply-rezerva-catalog-bridge.mjs
+
+      - name: Commit updated site
+        run: |
+          git config user.name 'rezerva-site-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add rezerva-site/index.html
+          git commit -m 'Add global arsenal catalog and correct NII launcher/FTL canon' || exit 0
+          git push origin HEAD:rezerva-web-assets
+
+# trigger 2026-09-12 catalog-v1

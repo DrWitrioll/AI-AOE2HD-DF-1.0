@@ -38,6 +38,8 @@ jobs:
         run: |
           git config user.name 'rezerva-asset-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add rezerva-assets/nii-technicka-tabule.png rezerva-assets/posadka-nii.png rezerva-assets/prouzek.png
-          git commit -m 'Add original Rezerva image assets' || exit 0
+          git add rezerva-assets/kvk-rychla-korveta.png rezerva-assets/kvk-titan.png rezerva-assets/kvk-juggernaut.png rezerva-assets/kvk-tezka-bitevni-lod.png rezerva-assets/mezirasova-stanice-bezpecnost.png
+          git commit -m 'Add new KVK and station image assets' || exit 0
           git push origin HEAD:rezerva-web-assets
+
+# trigger new image batch 2026-09-12
